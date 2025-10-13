@@ -1,0 +1,3 @@
+- [ ] Team Profile Page
+- [ ] Match Query Page that doesn't suck
+- [ ] Match page merging

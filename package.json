@@ -1,0 +1,14 @@
+{
+  "name": "halo-query",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "jest -c jest.config.ts",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

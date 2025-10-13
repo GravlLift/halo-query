@@ -1,0 +1,23 @@
+
+.paragraph p {
+  margin-bottom: 10px !important;
+}
+.paragraph p:last-child {
+  margin-bottom: 0;
+}
+.paragraph p a {
+  text-decoration: underline;
+}
+
+.paragraph pre {
+  background-color: #0d0d0d;
+}
+
+.paragraph ul {
+  margin-left: 1.5rem;
+}
+
+.lucide {
+  width: 18px;
+  height: 18px;
+}

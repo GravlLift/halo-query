@@ -1,0 +1,17 @@
+.query-builder {
+  margin: initial;
+}
+
+.query-builder .rule {
+  background: initial;
+}
+
+.query-builder .group-or-rule-container {
+  padding-right: 0;
+}
+
+.query-builder .group-or-rule {
+  background: initial;
+  border: 1px solid #868686;
+  border-radius: 0;
+}
