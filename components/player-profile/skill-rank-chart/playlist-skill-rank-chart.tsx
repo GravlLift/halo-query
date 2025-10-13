@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { skillRank, skillRankCombined } from '@gravllift/halo-helpers';
 import '@gravllift/utilities';
-import { wrapXuid } from '@gravllift/utilities';
+import { wrapXuid } from '@gravllift/halo-helpers';
 import {
   CategoryScale,
   ChartData,

@@ -11,7 +11,7 @@ import {
   TableCellProps,
 } from '@chakra-ui/react';
 import '@gravllift/utilities';
-import { compareXuids } from '@gravllift/utilities';
+import { compareXuids } from '@gravllift/halo-helpers';
 import NextLink from 'next/link';
 import React, { Fragment, useRef } from 'react';
 import { appInsights } from '../../lib/application-insights/client';

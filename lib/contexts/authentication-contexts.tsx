@@ -9,7 +9,8 @@ import {
   PublicClientApplication,
   ServerError,
 } from '@azure/msal-browser';
-import { requestPolicy, ResolvablePromise } from '@gravllift/utilities';
+import { ResolvablePromise } from '@gravllift/utilities';
+import { requestPolicy } from '@gravllift/halo-helpers';
 import { SeverityLevel } from '@microsoft/applicationinsights-web';
 import { RelyingParty } from 'halo-infinite-api';
 import {

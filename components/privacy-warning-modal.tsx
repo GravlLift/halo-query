@@ -1,6 +1,6 @@
 'use client';
 import { Button, Dialog, Link, Text, useDisclosure } from '@chakra-ui/react';
-import { requestPolicy } from '@gravllift/utilities';
+import { requestPolicy } from '@gravllift/halo-helpers';
 import { Privacy } from 'halo-infinite-api';
 import NextLink from 'next/link';
 import { useEffect } from 'react';

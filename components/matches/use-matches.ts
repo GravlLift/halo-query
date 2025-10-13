@@ -10,7 +10,7 @@ import { useNavigationController } from '../navigation-context';
 import { getPlayerMatches } from '../../lib/match-query/player-matches';
 import { ColumnName, columns } from '../columns/base-columns';
 import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
-import { compareXuids } from '../../../../libs/utilities/src';
+import { compareXuids } from '@gravllift/halo-helpers';
 import { toaster } from '../ui/toaster';
 import { DateTime } from 'luxon';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';

@@ -7,7 +7,7 @@ import {
   IconButton,
   Link,
 } from '@chakra-ui/react';
-import { requestPolicy } from '@gravllift/utilities';
+import { requestPolicy } from '@gravllift/halo-helpers';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createRef, useEffect, useMemo, useRef } from 'react';

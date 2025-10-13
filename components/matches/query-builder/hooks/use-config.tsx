@@ -1,4 +1,4 @@
-import { requestPolicy } from '@gravllift/utilities';
+import { requestPolicy } from '@gravllift/halo-helpers';
 import {
   BasicConfig,
   Config,

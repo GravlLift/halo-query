@@ -12,7 +12,7 @@ import {
   Portal,
 } from '@chakra-ui/react';
 import { getTierSubTierForSkill } from '@gravllift/halo-helpers';
-import { compareXuids, requestPolicy, wrapXuid } from '@gravllift/utilities';
+import { compareXuids, requestPolicy, wrapXuid } from '@gravllift/halo-helpers';
 import {
   Playlist,
   PlaylistAsset,

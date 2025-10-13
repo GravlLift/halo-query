@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { proxyFetch } from '../../../../../proxyRoute';
 import { UserInfo } from 'halo-infinite-api';
 import { addUserInfo, getByXuid } from '../../../../../../../lib/user-cache';
-import { compareXuids, getGamerpicUrl } from '@gravllift/utilities';
+import { compareXuids, getGamerpicUrl } from '@gravllift/halo-helpers';
 import type { XboxClient } from 'halo-infinite-api';
 
 type ResponseBody = Awaited<ReturnType<XboxClient['getProfiles']>>;
