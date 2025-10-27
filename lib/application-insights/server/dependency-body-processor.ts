@@ -113,9 +113,18 @@ export class DependencyBodyProcessor implements SpanProcessor {
         .split('\r\n')
         .map((header) => header.split(': ') as [string, string]);
     } else if (Array.isArray(request.headers)) {
-      headers = request.headers.map(
-        (header) => header.split(': ') as [string, string]
-      );
+      headers = request.headers.map((header) => {
+        // header might be a colon-separated string or several colon-separated strings
+        if (typeof header === 'string') {
+          const [key, ...rest] = header.split(': ');
+          return [key, rest[0]];
+        } else {
+          // The same header was provided multiple times, serialize values as a JSON array
+          const key = header[0].split(': ')[0];
+          const values = header.map((h) => h.split(': ')[1]);
+          return [key, JSON.stringify(values)];
+        }
+      });
     } else {
       headers = Object.entries(request.headers).map(([key, value]) => [
         key,
