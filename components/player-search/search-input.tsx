@@ -7,7 +7,7 @@ export default function SearchInput({
   value,
   setInputValue,
 }: {
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: RefObject<HTMLInputElement>;
   value: string;
   setInputValue: (value: string) => void;
 }) {

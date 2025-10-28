@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "predev": "npm run -w halo-infinite-api build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

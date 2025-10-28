@@ -11,6 +11,8 @@ import {
 import { useNavigationController } from '../navigation-context';
 import { toaster } from '../ui/toaster';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import type { JsonLogicTree } from '@react-awesome-query-builder/ui';
+import { useMemo } from 'react';
 
 function focusPlayerCoalesce(focusPlayer: string | string[]): string {
   if (Array.isArray(focusPlayer)) {
@@ -29,6 +31,18 @@ export function NavigationButtons(props: {
   const haloCaches = useHaloCaches();
   const { signal: navigationStartSignal, abort } = useNavigationController();
   const pageSize = useReadLocalStorage<number>('matches.pageSize') ?? 25;
+
+  const filters: JsonLogicTree | undefined = useMemo(() => {
+    if (props.filters) {
+      try {
+        return JSON.parse(props.filters);
+      } catch (e) {
+        return undefined;
+      }
+    } else {
+      return undefined;
+    }
+  }, [props.filters]);
   return (
     <Flex>
       <Box>
@@ -45,7 +59,7 @@ export function NavigationButtons(props: {
                 props.matchId,
                 pageSize,
                 navigationStartSignal,
-                props.filters,
+                filters,
                 haloCaches
               );
               if (previous == null) {
@@ -93,7 +107,7 @@ export function NavigationButtons(props: {
                 navigationStartSignal
               );
               let page: number;
-              if (props.filters) {
+              if (filters) {
                 // TODO: Handle filter return to paging
                 page = 0;
               } else {
@@ -102,7 +116,7 @@ export function NavigationButtons(props: {
                   props.matchId,
                   pageSize,
                   navigationStartSignal,
-                  props.filters,
+                  filters,
                   haloCaches
                 );
               }
@@ -138,7 +152,7 @@ export function NavigationButtons(props: {
                 props.matchId,
                 pageSize,
                 navigationStartSignal,
-                props.filters,
+                filters,
                 haloCaches
               );
               if (next == null) {

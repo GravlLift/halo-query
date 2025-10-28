@@ -2,7 +2,7 @@ import { Box, Flex, Link, Skeleton } from '@chakra-ui/react';
 import { showOpenFilePicker } from 'file-system-access';
 import { Ban } from 'lucide-react';
 import NextLink from 'next/link';
-import { RefObject } from 'react';
+import { MutableRefObject } from 'react';
 import Testing from '../testing';
 
 export default function GamertagDisplay({
@@ -12,7 +12,7 @@ export default function GamertagDisplay({
 }: {
   matchId?: string;
   player: { gamertag?: string; PlayerId: string };
-  fileHandleRef?: RefObject<FileSystemFileHandle | null>;
+  fileHandleRef?: MutableRefObject<FileSystemFileHandle | null>;
 }) {
   return (
     <Flex>

@@ -17,13 +17,7 @@ import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 
 function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
   // Traverse the object looking for gamertag references
-  if (Array.isArray(jsonLogicTree)) {
-    for (const item of jsonLogicTree) {
-      if (filterUsesGamertags(item)) {
-        return true;
-      }
-    }
-  } else if (typeof jsonLogicTree === 'object') {
+  if (typeof jsonLogicTree === 'object') {
     for (const [key, val] of Object.entries(jsonLogicTree)) {
       if (
         key === 'var' &&
