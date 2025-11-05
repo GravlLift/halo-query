@@ -157,7 +157,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         <PageViewTracker hideErrorModal={hideErrorModal} />
         <PrivacyWarningModal />
         <InteractionRequiredModal />
-        <ErrorModal isOpen={isErrorModalVisible} error={error} />
         <Card.Root
           position="fixed"
           width="100%"
