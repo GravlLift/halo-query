@@ -33,6 +33,7 @@ export type PlaylistSkillRankByModeChartProps = {
     matchId: string;
     gameVariantName: string;
     matchStart: string;
+    mapName: string;
     skill: MatchSkill;
     teamSkills: (MatchSkill | undefined)[];
   }[];
@@ -136,6 +137,8 @@ export default function PlaylistSkillRankByModeChart(
   );
 
   const chartRef = useRef<ChartJS<'line', ChartDataPoint[]>>(null);
+  const sortedSkillsRef = useRef(sortedSkills);
+  sortedSkillsRef.current = sortedSkills;
   const [zoomPlugin, firstRenderComplete] = useZoomPlugin();
   useEffect(() => {
     if (chartRef.current?.isPluginEnabled('zoom')) {
@@ -152,6 +155,8 @@ export default function PlaylistSkillRankByModeChart(
     }
   }, [props.showLastXGames, labels.length, firstRenderComplete]);
   const annotations = useTierBackgroundColorAnnotations(chartRef);
+
+  // No fetching here; mapName is supplied by parent
 
   // Recreating the options object every render will
   // cause the chart to re-render every time, interfering
@@ -180,6 +185,25 @@ export default function PlaylistSkillRankByModeChart(
           mode: 'index',
           enabled: true,
           intersect: false,
+          callbacks: {
+            beforeTitle(items) {
+              try {
+                if (!items || items.length === 0) return [];
+                const index = items[0].dataIndex ?? 0;
+                const skills = sortedSkillsRef.current;
+                if (index >= skills.length) return [];
+                const entry = skills[index];
+                const game = (entry?.gameVariantName || '').trim();
+                const mapName = (entry?.mapName || '').trim();
+                if (game && mapName) return [`${game} on ${mapName}`];
+                if (game) return [game];
+                if (mapName) return [mapName];
+                return [];
+              } catch {
+                return [];
+              }
+            },
+          },
         },
         legend: {
           position: 'bottom',

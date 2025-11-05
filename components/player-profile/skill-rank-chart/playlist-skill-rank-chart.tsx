@@ -50,6 +50,7 @@ export type PlaylistSkillRankChartProps = {
     matchId: string;
     matchStart: string;
     gameVariantName: string;
+    mapName: string;
     skill: MatchSkill;
     teamSkills: (MatchSkill | undefined)[];
   }[];
@@ -85,6 +86,9 @@ export default function PlaylistSkillRankChart(
   const allGameVariants = props.skills.map((s) => s.gameVariantName).distinct();
   const sortedSkills = props.skills.sortBy((m) => m.matchStart);
   const chartRef = useRef<ChartJS<'line', ChartDataPoint[]>>(null);
+  // Keep a ref to sorted skills for stable tooltip callbacks
+  const sortedSkillsRef = useRef(sortedSkills);
+  sortedSkillsRef.current = sortedSkills;
   const labels: string[] = [],
     csr: ChartDataPoint[] = [],
     esr: ChartDataPoint[] = [],
@@ -318,6 +322,27 @@ export default function PlaylistSkillRankChart(
           mode: 'index',
           enabled: true,
           intersect: false,
+          callbacks: {
+            // Insert a single combined line above the date: "<Game> on <Map>"
+            // If one is missing, show only the available value.
+            beforeTitle(items) {
+              try {
+                if (!items || items.length === 0) return [];
+                const index = items[0].dataIndex ?? 0;
+                const skills = sortedSkillsRef.current;
+                if (index >= skills.length) return [];
+                const entry = skills[index];
+                const game = (entry?.gameVariantName || '').trim();
+                const mapName = (entry?.mapName || '').trim();
+                if (game && mapName) return [`${game} on ${mapName}`];
+                if (game) return [game];
+                if (mapName) return [mapName];
+                return [];
+              } catch {
+                return [];
+              }
+            },
+          },
         },
         legend: {
           position: 'bottom',
@@ -388,6 +413,8 @@ export default function PlaylistSkillRankChart(
                 [
                   'Match Id',
                   'Date',
+                  'Game',
+                  'Map',
                   'CSR',
                   'ESR-A',
                   'ESR',
@@ -400,6 +427,8 @@ export default function PlaylistSkillRankChart(
                   .map((skill, i): (string | number)[] => [
                     skill.matchId,
                     skill.matchStart,
+                    skill.gameVariantName ?? '',
+                    skill.mapName ?? '',
                     csr[i]?.y ?? '',
                     esrA[i]?.y ?? '',
                     esr[i]?.y ?? '',

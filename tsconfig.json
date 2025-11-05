@@ -24,8 +24,6 @@
     "**/*.jsx",
     "**/*.ts",
     "**/*.tsx",
-    "../../dist/packages/halo-query/.next/types/**/*.ts",
-    "../../packages/halo-query/.next/types/**/*.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

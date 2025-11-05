@@ -2,6 +2,10 @@
   "name": "halo-query",
   "version": "0.0.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GravlLift/halo-query"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

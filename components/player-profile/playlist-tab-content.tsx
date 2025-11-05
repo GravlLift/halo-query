@@ -175,6 +175,10 @@ export function PlaylistTabContent({
           'PublicName' in m.MatchInfo.UgcGameVariant
             ? m.MatchInfo.UgcGameVariant.PublicName
             : m.MatchInfo.UgcGameVariant.AssetId,
+        mapName:
+          'PublicName' in m.MatchInfo.MapVariant
+            ? m.MatchInfo.MapVariant.PublicName
+            : m.MatchInfo.MapVariant.AssetId,
         skill: player?.Skill as MatchSkill,
         teamSkills: m.MatchStats.Players.filter(
           (p) => p.LastTeamId === player?.LastTeamId
