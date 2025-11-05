@@ -204,7 +204,7 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
               // User has explicitly revoked our app's access. We need to ask for permission again.
               return await requireInteraction(e);
             } else {
-              // Assume user needs to interactively re-authenticate
+              // Assume user needs to non-interactively re-authenticate
               appInsights.trackException({ exception: e });
               return await redirect();
             }
