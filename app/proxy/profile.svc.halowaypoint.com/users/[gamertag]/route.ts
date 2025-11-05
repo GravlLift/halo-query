@@ -10,7 +10,11 @@ export async function GET(
   const params = await context.params;
   const userInfo = await getByGamertag([params.gamertag]).get(params.gamertag);
   if (userInfo) {
-    return NextResponse.json(userInfo);
+    return NextResponse.json(userInfo, {
+      headers: {
+        'Cache-Control': 's-maxage=120, stale-while-revalidate=600',
+      },
+    });
   }
 
   request.headers.set('Origin', 'https://www.halowaypoint.com');
@@ -29,6 +33,10 @@ export async function GET(
       .clone()
       .json()
       .then((body: UserInfo) => addUserInfo(body));
+    response.headers.set(
+      'Cache-Control',
+      's-maxage=120, stale-while-revalidate=600'
+    );
   }
 
   return response;

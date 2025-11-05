@@ -23,7 +23,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (xuidsToFetch.size === 0) {
-      return NextResponse.json(xuids.map((xuid) => userInfos.get(xuid)!));
+      return NextResponse.json(
+        xuids.map((xuid) => userInfos.get(xuid)!),
+        {
+          headers: {
+            'Cache-Control': 's-maxage=120, stale-while-revalidate=600',
+          },
+        }
+      );
     }
 
     request.nextUrl.searchParams.set(
@@ -66,6 +73,10 @@ export async function GET(request: NextRequest) {
     response.headers.set(
       'Content-Length',
       Buffer.byteLength(JSON.stringify(newResponseBody)).toString()
+    );
+    response.headers.set(
+      'Cache-Control',
+      's-maxage=120, stale-while-revalidate=600'
     );
     return NextResponse.json(newResponseBody, {
       status: response.status,

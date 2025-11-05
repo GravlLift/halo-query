@@ -5,8 +5,6 @@ import { Preset } from '../../components/columns';
 import Matches from '../../components/matches';
 import { appInsights } from '../../lib/application-insights/client';
 
-export const dynamic = 'force-dynamic';
-
 /* eslint-disable-next-line */
 export interface MatchesPageProps {
   searchParams: Promise<{
