@@ -18,7 +18,6 @@ import NProgress from 'nprogress';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useEventListener } from 'usehooks-ts';
 import { CurrentUserHeader } from '../components/current-user-header';
-import ErrorModal from '../components/error-modal';
 import { HeaderSizeContext } from '../components/header-size';
 import InteractionRequiredModal from '../components/interaction-required-modal';
 import { NavigationProvider } from '../components/navigation-context';

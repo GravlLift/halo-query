@@ -1,7 +1,6 @@
 'use client';
+import { Box, Button, Code, Heading, VStack } from '@chakra-ui/react';
 import { TriangleAlert } from 'lucide-react';
-import { Box, Code, Heading, VStack, Button } from '@chakra-ui/react';
-import { appInsights } from '../lib/application-insights/client';
 import { useEffect } from 'react';
 
 export default function Error({
@@ -13,7 +12,9 @@ export default function Error({
 }) {
   useEffect(() => {
     if (error) {
-      appInsights.trackException({ exception: error });
+      import('../lib/application-insights/client').then(({ appInsights }) => {
+        appInsights.trackException({ exception: error });
+      });
     }
   }, [error]);
   return (
