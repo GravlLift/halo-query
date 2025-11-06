@@ -17,25 +17,21 @@ import { useApiClients } from '../lib/contexts/api-client-contexts';
 export function CurrentUserHeader() {
   const gamertag = useCurrentUserGamertag();
   const currentUser = useCurrentUser();
+
+  const [gamerpicLoaded, setGamerpicLoaded] = useState(false);
+
   const { logout } = useAuthentication();
   const { xboxAuthClient } = useApiClients();
-  // Gamertag has not been loaded from local storage,
-  // or gamertag is known but user details have not been loaded yet
-  const isLoading =
-    gamertag === undefined || (gamertag !== null && !currentUser);
-  const [gamerpicLoaded, setGamerpicLoaded] = useState(false);
 
   return (
     <Box>
-      {isLoading ? (
+      {gamertag === undefined ? (
         <Loading />
       ) : gamertag === null ? (
         <Avatar.Root
           size="md"
           cursor="pointer"
-          onClick={async () => {
-            await xboxAuthClient.getCurrentGamertag();
-          }}
+          onClick={() => xboxAuthClient.getCurrentGamertag()}
         >
           <Avatar.Fallback />
           <Avatar.Image />
