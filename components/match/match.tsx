@@ -569,17 +569,12 @@ export default function Match({ matchId, filters }: MatchProps) {
               category={playerStatsCategory}
               playersByTeam={playersByTeam}
               teamPresets={teamPresets}
-              fileHandleRef={fileHandleRef}
             />
           </Box>
           {match.Players[0] &&
           'Skill' in match.Players[0] &&
           match.Players[0].Skill ? (
-            <SkillRankingsTable
-              match={match}
-              playersByTeam={playersByTeam}
-              fileHandleRef={fileHandleRef}
-            />
+            <SkillRankingsTable match={match} playersByTeam={playersByTeam} />
           ) : null}
         </>
       ) : (

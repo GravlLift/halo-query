@@ -95,9 +95,6 @@ export default function Leaderboard({
             <Box>
               <Heading size="lg">Leaderboard</Heading>
             </Box>
-            <Box>
-              <CrawlButton />
-            </Box>
           </Box>
           <Testing>
             <Box flexGrow={1} textAlign="right">

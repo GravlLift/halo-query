@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import {
   accordionAnatomy,
+  statAnatomy,
   menuAnatomy,
   tableAnatomy,
   tabsAnatomy,
@@ -18,9 +19,12 @@ export const system = createSystem(
     globalCss: {
       html: {
         colorPalette: 'haloQuery',
+        // Ensure a sane default text and background that react to color mode
+        color: 'fg',
+        bg: 'bg',
       },
       '::selection': {
-        background: 'blue.700', // using blue.400 for contrast on dark bg
+        background: 'blue.700',
         color: 'white',
       },
       '::-moz-selection': {
@@ -37,6 +41,18 @@ export const system = createSystem(
         }),
       },
       slotRecipes: {
+        // Ensure Stat text colors don't shift with OS color mode
+        stat: defineSlotRecipe({
+          slots: statAnatomy.keys(),
+          base: {
+            label: {
+              color: 'haloQuery.fg',
+            },
+            helpText: {
+              color: 'haloQuery.fg',
+            },
+          },
+        }),
         accordion: defineSlotRecipe({
           slots: accordionAnatomy.keys(),
           base: {
@@ -61,7 +77,7 @@ export const system = createSystem(
           base: {
             root: {
               borderWidth: '1px',
-              borderColor: '#2d3748',
+              borderColor: 'border',
             },
             columnHeader: {
               textTransform: 'uppercase',
@@ -69,11 +85,12 @@ export const system = createSystem(
               fontWeight: 'bold',
               color: 'haloQuery.400',
               whiteSpace: 'break-spaces',
-              borderColor: '#2d3748',
+              borderColor: 'border',
             },
             cell: {
               whiteSpace: 'break-spaces',
-              borderColor: '#2d3748',
+              borderColor: 'border',
+              color: 'fg',
             },
           },
           variants: {
@@ -89,9 +106,39 @@ export const system = createSystem(
         tabs: defineSlotRecipe({
           slots: tabsAnatomy.keys(),
           base: {
+            // Stabilize inactive + active tab text colors across OS light/dark changes
+            trigger: {
+              color: 'haloQuery.400', // inactive (stable, muted)
+              _selected: {
+                color: 'fg', // active (stable)
+              },
+              _hover: {
+                color: 'haloQuery.400',
+              },
+              _active: {
+                color: 'haloQuery.600',
+              },
+              _focusVisible: {
+                outline: 'none',
+                boxShadow: '0 0 0 1px var(--chakra-colors-border)',
+              },
+            },
             content: {
               paddingX: '2',
             },
+          },
+          variants: {
+            variant: {
+              line: {
+                trigger: {
+                  color: 'haloQuery.600',
+                  _selected: { color: 'fg' },
+                },
+              },
+            },
+          },
+          defaultVariants: {
+            variant: 'line',
           },
         }),
       },
@@ -262,6 +309,11 @@ export const system = createSystem(
             },
             emphasized: {
               value: '{colors.haloQuery.700}',
+            },
+          },
+          fg: {
+            DEFAULT: {
+              value: '{colors.white}',
             },
           },
           border: {

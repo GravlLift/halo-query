@@ -23,6 +23,7 @@ import NProgress from 'nprogress';
 import { useEffect, useMemo, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import { useColors } from '../../../lib/hooks/colors';
+import { useChartTheme } from '../../../lib/hooks/chart-theme';
 import { tierBackgroundColorsPlugin } from './tier-background-colors-plugin';
 import { useTierBackgroundColorAnnotations } from './tier-lines-annotation-options';
 import { useZoomPlugin } from './use-zoom-plugin';
@@ -58,6 +59,7 @@ export default function PlaylistSkillRankByModeChart(
 ) {
   const { abort } = useNavigationController();
   const router = useRouter();
+  const { fontColor, gridColor } = useChartTheme();
   const sortedSkills = props.skills.sortBy((m) => m.matchStart);
   const gameVariants = sortedSkills
     .map((m) => m.gameVariantName)
@@ -170,8 +172,9 @@ export default function PlaylistSkillRankByModeChart(
         x: { display: false },
         y: {
           grid: {
-            color: 'rgba(255,255,255,0.1)',
+            color: gridColor,
           },
+          ticks: { color: fontColor },
         },
       },
       maintainAspectRatio: false,
@@ -207,6 +210,7 @@ export default function PlaylistSkillRankByModeChart(
         },
         legend: {
           position: 'bottom',
+          labels: { color: fontColor },
         },
         annotation: {},
         zoom: {
@@ -245,12 +249,10 @@ export default function PlaylistSkillRankByModeChart(
         event.native.target.style.cursor = elements[0] ? 'pointer' : 'default';
       },
     }),
-    [router]
+    [router, fontColor]
   );
-  if (options.plugins) {
-    if (options.plugins.annotation) {
-      options.plugins.annotation.annotations = annotations;
-    }
+  if (options.plugins?.annotation) {
+    options.plugins.annotation.annotations = annotations;
   }
 
   return (

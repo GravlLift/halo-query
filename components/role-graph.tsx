@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import { Radar } from 'react-chartjs-2';
 import { useColors } from '../lib/hooks/colors';
+import { useChartTheme } from '../lib/hooks/chart-theme';
 
 ChartJS.register(
   RadialLinearScale,
@@ -34,6 +35,7 @@ export default function RoleGraph(props: {
   colorOverrides?: string[];
 }) {
   const colors = useColors();
+  const { fontColor, gridColorStrong } = useChartTheme();
 
   const labels = ['Kills', 'Assists'];
   if (props.stats.find((s) => s.damage !== undefined)) {
@@ -71,22 +73,24 @@ export default function RoleGraph(props: {
           scales: {
             r: {
               max: props.radiusMax,
-              angleLines: { color: 'rgba(255, 255, 255, 0.24)' },
+              angleLines: { color: gridColorStrong },
               grid: {
                 circular: true,
-                color: 'rgba(255, 255, 255, 0.24)',
+                color: gridColorStrong,
               },
               beginAtZero: true,
               ticks: {
                 count: 4,
                 display: true,
                 backdropColor: 'rgba(0, 0, 0, 0)',
+                color: fontColor,
                 format: {
                   style: 'percent',
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 },
               },
+              pointLabels: { color: fontColor },
             },
           },
           elements: {
@@ -95,7 +99,11 @@ export default function RoleGraph(props: {
             },
           },
           plugins: {
-            legend: { display: props.stats.length > 1, position: 'bottom' },
+            legend: {
+              display: props.stats.length > 1,
+              position: 'bottom',
+              labels: { color: fontColor },
+            },
           },
         }}
       />

@@ -30,11 +30,9 @@ import { useTeamPresets } from './team-presets';
 export default function SkillRankingsTable({
   playersByTeam,
   match,
-  fileHandleRef,
 }: {
   playersByTeam: Array<[number, MatchPlayers]> | undefined;
   match: PlayerMatchHistoryStatsSkill | ProgressiveMatch;
-  fileHandleRef: RefObject<FileSystemFileHandle | null>;
 }) {
   const csrExists = match?.Players.some(
     (p) => 'Skill' in p && p.Skill?.RankRecap.PreMatchCsr.Value
@@ -167,11 +165,7 @@ export default function SkillRankingsTable({
                         }
                       >
                         <Table.Cell>
-                          <GamertagDisplay
-                            player={p}
-                            matchId={match.MatchId}
-                            fileHandleRef={fileHandleRef}
-                          />
+                          <GamertagDisplay player={p} />
                         </Table.Cell>
                         {csrExists ? (
                           p.Skill?.RankRecap.PreMatchCsr.Value === -1 ? (

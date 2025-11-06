@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import blackList from '../../../../../lib/black-list.json' with { type: 'json' };
+import { getBlackListEntry } from './blacklist';
+import { defaultClient } from '../../../../../lib/application-insights/server';
 
-function xuidIsBlacklisted(xuid: string): xuid is keyof typeof blackList {
-  return xuid in blackList;
-}
+// Required for application insights
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const requestBody = await request.text();
@@ -36,24 +36,28 @@ export async function POST(request: NextRequest) {
     } = await response.json();
 
     const xuid: string | undefined = responseBody.DisplayClaims.xui[0].xid;
-    if (xuid && xuidIsBlacklisted(xuid)) {
-      if (process.env.NEXT_RUNTIME === 'nodejs') {
-        const { defaultClient } = await import(
-          '../../../../../lib/application-insights/server'
-        );
-        defaultClient.trackEvent({
-          name: 'UserBlacklisted',
-          properties: {
-            RelyingParty: JSON.parse(requestBody).RelyingParty,
-            DisplayClaims: responseBody.DisplayClaims,
-            Gamertag: responseBody.DisplayClaims.xui[0].gtg,
-          },
-        });
+    if (xuid) {
+      try {
+        const entry = await getBlackListEntry(xuid);
+        if (entry) {
+          defaultClient.trackEvent({
+            name: 'UserBlacklisted',
+            properties: {
+              RelyingParty: JSON.parse(requestBody).RelyingParty,
+              DisplayClaims: responseBody.DisplayClaims,
+              Gamertag: responseBody.DisplayClaims.xui[0].gtg,
+            },
+          });
+          return NextResponse.json(
+            { type: 'blacklist', reason: entry.reason },
+            { status: 403 }
+          );
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          defaultClient.trackException({ exception: err });
+        }
       }
-      return NextResponse.json(
-        { type: 'blacklist', reason: blackList[xuid].reason },
-        { status: 403 }
-      );
     }
     return NextResponse.json(responseBody, response);
   }

@@ -12,6 +12,7 @@ import Leaderboards from './articles/leaderboards';
 import PsrRemoval from './articles/psr-removal';
 import QuerySavingSharing from './articles/query-saving-sharing';
 import Post from './post';
+import OpenSource from './articles/open-source';
 
 const articles: Record<
   string,
@@ -21,6 +22,11 @@ const articles: Record<
     Component: () => JSX.Element;
   }
 > = {
+  'open-source': {
+    date: '2025-11-06',
+    title: 'Halo Query is Open Source',
+    Component: OpenSource,
+  },
   assault: {
     date: '2025-02-04',
     title: 'Assault Released',

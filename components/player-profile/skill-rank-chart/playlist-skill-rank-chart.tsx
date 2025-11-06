@@ -37,6 +37,7 @@ import NProgress from 'nprogress';
 import { useEffect, useMemo, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import { useColors } from '../../../lib/hooks/colors';
+import { useChartTheme } from '../../../lib/hooks/chart-theme';
 import { getLocalStorageValueOrDefault } from '../../../lib/next-local-storage';
 import { tierBackgroundColorsPlugin } from './tier-background-colors-plugin';
 import { useTierBackgroundColorAnnotations } from './tier-lines-annotation-options';
@@ -83,6 +84,7 @@ export default function PlaylistSkillRankChart(
   const { usersCache } = useHaloCaches();
   const { abort } = useNavigationController();
   const router = useRouter();
+  const { fontColor, annotationLabelColor, gridColor } = useChartTheme();
   const allGameVariants = props.skills.map((s) => s.gameVariantName).distinct();
   const sortedSkills = props.skills.sortBy((m) => m.matchStart);
   const chartRef = useRef<ChartJS<'line', ChartDataPoint[]>>(null);
@@ -194,7 +196,7 @@ export default function PlaylistSkillRankChart(
               csrPixelValue < chartArea?.right
             );
           },
-          color: `rgba(255, 255, 255, 0.92)`,
+          color: annotationLabelColor,
           backgroundColor: 'transparent',
           font: { size: 12 },
           content: [delta > 0 ? `+${delta}` : `${delta}`],
@@ -307,8 +309,9 @@ export default function PlaylistSkillRankChart(
         x: { display: false },
         y: {
           grid: {
-            color: 'rgba(255,255,255,0.1)',
+            color: gridColor,
           },
+          ticks: { color: fontColor },
         },
       },
       maintainAspectRatio: false,
@@ -346,6 +349,7 @@ export default function PlaylistSkillRankChart(
         },
         legend: {
           position: 'bottom',
+          labels: { color: fontColor },
         },
         annotation: {},
         zoom: {
@@ -384,7 +388,7 @@ export default function PlaylistSkillRankChart(
         event.native.target.style.cursor = elements[0] ? 'pointer' : 'default';
       },
     }),
-    [router]
+    [router, fontColor]
   );
   if (options.plugins?.annotation) {
     options.plugins.annotation.annotations = annotations;

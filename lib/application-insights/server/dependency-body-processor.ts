@@ -149,7 +149,9 @@ export class DependencyBodyProcessor implements SpanProcessor {
     }
 
     if (!mswRequestId) {
-      throw new Error('msw-request-id not found');
+      // If the interceptor didn't annotate this request, skip body processing
+      // but still record available headers to avoid breaking instrumentation.
+      return;
     }
 
     this.prepareResponseHandler(mswRequestId, span);

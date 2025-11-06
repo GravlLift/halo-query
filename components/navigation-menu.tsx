@@ -22,6 +22,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import {
   FaChartLine,
   FaDiscord,
+  FaGithub,
   FaHome,
   FaNpm,
   FaPaypal,
@@ -182,6 +183,15 @@ export function NavigationMenu() {
                         title="Halo Query on Discord"
                       >
                         <Icon as={FaDiscord} boxSize={8} />
+                      </Link>
+                    </Box>
+                    <Box>
+                      <Link
+                        target="_blank"
+                        href="https://www.github.com/GravlLift/halo-query"
+                        title="Halo Query on Github"
+                      >
+                        <Icon as={FaGithub} boxSize={8} />
                       </Link>
                     </Box>
                     <Box>

@@ -14,7 +14,17 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@chakra-ui/react'],
   },
-  serverExternalPackages: ['@sentry/node', '@opentelemetry/instrumentation'],
+  // Externalize Node-only observability packages to avoid bundling warnings from dynamic require
+  serverExternalPackages: [
+    '@sentry/node',
+    '@opentelemetry/instrumentation',
+    '@opentelemetry/sdk-node',
+    '@azure/monitor-opentelemetry',
+    '@azure/opentelemetry-instrumentation-azure-sdk',
+    'require-in-the-middle',
+    'diagnostic-channel-publishers',
+    'applicationinsights',
+  ],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.externals = {
@@ -33,6 +43,12 @@ const nextConfig = {
         },
       ];
     }
+    // Silence known webpack warnings about dynamic require in 3rd-party instrumentation libs
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      /Critical dependency: require function is used in a way in which dependencies cannot be statically extracted/,
+      /Critical dependency: the request of a dependency is an expression/,
+    ];
     config.experiments = {
       ...config.experiments,
       topLevelAwait: true,

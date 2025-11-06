@@ -9,7 +9,6 @@ import { teamNames } from '../../lib/team-names';
 import { categories } from '../columns/base-columns';
 import { RowParameters, TableColumn } from '../columns/types';
 import GamertagDisplay from './gamertag-display';
-import { RefObject } from 'react';
 
 function mapTableCell(
   c2: TableColumn,
@@ -44,13 +43,11 @@ export default function PlayerCategoryTable({
   category,
   playersByTeam,
   teamPresets,
-  fileHandleRef,
 }: {
   category: (typeof categories)[number];
   match: PlayerMatchHistoryStatsSkill | ProgressiveMatch;
   playersByTeam: Array<[number, MatchPlayers]> | undefined;
   teamPresets: { color: string }[];
-  fileHandleRef: RefObject<FileSystemFileHandle | null>;
 }) {
   const matchStats = 'MatchStats' in match ? match.MatchStats : match;
   return (
@@ -140,11 +137,7 @@ export default function PlayerCategoryTable({
                     }
                   >
                     <Table.Cell>
-                      <GamertagDisplay
-                        player={p}
-                        matchId={match.MatchId}
-                        fileHandleRef={fileHandleRef}
-                      />
+                      <GamertagDisplay player={p} />
                     </Table.Cell>
                     {category.children.flatMap((c, i) =>
                       c.children
