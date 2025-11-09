@@ -40,7 +40,9 @@ export function getByGamertag(
 }
 
 export async function addUserInfo(user: UserInfo): Promise<void> {
-  const expireAt = DateTime.now().plus({ days: 3 });
+  const expireAt = DateTime.now().plus({
+    days: +(process.env.USER_CACHE_EXPIRATION_DAYS || 7),
+  });
   await Promise.all([
     redis.set(wrapXuid(user.xuid), user, {
       exat: Math.round(expireAt.toSeconds()),
