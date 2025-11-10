@@ -86,21 +86,23 @@ export async function POST(request: NextRequest) {
     const responseBody: Awaited<ReturnType<XboxClient['getProfiles']>> =
       await response.json();
     const newResponseBody: Awaited<ReturnType<XboxClient['getProfiles']>> = {
-      profileUsers: await Promise.all(
-        xuids.map(async (xuid) => {
-          let profileUser: ProfileUser;
-          const userInfo = userInfos.get(xuid);
-          if (userInfo) {
-            profileUser = userInfoToProfileUser(userInfo);
-          } else {
-            profileUser = responseBody.profileUsers.find((user) =>
-              compareXuids(user.id, xuid)
-            )!;
-            await addUserInfo(profileUserToUserInfo(profileUser));
+      profileUsers: xuids.map((xuid) => {
+        let profileUser: ProfileUser;
+        const userInfo = userInfos.get(xuid);
+        if (userInfo) {
+          profileUser = userInfoToProfileUser(userInfo);
+        } else {
+          profileUser = responseBody.profileUsers.find((user) =>
+            compareXuids(user.id, xuid)
+          )!;
+
+          if (profileUser) {
+            // Update the cache asynchronously
+            addUserInfo(profileUserToUserInfo(profileUser));
           }
-          return profileUser;
-        })
-      ),
+        }
+        return profileUser;
+      }),
     };
     // Update content length
     response.headers.set(
