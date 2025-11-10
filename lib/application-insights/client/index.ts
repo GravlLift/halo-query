@@ -64,6 +64,9 @@ appInsights.addDependencyInitializer((envelope) => {
             if (
               /\/matches\/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/skill$/.test(
                 targetUrl.pathname
+              ) ||
+              /playlist\/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/csrs/.test(
+                targetUrl.pathname
               )
             ) {
               // 404s for skill data are expected

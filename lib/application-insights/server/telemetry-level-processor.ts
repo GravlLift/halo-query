@@ -99,9 +99,12 @@ export class TelemetryLevelProcessor implements SpanProcessor {
 
               if (
                 path &&
-                /\/matches\/[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/skill$/.test(
+                (/\/matches\/[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/skill$/.test(
                   path
-                )
+                ) ||
+                  /playlist\/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/csrs/.test(
+                    path
+                  ))
               ) {
                 span.spanContext().traceFlags = TraceFlags.NONE;
                 break;
