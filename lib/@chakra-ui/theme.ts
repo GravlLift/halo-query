@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import {
   accordionAnatomy,
+  checkboxAnatomy,
   statAnatomy,
   menuAnatomy,
   tableAnatomy,
@@ -41,6 +42,40 @@ export const system = createSystem(
         }),
       },
       slotRecipes: {
+        // Make unchecked checkboxes visible against dark backgrounds
+        checkbox: defineSlotRecipe({
+          slots: checkboxAnatomy.keys(),
+          base: {
+            control: {
+              borderWidth: '2px',
+              borderColor: 'haloQuery.400',
+              bg: 'haloQuery.solid',
+              _hover: {
+                borderColor: 'haloQuery.300',
+                bg: 'haloQuery.emphasized',
+              },
+              _focusVisible: {
+                outline: 'none',
+                boxShadow: '0 0 0 1px var(--chakra-colors-haloQuery-focusRing)',
+              },
+              _checked: {
+                bg: 'blue.600',
+                borderColor: 'blue.600',
+                color: 'white',
+                _hover: {
+                  bg: 'blue.500',
+                  borderColor: 'blue.500',
+                },
+              },
+            },
+            label: {
+              color: 'fg',
+            },
+            indicator: {
+              color: 'white',
+            },
+          },
+        }),
         // Ensure Stat text colors don't shift with OS color mode
         stat: defineSlotRecipe({
           slots: statAnatomy.keys(),
