@@ -67,22 +67,16 @@ export async function POST(request: NextRequest) {
         ),
       });
     }
-
-    request.nextUrl.searchParams.set(
-      'xuids',
-      Array.from(xuidsToFetch).join(',')
-    );
   } else {
     return NextResponse.json({
       profileUsers: [],
     });
   }
 
-  const target = new URL(
-    `https://profile.xboxlive.com/users/batch/profile/settings?${request.nextUrl.searchParams}`
-  );
-
-  const response = await proxyFetch(target, request);
+  const response = await proxyFetch(request.nextUrl, request, {
+    userIds: Array.from(xuidsToFetch),
+    settings: requestBody.settings,
+  });
 
   if (response.ok) {
     const responseBody: Awaited<ReturnType<XboxClient['getProfiles']>> =

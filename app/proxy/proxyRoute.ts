@@ -1,10 +1,31 @@
 import { NextRequest } from 'next/server';
 
-export async function proxyFetch(target: URL, request: NextRequest) {
+/**
+ * Proxies a request to a target URL. Optionally allows overriding the JSON body.
+ * If overrideBody is provided it will be JSON stringified and Content-Type / Content-Length headers adjusted.
+ */
+export async function proxyFetch(
+  target: URL,
+  request: NextRequest,
+  overrideBody?: unknown
+) {
+  let headers = new Headers(request.headers);
+  let body: BodyInit | undefined;
+
+  if (overrideBody !== undefined) {
+    const json = JSON.stringify(overrideBody);
+    body = json;
+    headers.set('Content-Type', 'application/json');
+    // Remove any existing content-length; fetch will set it automatically for node >=18 when using undici
+    headers.delete('Content-Length');
+  } else {
+    body = request.body as any; // streaming body passthrough
+  }
+
   const response = await fetch(target, {
     method: request.method,
-    headers: request.headers,
-    body: request.body,
+    headers,
+    body,
     duplex: 'half',
   } as RequestInit);
 
