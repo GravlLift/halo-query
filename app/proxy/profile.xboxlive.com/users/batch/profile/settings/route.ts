@@ -73,10 +73,14 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const response = await proxyFetch(request.nextUrl, request, {
-    userIds: Array.from(xuidsToFetch),
-    settings: requestBody.settings,
-  });
+  const response = await proxyFetch(
+    new URL(`https://profile.xboxlive.com/users/batch/profile/settings`),
+    request,
+    {
+      userIds: Array.from(xuidsToFetch),
+      settings: requestBody.settings,
+    }
+  );
 
   if (response.ok) {
     const responseBody: Awaited<ReturnType<XboxClient['getProfiles']>> =
