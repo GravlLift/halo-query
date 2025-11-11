@@ -10,7 +10,6 @@ export async function proxyFetch(
   overrideBody?: unknown
 ) {
   let headers = new Headers(request.headers);
-  headers.delete('origin');
   let body: BodyInit | undefined;
 
   if (overrideBody !== undefined) {

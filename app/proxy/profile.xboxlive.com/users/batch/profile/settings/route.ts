@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  request.headers.delete('origin');
   const response = await proxyFetch(
     new URL(`https://profile.xboxlive.com/users/batch/profile/settings`),
     request,
