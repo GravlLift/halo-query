@@ -29,7 +29,7 @@ export function HaloCachesProvider({
       value={
         new HaloCaches(haloInfiniteClient, xboxClient, requestPolicy, {
           async fetchManyFn(keys) {
-            if (!leaderboard) {
+            if (!leaderboard || (await leaderboard.initialized()) === false) {
               return [];
             }
             return leaderboard.getEntries(keys);

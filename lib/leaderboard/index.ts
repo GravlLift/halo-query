@@ -15,7 +15,7 @@ import { databaseInitialized } from './csr-storage/indexed-db-repository';
 export type { LeaderboardEntry } from '@gravllift/halo-helpers';
 
 const provider: ILeaderboardProvider = {
-  initialized: () => databaseInitialized,
+  initialized: () => Promise.resolve(databaseInitialized),
   addLeaderboardEntries,
   getAllEntries,
   getRandomEntry,
