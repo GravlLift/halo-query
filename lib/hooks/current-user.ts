@@ -43,7 +43,7 @@ export function useCurrentUser() {
           toaster.create({
             id: 'user-fetch-error',
             title: 'Error fetching user from Halo Waypoint',
-            description: e.message,
+            description: e?.message,
             type: 'error',
           });
         });
@@ -57,7 +57,7 @@ export function useCurrentUser() {
               toaster.create({
                 id: 'user-fetch-error',
                 title: 'Error fetching user from Halo Waypoint',
-                description: e.message,
+                description: e?.message,
                 type: 'error',
               });
             }

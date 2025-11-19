@@ -6,11 +6,12 @@ import NextLink from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { FaMicrosoft } from 'react-icons/fa';
 import { useAuthentication } from '../lib/contexts/authentication-contexts';
-import { useCurrentUser } from '../lib/hooks/current-user';
+import { useCurrentUserGamertag } from '../lib/hooks/current-user';
 import { appInsights } from '../lib/application-insights/client';
 
 export default function InteractionRequiredModal() {
   const { interaction } = useAuthentication();
+  const gamertag = useCurrentUserGamertag();
   const canAbort = interaction && 'abort' in interaction ? true : false;
   const [navigating, setNavigating] = useState<boolean>(false);
 
@@ -29,11 +30,16 @@ export default function InteractionRequiredModal() {
       setNavigating(false);
     }
   };
-  const isOpen = !!interaction;
+  const isOpen = !!interaction && !gamertag;
   useEffect(() => {
     if (isOpen) {
       appInsights.trackEvent({
         name: 'InteractionRequiredModalOpened',
+        properties: {
+          reason: interaction?.authError
+            ? interaction.authError.message
+            : undefined,
+        },
       });
     }
   }, [isOpen]);
