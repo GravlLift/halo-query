@@ -5,6 +5,7 @@ export enum TelemetryLevel {
   All = 3,
 }
 
-export const telemetryLevel: TelemetryLevel = process.env.TELEMETRY_LEVEL
-  ? +process.env.TELEMETRY_LEVEL
+export const telemetryLevel: TelemetryLevel = process.env
+  .NEXT_PUBLIC_TELEMETRY_LEVEL
+  ? +process.env.NEXT_PUBLIC_TELEMETRY_LEVEL
   : TelemetryLevel.None;
