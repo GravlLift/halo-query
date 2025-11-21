@@ -81,7 +81,8 @@ export function useQueryBuilder(
   const renderBuilder = useCallback(
     (props: BuilderProps) => (
       <Box className="query-builder-container">
-        <Box className="query-builder">
+        {/* Add qb-dark and qb-lite so we can override minimalism but maintain dark variable set */}
+        <Box className="query-builder qb-dark qb-lite">
           <Builder {...props} />
         </Box>
       </Box>

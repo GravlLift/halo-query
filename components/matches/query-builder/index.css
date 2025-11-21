@@ -1,17 +1,228 @@
 .query-builder {
   margin: initial;
+  /* Map library CSS variable hooks to Chakra theme tokens */
+  --main-text-color: var(--chakra-colors-fg); /* relies on semantic token */
+  --group-background: var(--chakra-colors-haloQuery-solid);
+  --group-border-color: var(--chakra-colors-border);
+  --rule-background: var(--chakra-colors-haloQuery-emphasized);
+  --rule-border-color: var(--chakra-colors-border);
+  --rulegroup-background: var(--chakra-colors-haloQuery-solid);
+  --rulegroup-border-color: var(--chakra-colors-border);
+  --rulegroupext-background: var(--chakra-colors-haloQuery-solid);
+  --rulegroupext-border-color: var(--chakra-colors-border);
+  --switch-background: var(--chakra-colors-haloQuery-emphasized);
+  --switch-border-color: var(--chakra-colors-border);
+  --case-background: var(--chakra-colors-haloQuery-emphasized);
+  --case-border-color: var(--chakra-colors-border);
 }
 
-.query-builder .rule {
-  background: initial;
-}
 
 .query-builder .group-or-rule-container {
   padding-right: 0;
 }
 
 .query-builder .group-or-rule {
-  background: initial;
   border: 1px solid #868686;
   border-radius: 0;
+}
+
+/* Improve visibility of conjunction buttons that are dimmed by hide--conj */
+.query-builder .group--conjunctions.hide--conj {
+  opacity: 0.8; /* was 0.3 in library */
+}
+
+/* Ensure action buttons (add rule/group, delete) are visible at rest */
+.query-builder .group--actions button,
+.query-builder .rule--header button {
+  opacity: 1 !important;
+  color: var(--chakra-colors-haloQuery-200);
+  background-color: var(--chakra-colors-haloQuery-emphasized);
+  border: 1px solid var(--chakra-colors-border);
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: 0;
+  cursor: pointer;
+  text-transform: none;
+}
+
+/* Fallback: unify any other builder buttons to same style */
+.query-builder button:not(.ant-btn):not(.chakra-button) {
+  background-color: var(--chakra-colors-haloQuery-emphasized) !important;
+  color: var(--chakra-colors-haloQuery-200) !important;
+  border: 1px solid var(--chakra-colors-border) !important;
+  padding: 4px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  border-radius: 0 !important;
+  text-transform: none !important;
+}
+
+.query-builder button:not(.ant-btn):not(.chakra-button):hover {
+  background-color: var(--chakra-colors-blue-600) !important;
+  border-color: var(--chakra-colors-blue-600) !important;
+  color: #fff !important;
+}
+
+.query-builder button:not(.ant-btn):not(.chakra-button):focus-visible {
+  outline: 2px solid var(--chakra-colors-haloQuery-focusRing);
+  outline-offset: 1px;
+}
+
+.query-builder .group--actions button:hover,
+.query-builder .rule--header button:hover {
+  background-color: var(--chakra-colors-blue-600);
+  border-color: var(--chakra-colors-blue-600);
+  color: white;
+}
+
+/* Explicit dark backgrounds to defeat tan fallbacks */
+.query-builder .simple_group,
+.query-builder .rule_group,
+.query-builder .rule_group_ext,
+.query-builder .switch_group,
+.query-builder .case_group {
+  background-color: var(--chakra-colors-haloQuery-solid) !important;
+  border-color: var(--chakra-colors-border) !important;
+}
+
+/* Override qb-lite's hover-only visibility behavior */
+.qb-lite .group--drag-handler,
+.qb-lite .group--actions,
+.qb-lite .rule--fieldsrc,
+.qb-lite .widget--valuesrc,
+.qb-lite .rule--drag-handler,
+.qb-lite .rule--header {
+  opacity: 1 !important;
+  transition: none;
+}
+
+.qb-lite .group--header:hover .group--actions,
+.qb-lite .rule:hover .rule--header {
+  opacity: 1 !important;
+}
+
+/* Dark styling for individual rule rows */
+.query-builder .rule {
+  background-color: var(--chakra-colors-haloQuery-subtle) !important;
+  border: 1px solid var(--chakra-colors-border) !important;
+}
+
+/* Provide contrast for inputs inside dark rule rows */
+.query-builder .rule select,
+.query-builder .rule input,
+.query-builder .rule .ant-select-selector,
+.query-builder .rule .widget--widget input,
+.query-builder .rule .widget--widget select {
+  background-color: var(--chakra-colors-bg-panel) !important;
+  color: var(--chakra-colors-fg) !important;
+  border-color: var(--chakra-colors-border) !important;
+}
+
+/* Focus ring alignment */
+.query-builder .rule select:focus,
+.query-builder .rule input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--chakra-colors-haloQuery-focusRing);
+}
+
+/* Conjunction + NOT controls spacing (prevent "NotAndOr" smash) */
+.query-builder .group--header {
+  gap: 8px;
+}
+.query-builder .group--header .group--conjunctions { display: flex; gap: 4px; }
+.query-builder .group--header .group--conjunctions > * { margin: 0; }
+.query-builder .group--header .group--not { margin-right: 4px; }
+
+/* Segmented buttons for And / Or using potential radio + label structure */
+.query-builder .group--conjunctions input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.query-builder .group--conjunctions label,
+.query-builder .group--conjunctions button,
+.query-builder .group--conjunctions .segmented-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px; /* match Add rule button interior spacing */
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--chakra-colors-haloQuery-emphasized);
+  color: var(--chakra-colors-haloQuery-200);
+  border: 1px solid var(--chakra-colors-border);
+  cursor: pointer;
+  line-height: 1.2;
+  user-select: none;
+  text-transform: none; /* align with standard buttons */
+}
+.query-builder .group--conjunctions label:first-of-type,
+.query-builder .group--conjunctions button:first-of-type,
+.query-builder .group--conjunctions .segmented-item:first-of-type {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.query-builder .group--conjunctions label:last-of-type,
+.query-builder .group--conjunctions button:last-of-type,
+.query-builder .group--conjunctions .segmented-item:last-of-type {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.query-builder .group--conjunctions label + label,
+.query-builder .group--conjunctions button + button,
+.query-builder .group--conjunctions .segmented-item + .segmented-item {
+  margin-left: -1px; /* collapse borders */
+}
+/* Active state: handle radio checked + label, or an .active class */
+.query-builder .group--conjunctions input[type="radio"]:checked + label,
+.query-builder .group--conjunctions .active,
+.query-builder .group--conjunctions button[aria-pressed="true"] {
+  background: var(--chakra-colors-blue-600);
+  color: #fff;
+  border-color: var(--chakra-colors-blue-600);
+}
+.query-builder .group--conjunctions label:hover,
+.query-builder .group--conjunctions button:hover,
+.query-builder .group--conjunctions .segmented-item:hover {
+  background: var(--chakra-colors-blue-600);
+  color: #fff;
+  border-color: var(--chakra-colors-blue-600);
+}
+
+/* Chakra RadioGroup version of conjunctions */
+.query-builder .chakra-radio-group__root {
+  display: inline-flex;
+  gap: 0;
+  border: 0;
+}
+.query-builder .chakra-radio-group__root .chakra-radio-group__item {
+  background-color: var(--chakra-colors-haloQuery-emphasized);
+  color: var(--chakra-colors-haloQuery-200);
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  border: 1px solid var(--chakra-colors-border);
+  cursor: pointer;
+  user-select: none;
+  border-radius: 0;
+  text-transform: none;
+}
+.query-builder .chakra-radio-group__root .chakra-radio-group__item + .chakra-radio-group__item {
+  margin-left: -1px; /* collapse borders */
+}
+.query-builder .chakra-radio-group__root .chakra-radio-group__item[data-state="checked"],
+.query-builder .chakra-radio-group__root .chakra-radio-group__item:hover[data-state="unchecked"] {
+  background-color: var(--chakra-colors-blue-600);
+  border-color: var(--chakra-colors-blue-600);
+  color: #fff;
+}
+.query-builder .chakra-radio-group__root .chakra-radio-group__item:focus-visible {
+  outline: 2px solid var(--chakra-colors-haloQuery-focusRing);
+  outline-offset: 1px;
+}
+.query-builder .chakra-radio-group__root .chakra-radio-group__itemText {
+  pointer-events: none; /* allow clicking anywhere in label */
 }
