@@ -297,13 +297,16 @@ function ExplainMissingSkill({
   skill,
   stat,
 }: {
-  skill: MatchSkill | undefined;
+  skill: MatchSkill<1 | 0> | undefined;
   stat: 'Kills' | 'Deaths';
 }) {
   let explanation: string;
   if (skill == null) {
     explanation = 'No skill information was returned for this player.';
-  } else if (skill.StatPerformances[stat]['Count'] === 0) {
+  } else if (
+    'Kills' in skill.StatPerformances &&
+    skill.StatPerformances[stat]['Count'] === 0
+  ) {
     explanation = `This player did not record any ${stat.toLowerCase()} in this match. For whatever reason, this breaks Halo's counterfactual code. Possibly they're dividing by 0 somewhere in there?`;
   } else if (!isValidCounterfactual(skill.Counterfactuals, stat)) {
     explanation = `For some reason, this performance broke Halo's counterfactual code. Only the developers there know...`;

@@ -52,8 +52,8 @@ export type PlaylistSkillRankChartProps = {
     matchStart: string;
     gameVariantName: string;
     mapName: string;
-    skill: MatchSkill;
-    teamSkills: (MatchSkill | undefined)[];
+    skill: MatchSkill<1 | 0>;
+    teamSkills: (MatchSkill<1 | 0> | undefined)[];
   }[];
   showLastXGames: number | null;
   showCsrDeltas: boolean;

@@ -258,10 +258,10 @@ const AwardExplanation = ({
 
 export default function CsrDeltaDisplay(props: {
   outcome: MatchOutcome;
-  skill: MatchSkill | undefined;
+  skill: MatchSkill<1 | 0> | undefined;
   allTeammatesFinished: boolean;
   allEnemiesFinished: boolean;
-  teamSkills: (MatchSkill | undefined)[];
+  teamSkills: (MatchSkill<1 | 0> | undefined)[];
 }) {
   if (
     props.skill?.RankRecap == null ||
