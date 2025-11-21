@@ -1,4 +1,5 @@
 'use client';
+import { SpreadableClassShape } from '@gravllift/utilities';
 import {
   HaloAuthenticationClient,
   HaloInfiniteClient,
@@ -9,8 +10,14 @@ import {
 import { createContext, ReactNode, useContext } from 'react';
 import { fetcher } from '../clients/fetcher';
 import { tokenPersister } from '../token-persisters/client';
-import { SpreadableClassShape } from '@gravllift/utilities';
 import { useAuthentication } from './authentication-contexts';
+
+class XboxCurrentGamertagAuthenticationClient extends XboxAuthenticationClient {
+  public async getCurrentGamertag() {
+    const xstsTicket = await this.getXstsTicket(RelyingParty.Xbox);
+    return xstsTicket.DisplayClaims.xui[0].gtg;
+  }
+}
 
 interface ApiClientsContextValue {
   haloInfiniteClient: HaloInfiniteClient;
@@ -33,15 +40,18 @@ export function useApiClients() {
 
 export function ApiClientsProvider({ children }: { children: ReactNode }) {
   const { acquireOauth2AccessToken } = useAuthentication();
-  const xboxAuthClient = new XboxAuthenticationClient(tokenPersister, fetcher);
-
-  const getXstsTicket = () =>
-    xboxAuthClient.getXstsTicket(acquireOauth2AccessToken, RelyingParty.Xbox);
+  const xboxAuthClient = new XboxCurrentGamertagAuthenticationClient(
+    acquireOauth2AccessToken,
+    tokenPersister,
+    fetcher
+  );
 
   const xboxClient = new XboxClient(
     {
       getXboxLiveV3Token: async () => {
-        const xstsTicket = await getXstsTicket();
+        const xstsTicket = await xboxAuthClient.getXstsTicket(
+          RelyingParty.Xbox
+        );
         return xboxAuthClient.getXboxLiveV3Token(xstsTicket);
       },
       clearXboxLiveV3Token: () =>
@@ -51,22 +61,24 @@ export function ApiClientsProvider({ children }: { children: ReactNode }) {
   );
 
   const haloAuthClient = new HaloAuthenticationClient(
-    async () => {
-      const xstsTicket = await xboxAuthClient.getXstsTicket(
-        acquireOauth2AccessToken,
-        RelyingParty.Halo
-      );
-      return xstsTicket.Token;
+    {
+      fetchToken: async () => {
+        const xstsTicket = await xboxAuthClient.getXstsTicket(
+          RelyingParty.Halo
+        );
+        return xstsTicket.Token;
+      },
+      clearXstsToken: () => xboxAuthClient.clearXstsTicket(RelyingParty.Halo),
     },
-    () => xboxAuthClient.clearXstsTicket(RelyingParty.Halo),
-    async () => {
-      return await tokenPersister.load('halo.authToken');
-    },
-    async (token) => {
-      await tokenPersister.save('halo.authToken', token);
-    },
-    async () => {
-      await tokenPersister.clear('halo.authToken');
+    {
+      loadToken: async () =>
+        (await tokenPersister.load('halo.authToken')) ?? null,
+      saveToken: async (token) => {
+        await tokenPersister.save('halo.authToken', token);
+      },
+      clearToken: async () => {
+        await tokenPersister.clear('halo.authToken');
+      },
     },
     fetcher
   );
@@ -77,13 +89,7 @@ export function ApiClientsProvider({ children }: { children: ReactNode }) {
     <ApiClientsContext.Provider
       value={{
         haloInfiniteClient,
-        xboxAuthClient: {
-          ...xboxAuthClient,
-          getCurrentGamertag: async () => {
-            const xstsTicket = await getXstsTicket();
-            return xstsTicket.DisplayClaims.xui[0].gtg;
-          },
-        },
+        xboxAuthClient,
         xboxClient,
         haloAuthClient,
       }}
