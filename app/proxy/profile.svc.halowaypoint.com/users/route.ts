@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { proxyFetch } from '../../proxyRoute';
 import { addUserInfo, getByXuid } from '../../../../lib/user-cache';
 import { UserInfo } from 'halo-infinite-api';
@@ -55,20 +55,18 @@ export async function GET(request: NextRequest) {
     const responseBody: Awaited<ReturnType<HaloInfiniteClient['getUsers']>> =
       await response.json();
     const newResponseBody: Awaited<ReturnType<HaloInfiniteClient['getUsers']>> =
-      await Promise.all(
-        xuids.map(async (xuid) => {
-          let userInfo: UserInfo;
-          if (userInfos.has(xuid)) {
-            userInfo = userInfos.get(xuid)!;
-          } else {
-            userInfo = responseBody.find((user) =>
-              compareXuids(user.xuid, xuid)
-            )!;
-            await addUserInfo(userInfo);
-          }
-          return userInfo;
-        })
-      );
+      xuids.map((xuid) => {
+        let userInfo: UserInfo;
+        if (userInfos.has(xuid)) {
+          userInfo = userInfos.get(xuid)!;
+        } else {
+          userInfo = responseBody.find((user) =>
+            compareXuids(user.xuid, xuid)
+          )!;
+          after(() => addUserInfo(userInfo));
+        }
+        return userInfo;
+      });
     // Update content length
     response.headers.set(
       'Content-Length',

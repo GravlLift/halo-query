@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { proxyFetch } from '../../../../../proxyRoute';
 import { UserInfo } from 'halo-infinite-api';
 import { addUserInfo, getByXuid } from '../../../../../../../lib/user-cache';
@@ -67,42 +67,43 @@ export async function POST(request: NextRequest) {
         ),
       });
     }
-
-    request.nextUrl.searchParams.set(
-      'xuids',
-      Array.from(xuidsToFetch).join(',')
-    );
   } else {
     return NextResponse.json({
       profileUsers: [],
     });
   }
 
-  const target = new URL(
-    `https://profile.xboxlive.com/users/batch/profile/settings?${request.nextUrl.searchParams}`
+  request.headers.delete('origin');
+  const response = await proxyFetch(
+    new URL(`https://profile.xboxlive.com/users/batch/profile/settings`),
+    request,
+    {
+      userIds: Array.from(xuidsToFetch),
+      settings: requestBody.settings,
+    }
   );
-
-  const response = await proxyFetch(target, request);
 
   if (response.ok) {
     const responseBody: Awaited<ReturnType<XboxClient['getProfiles']>> =
       await response.json();
     const newResponseBody: Awaited<ReturnType<XboxClient['getProfiles']>> = {
-      profileUsers: await Promise.all(
-        xuids.map(async (xuid) => {
-          let profileUser: ProfileUser;
-          const userInfo = userInfos.get(xuid);
-          if (userInfo) {
-            profileUser = userInfoToProfileUser(userInfo);
-          } else {
-            profileUser = responseBody.profileUsers.find((user) =>
-              compareXuids(user.id, xuid)
-            )!;
-            await addUserInfo(profileUserToUserInfo(profileUser));
+      profileUsers: xuids.map((xuid) => {
+        let profileUser: ProfileUser;
+        const userInfo = userInfos.get(xuid);
+        if (userInfo) {
+          profileUser = userInfoToProfileUser(userInfo);
+        } else {
+          profileUser = responseBody.profileUsers.find((user) =>
+            compareXuids(user.id, xuid)
+          )!;
+
+          if (profileUser) {
+            // Update the cache asynchronously
+            after(() => addUserInfo(profileUserToUserInfo(profileUser)));
           }
-          return profileUser;
-        })
-      ),
+        }
+        return profileUser;
+      }),
     };
     // Update content length
     response.headers.set(

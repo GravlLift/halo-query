@@ -1,5 +1,4 @@
-import { UserInfo } from 'halo-infinite-api';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { addUserInfo, getByGamertag } from '../../../../../lib/user-cache';
 import { proxyFetch } from '../../../proxyRoute';
 
@@ -29,10 +28,12 @@ export async function GET(
   const response = await proxyFetch(target, request);
 
   if (response.ok) {
-    await response
-      .clone()
-      .json()
-      .then((body: UserInfo) => addUserInfo(body));
+    const dupeResponse = response.clone();
+    after(async () => {
+      const body = await dupeResponse.json();
+      await addUserInfo(body);
+    });
+
     response.headers.set(
       'Cache-Control',
       's-maxage=120, stale-while-revalidate=600'
