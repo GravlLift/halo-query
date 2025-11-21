@@ -1,5 +1,6 @@
 .query-builder {
   margin: initial;
+  border-radius: 0;
   /* Map library CSS variable hooks to Chakra theme tokens */
   --main-text-color: var(--chakra-colors-fg); /* relies on semantic token */
   --group-background: var(--chakra-colors-haloQuery-solid);
@@ -132,7 +133,7 @@
 .query-builder .group--header {
   gap: 8px;
 }
-.query-builder .group--header .group--conjunctions { display: flex; gap: 4px; }
+.query-builder .group--header .group--conjunctions { display: flex; gap: 4px; border-radius: 0; }
 .query-builder .group--header .group--conjunctions > * { margin: 0; }
 .query-builder .group--header .group--not { margin-right: 4px; }
 

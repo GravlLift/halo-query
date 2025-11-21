@@ -31,7 +31,10 @@ export default function ChakraConjs({
               ?.key
           : null
       }
-      onValueChange={(e) => setConjunction(e.value || '')}
+      onValueChange={(e) => {
+        // details should contain the selected value; ensure we pass it through.
+        setConjunction(e.value || '');
+      }}
     >
       {conjunctionOptionsKeys.map((key) => {
         const { id, label, checked } = conjunctionOptions
@@ -53,6 +56,8 @@ export default function ChakraConjs({
             disabled={readonly || disabled}
             value={key}
           >
+            <RadioGroup.ItemHiddenInput />
+            <RadioGroup.ItemIndicator />
             <RadioGroup.ItemText key={id + postfix + 'label'}>
               {label}
             </RadioGroup.ItemText>
