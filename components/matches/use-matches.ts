@@ -14,6 +14,7 @@ import { compareXuids } from '@gravllift/halo-helpers';
 import { toaster } from '../ui/toaster';
 import { DateTime } from 'luxon';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
   // Traverse the object looking for gamertag references
@@ -259,7 +260,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
         }
       } catch (e) {
         if (e instanceof Error) {
-          if (e instanceof RequestError && e.response.status === 404) {
+          if (isRequestError(e) && e.response.status === 404) {
             if (!toaster.isVisible('no-matches-found')) {
               toaster.create({
                 id: 'no-matches-found',

@@ -13,6 +13,7 @@ import NextLink from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCurrentUserGamertag } from '../lib/hooks/current-user';
 import { Loading } from './loading';
+import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 type DeniedError =
   | { type: 'blacklist'; reason: string }
@@ -28,7 +29,8 @@ export default function ErrorModal(props: {
   useEffect(() => {
     (async () => {
       if (
-        props.error instanceof RequestError &&
+        props.error &&
+        isRequestError(props.error) &&
         props.error.response?.status === 403 &&
         props.error.response?.url?.endsWith('/xsts/authorize')
       ) {
@@ -67,7 +69,7 @@ export default function ErrorModal(props: {
                 <Center mb={2}>
                   <CircleAlert size={32} color={'yellow.500'} />
                 </Center>
-                {props.error instanceof RequestError ? (
+                {props.error && isRequestError(props.error) ? (
                   <>
                     <Text>
                       Maybe I did this, maybe this is Halo&apos;s fault. Either
@@ -106,7 +108,7 @@ export default function ErrorModal(props: {
               <Dialog.Footer>
                 <ButtonGroup>
                   <Button onClick={() => location.reload()}>Reload</Button>
-                  {props.error instanceof RequestError && (
+                  {props.error && isRequestError(props.error) && (
                     <Link asChild>
                       <NextLink
                         href={

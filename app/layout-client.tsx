@@ -28,6 +28,7 @@ import { Toaster } from '../components/ui/toaster';
 import { VerticalCenter } from '../components/vertical-center';
 import { appInsights } from '../lib/application-insights/client';
 import '../lib/client-polyfills';
+import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 const unloadAbortController = new AbortController();
 if (typeof window !== 'undefined') {
@@ -73,7 +74,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   const errorHandler = useCallback(
     async (e: Error) => {
       let shouldReload = false;
-      if (e instanceof RequestError && e.response.status === 401) {
+      if (isRequestError(e) && e.response.status === 401) {
         // Something has gone wrong with auth, clear the cache and force a reload
         shouldReload = true;
       } else if (

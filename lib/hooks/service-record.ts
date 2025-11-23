@@ -6,6 +6,7 @@ import {
   useNavigationController,
 } from '../../components/navigation-context';
 import { useApiClients } from '../contexts/api-client-contexts';
+import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 export function useServiceRecord(gamerTag: string | null) {
   const { haloInfiniteClient } = useApiClients();
@@ -32,7 +33,11 @@ export function useServiceRecord(gamerTag: string | null) {
         );
         setServiceRecord(res);
       } catch (e) {
-        if (e instanceof RequestError && e.response.status === 404) {
+        if (
+          e instanceof Error &&
+          isRequestError(e) &&
+          e.response.status === 404
+        ) {
           setServiceRecord(undefined);
         } else {
           abortErrorCatch(e);

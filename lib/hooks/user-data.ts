@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigationController } from '../../components/navigation-context';
 import { toaster } from '../../components/ui/toaster';
 import { useHaloCaches } from '../contexts/halo-caches-context';
+import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 export function useUserData(gamerTag: string | null) {
   const { usersCache } = useHaloCaches();
@@ -19,7 +20,11 @@ export function useUserData(gamerTag: string | null) {
         const user = await usersCache.get(gamerTag, navigationStartSignal);
         setUser(user);
       } catch (e) {
-        if (e instanceof RequestError && e.response.status === 404) {
+        if (
+          e instanceof Error &&
+          isRequestError(e) &&
+          e.response.status === 404
+        ) {
           setUser(undefined);
         } else {
           if (e instanceof DOMException && e.name === 'AbortError') {
