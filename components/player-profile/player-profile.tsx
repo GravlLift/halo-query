@@ -1,37 +1,42 @@
 'use client';
-import { ExternalLink } from 'lucide-react';
 import {
   Box,
   Center,
   Flex,
   Heading,
   Link,
-  Text,
   Menu,
-  Tabs,
   Portal,
+  Tabs,
+  Text,
 } from '@chakra-ui/react';
-import { getTierSubTierForSkill } from '@gravllift/halo-helpers';
-import { compareXuids, requestPolicy, wrapXuid } from '@gravllift/halo-helpers';
 import {
+  compareXuids,
+  getTierSubTierForSkill,
+  requestPolicy,
+  wrapXuid,
+} from '@gravllift/halo-helpers';
+import {
+  BanSummary,
   Playlist,
   PlaylistAsset,
   PlaylistCsrContainer,
   ServiceRecord,
-  BanSummary,
 } from 'halo-infinite-api';
-import { useEffect, useState } from 'react';
-import { useNavigationController } from '../navigation-context';
+import { ExternalLink } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { useEffect, useMemo, useState } from 'react';
+import { MemoryCache } from '../../../../libs/utilities/src';
+import { useApiClients } from '../../lib/contexts/api-client-contexts';
+import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useServiceRecord } from '../../lib/hooks/service-record';
 import { useUserData } from '../../lib/hooks/user-data';
 import { nextRedirectRejectionHandler } from '../../lib/match-query/promise-helpers';
 import { Loading } from '../loading';
+import { useNavigationController } from '../navigation-context';
 import { VerticalCenter } from '../vertical-center';
 import { PlaylistTabContent } from './playlist-tab-content';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { useApiClients } from '../../lib/contexts/api-client-contexts';
-import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
-import { DateTime } from 'luxon';
 
 function usePlaylists(
   serviceRecord: ServiceRecord | undefined,
@@ -39,6 +44,36 @@ function usePlaylists(
 ) {
   const { playlistCache, playlistVersionCache } = useHaloCaches();
   const { haloInfiniteClient } = useApiClients();
+  const seasonCache = useMemo(
+    () =>
+      new MemoryCache<
+        PlaylistCsrContainer | null,
+        { xuid: string; playlistId: string; seasonId: string },
+        string
+      >({
+        cacheExpirationMs: 15 * 1000,
+        fetchOneFn: async ({ playlistId, seasonId, xuid }, signal) => {
+          return await requestPolicy
+            .execute(
+              (ctx) =>
+                haloInfiniteClient.getPlaylistCsr(
+                  playlistId,
+                  [xuid],
+                  seasonId,
+                  {
+                    signal: ctx.signal,
+                  }
+                ),
+              signal
+            )
+            .then((r) => r[0].Result)
+            .catch(() => null);
+        },
+        keyTransformer: ({ xuid, playlistId, seasonId }) =>
+          `${xuid}-${playlistId}-${seasonId}`,
+      }),
+    [haloInfiniteClient]
+  );
 
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState<
@@ -107,21 +142,14 @@ function usePlaylists(
                       `Failed to parse season id from ${CsrSeasonFilePath}`
                     );
                   }
-                  return requestPolicy
-                    .execute(
-                      (ctx) =>
-                        haloInfiniteClient.getPlaylistCsr(
-                          playlistId,
-                          [userInfo.xuid],
-                          seasonId,
-                          {
-                            signal: ctx.signal,
-                          }
-                        ),
-                      navigationStartSignal
-                    )
-                    .then((r) => r[0].Result)
-                    .catch(() => null);
+                  return seasonCache.get(
+                    {
+                      playlistId,
+                      seasonId,
+                      xuid: userInfo.xuid,
+                    },
+                    navigationStartSignal
+                  );
                 }),
               ]).then(nextRedirectRejectionHandler);
 
