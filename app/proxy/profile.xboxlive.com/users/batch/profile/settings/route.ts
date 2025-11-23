@@ -1,9 +1,8 @@
-import { after, NextRequest, NextResponse } from 'next/server';
-import { proxyFetch } from '../../../../../proxyRoute';
-import { UserInfo } from 'halo-infinite-api';
-import { addUserInfo, getByXuid } from '../../../../../../../lib/user-cache';
 import { compareXuids, getGamerpicUrl } from '@gravllift/halo-helpers';
 import type { XboxClient } from 'halo-infinite-api';
+import { UserInfo } from 'halo-infinite-api';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { addUserInfo, getByXuid } from '../../../../../../../lib/user-cache';
 
 type ResponseBody = Awaited<ReturnType<XboxClient['getProfiles']>>;
 type ProfileUser = ResponseBody['profileUsers'][number];
@@ -73,34 +72,62 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  request.headers.delete('origin');
-  const response = await proxyFetch(
-    new URL(`https://profile.xboxlive.com/users/batch/profile/settings`),
-    request
+  // Perform a partial fetch: only request missing xuids from upstream
+  const url = new URL(
+    'https://profile.xboxlive.com/users/batch/profile/settings'
   );
+  const headers = new Headers(request.headers);
+  headers.delete('origin');
+  headers.set('Content-Type', 'application/json');
+  const fetchBody = {
+    userIds: Array.from(xuidsToFetch),
+    settings: requestBody.settings,
+  };
+
+  let response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(fetchBody),
+  });
+
+  // Re-wrap response and add CORS headers (mirrors proxyFetch behavior)
+  response = new Response(response.body, response);
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, DELETE, OPTIONS'
+  );
+  response.headers.set('Access-Control-Allow-Headers', '*');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set('Access-Control-Max-Age', '3600');
 
   if (response.ok) {
     const responseBody: Awaited<ReturnType<XboxClient['getProfiles']>> =
       await response.json();
     const newResponseBody: Awaited<ReturnType<XboxClient['getProfiles']>> = {
-      profileUsers: xuids.map((xuid) => {
-        let profileUser: ProfileUser;
-        const userInfo = userInfos.get(xuid);
-        if (userInfo) {
-          profileUser = userInfoToProfileUser(userInfo);
-        } else {
-          profileUser = responseBody.profileUsers.find((user) =>
-            compareXuids(user.id, xuid)
-          )!;
-
-          if (profileUser) {
-            // Update the cache asynchronously
-            after(() => addUserInfo(profileUserToUserInfo(profileUser)));
-          }
-        }
-        return profileUser;
-      }),
+      profileUsers: [],
     };
+    for (const xuid of xuids) {
+      const userInfo = userInfos.get(xuid);
+      if (userInfo) {
+        newResponseBody.profileUsers.push(userInfoToProfileUser(userInfo));
+      } else {
+        const found = responseBody.profileUsers.find((user) =>
+          compareXuids(user.id, xuid)
+        );
+
+        if (found) {
+          newResponseBody.profileUsers.push(found);
+          // Update the cache asynchronously
+          after(() => addUserInfo(profileUserToUserInfo(found)));
+        } else {
+          console.warn(
+            `Failed to find user profile for xuid(${xuid}) in both cache and upstream fetch.`
+          );
+        }
+      }
+    }
+
     // Update content length
     response.headers.set(
       'Content-Length',
