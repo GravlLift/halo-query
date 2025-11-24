@@ -28,7 +28,7 @@ import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useObservable } from '../../lib/hooks/use-observable';
 import { ResultsList } from './results-list';
 import SearchInput from './search-input';
-import { waypointXboxRequestPolicy } from '../../lib/requestPolicy';
+import { waypointXboxRequestPolicy } from '../../lib/request-policy';
 
 export default function PlayerSearch() {
   const { fullUsersCache } = useHaloCaches();

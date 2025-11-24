@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useApiClients } from '../lib/contexts/api-client-contexts';
 import { useCurrentUser } from '../lib/hooks/current-user';
 import { localStorageEvent } from '../lib/local-storage/event-based-localstorage';
-import { waypointXboxRequestPolicy } from '../lib/requestPolicy';
+import { waypointXboxRequestPolicy } from '../lib/request-policy';
 
 export default function PrivacyWarningModal() {
   const currentUser = useCurrentUser();

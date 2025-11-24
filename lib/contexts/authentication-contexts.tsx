@@ -24,7 +24,7 @@ import { appInsights } from '../application-insights/client';
 import { fetcher } from '../clients/fetcher';
 import { localStorageEvent } from '../local-storage/event-based-localstorage';
 import { scopes } from '../msal-instance/scopes';
-import { waypointXboxRequestPolicy } from '../requestPolicy';
+import { waypointXboxRequestPolicy } from '../request-policy';
 
 function getHeaderDict(headers: Headers): Record<string, string> {
   const headerDict: Record<string, string> = {};

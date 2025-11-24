@@ -25,7 +25,7 @@ import {
 import { useApiClients } from '../../../../lib/contexts/api-client-contexts';
 import { useHaloCaches } from '../../../../lib/contexts/halo-caches-context';
 import { useFocusPlayer } from '../../../../lib/contexts/focus-player-context';
-import { waypointXboxRequestPolicy } from '../../../../lib/requestPolicy';
+import { waypointXboxRequestPolicy } from '../../../../lib/request-policy';
 
 type HaloQueryFields = {
   [key in ColumnName]?: Field;

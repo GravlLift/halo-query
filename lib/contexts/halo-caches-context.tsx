@@ -2,7 +2,7 @@ import { HaloCaches, compareXuids } from '@gravllift/halo-helpers';
 import { createContext, useContext } from 'react';
 import { useLeaderboard } from '../../components/leaderboard-provider/leaderboard-context';
 import { useApiClients } from './api-client-contexts';
-import { waypointXboxRequestPolicy } from '../requestPolicy';
+import { waypointXboxRequestPolicy } from '../request-policy';
 
 const HaloCachesContext = createContext<HaloCaches | null>(null);
 

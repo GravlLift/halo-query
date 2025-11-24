@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigationController } from '../../components/navigation-context';
 import { toaster } from '../../components/ui/toaster';
 import { useHaloCaches } from '../contexts/halo-caches-context';
-import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
+import { isRequestError } from '@gravllift/halo-helpers';
 
 export function useUserData(gamerTag: string | null) {
   const { usersCache } = useHaloCaches();

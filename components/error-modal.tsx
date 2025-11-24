@@ -1,19 +1,18 @@
-import { CircleAlert, ExternalLink, TriangleAlert } from 'lucide-react';
 import {
   Box,
   Button,
   ButtonGroup,
   Center,
-  Link,
   Dialog,
+  Link,
   Text,
 } from '@chakra-ui/react';
-import { RequestError } from 'halo-infinite-api';
+import { isRequestError } from '@gravllift/halo-helpers';
+import { CircleAlert, ExternalLink, TriangleAlert } from 'lucide-react';
 import NextLink from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCurrentUserGamertag } from '../lib/hooks/current-user';
 import { Loading } from './loading';
-import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 type DeniedError =
   | { type: 'blacklist'; reason: string }

@@ -33,7 +33,7 @@ import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useServiceRecord } from '../../lib/hooks/service-record';
 import { useUserData } from '../../lib/hooks/user-data';
 import { nextRedirectRejectionHandler } from '../../lib/match-query/promise-helpers';
-import { waypointXboxRequestPolicy } from '../../lib/requestPolicy';
+import { waypointXboxRequestPolicy } from '../../lib/request-policy';
 import { Loading } from '../loading';
 import { useNavigationController } from '../navigation-context';
 import { VerticalCenter } from '../vertical-center';

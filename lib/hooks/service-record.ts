@@ -1,4 +1,4 @@
-import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
+import { isRequestError } from '@gravllift/halo-helpers';
 import { ServiceRecord } from 'halo-infinite-api';
 import { useEffect, useState } from 'react';
 import {
@@ -6,7 +6,7 @@ import {
   useNavigationController,
 } from '../../components/navigation-context';
 import { useApiClients } from '../contexts/api-client-contexts';
-import { waypointXboxRequestPolicy } from '../requestPolicy';
+import { waypointXboxRequestPolicy } from '../request-policy';
 
 export function useServiceRecord(gamerTag: string | null) {
   const { haloInfiniteClient } = useApiClients();

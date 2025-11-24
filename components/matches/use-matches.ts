@@ -14,7 +14,7 @@ import { compareXuids } from '@gravllift/halo-helpers';
 import { toaster } from '../ui/toaster';
 import { DateTime } from 'luxon';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
+import { isRequestError } from '@gravllift/halo-helpers';
 
 function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
   // Traverse the object looking for gamertag references

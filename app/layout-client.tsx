@@ -9,9 +9,8 @@ import {
   Link,
   Spacer,
   useBreakpointValue,
-  useDisclosure,
 } from '@chakra-ui/react';
-import { RequestError } from 'halo-infinite-api';
+import { isRequestError } from '@gravllift/halo-helpers';
 import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
@@ -28,7 +27,6 @@ import { Toaster } from '../components/ui/toaster';
 import { VerticalCenter } from '../components/vertical-center';
 import { appInsights } from '../lib/application-insights/client';
 import '../lib/client-polyfills';
-import { isRequestError } from '@gravllift/halo-helpers/src/error-helpers';
 
 const unloadAbortController = new AbortController();
 if (typeof window !== 'undefined') {
@@ -50,11 +48,7 @@ function shouldIgnoreError(e: Error) {
   );
 }
 
-const PageViewTracker = ({
-  hideErrorModal,
-}: {
-  hideErrorModal: () => void;
-}) => {
+const PageViewTracker = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,45 +56,37 @@ const PageViewTracker = ({
   useEffect(() => {
     appInsights.trackPageView();
     NProgress.done();
-    hideErrorModal();
-  }, [pathname, router, searchParams, hideErrorModal]);
+  }, [pathname, router, searchParams]);
   return <></>;
 };
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
-  const { open: isErrorModalVisible, onClose: hideErrorModal } =
-    useDisclosure();
-  const [error, setError] = useState<Error>();
-  const errorHandler = useCallback(
-    async (e: Error) => {
-      let shouldReload = false;
-      if (isRequestError(e) && e.response.status === 401) {
-        // Something has gone wrong with auth, clear the cache and force a reload
-        shouldReload = true;
-      } else if (
-        e.name === 'ChunkLoadError' ||
-        e.message.startsWith('ChunkLoadError:')
-      ) {
-        shouldReload = true;
-      }
+  const errorHandler = useCallback(async (e: Error) => {
+    let shouldReload = false;
+    if (isRequestError(e) && e.response.status === 401) {
+      // Something has gone wrong with auth, clear the cache and force a reload
+      shouldReload = true;
+    } else if (
+      e.name === 'ChunkLoadError' ||
+      e.message.startsWith('ChunkLoadError:')
+    ) {
+      shouldReload = true;
+    }
 
-      if (shouldReload) {
-        // Prevent infinite reload loop
-        const searchParams = new URLSearchParams(location.search);
-        if (!searchParams.has('force-reload')) {
-          searchParams.set('force-reload', '1');
-          location.search = searchParams.toString();
-          return;
-        }
-      }
-
-      if (shouldIgnoreError(e)) {
+    if (shouldReload) {
+      // Prevent infinite reload loop
+      const searchParams = new URLSearchParams(location.search);
+      if (!searchParams.has('force-reload')) {
+        searchParams.set('force-reload', '1');
+        location.search = searchParams.toString();
         return;
       }
-      setError(e);
-    },
-    [setError]
-  );
+    }
+
+    if (shouldIgnoreError(e)) {
+      return;
+    }
+  }, []);
   useEventListener(
     'unhandledrejection',
     (e) => {
@@ -154,7 +140,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     >
       <NavigationProvider>
         <Toaster />
-        <PageViewTracker hideErrorModal={hideErrorModal} />
+        <PageViewTracker />
         <PrivacyWarningModal />
         <InteractionRequiredModal />
         <Card.Root
