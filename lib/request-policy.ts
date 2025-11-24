@@ -8,6 +8,14 @@ waypointXboxRequestPolicy.onFailure(async ({ reason }) => {
     isRequestError(reason.error) &&
     reason.error.response.headers.has('x-vercel-mitigated')
   ) {
-    window.location.reload();
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.has('force-reload')) {
+      searchParams.set('force-reload', '1');
+      location.search = searchParams.toString();
+    } else {
+      console.error(
+        'Request failed due to Vercel mitigation, but force-reload was already attempted.'
+      );
+    }
   }
 });
