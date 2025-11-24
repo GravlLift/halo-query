@@ -7,7 +7,6 @@ import {
   IconButton,
   Link,
 } from '@chakra-ui/react';
-import { requestPolicy } from '@gravllift/halo-helpers';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createRef, useEffect, useMemo, useRef } from 'react';
@@ -29,6 +28,7 @@ import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useObservable } from '../../lib/hooks/use-observable';
 import { ResultsList } from './results-list';
 import SearchInput from './search-input';
+import { waypointXboxRequestPolicy } from '../../lib/requestPolicy';
 
 export default function PlayerSearch() {
   const { fullUsersCache } = useHaloCaches();
@@ -48,7 +48,7 @@ export default function PlayerSearch() {
         filter((search) => !!search),
         debounceTime(200),
         switchMap((search) =>
-          requestPolicy
+          waypointXboxRequestPolicy
             .execute((ctx) =>
               xboxClient.searchUsers(search, 5, { signal: ctx.signal })
             )

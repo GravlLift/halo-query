@@ -10,7 +10,6 @@ import {
   ServerError,
 } from '@azure/msal-browser';
 import { ResolvablePromise } from '@gravllift/utilities';
-import { requestPolicy } from '@gravllift/halo-helpers';
 import { SeverityLevel } from '@microsoft/applicationinsights-web';
 import { RelyingParty } from 'halo-infinite-api';
 import {
@@ -25,6 +24,7 @@ import { appInsights } from '../application-insights/client';
 import { fetcher } from '../clients/fetcher';
 import { localStorageEvent } from '../local-storage/event-based-localstorage';
 import { scopes } from '../msal-instance/scopes';
+import { waypointXboxRequestPolicy } from '../requestPolicy';
 
 function getHeaderDict(headers: Headers): Record<string, string> {
   const headerDict: Record<string, string> = {};
@@ -82,7 +82,7 @@ const msalInstance = new PublicClientApplication({
     },
     networkClient: {
       async sendGetRequestAsync(url, options) {
-        const response = await requestPolicy.execute(() =>
+        const response = await waypointXboxRequestPolicy.execute(() =>
           fetcher(url, { ...options, method: 'GET' })
         );
         return {
@@ -92,7 +92,7 @@ const msalInstance = new PublicClientApplication({
         };
       },
       async sendPostRequestAsync(url, options) {
-        const response = await requestPolicy.execute(() =>
+        const response = await waypointXboxRequestPolicy.execute(() =>
           fetcher(url, { ...options, method: 'POST' })
         );
         return {

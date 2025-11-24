@@ -1,4 +1,3 @@
-import { requestPolicy } from '@gravllift/halo-helpers';
 import {
   BasicConfig,
   Config,
@@ -26,6 +25,7 @@ import {
 import { useApiClients } from '../../../../lib/contexts/api-client-contexts';
 import { useHaloCaches } from '../../../../lib/contexts/halo-caches-context';
 import { useFocusPlayer } from '../../../../lib/contexts/focus-player-context';
+import { waypointXboxRequestPolicy } from '../../../../lib/requestPolicy';
 
 type HaloQueryFields = {
   [key in ColumnName]?: Field;
@@ -37,7 +37,7 @@ export function useConfig() {
   const { playlistCache, playlistVersionCache } = useHaloCaches();
   return useMemo(() => {
     const serviceRecordPromise = focusGamertag
-      ? requestPolicy.execute((ctx) =>
+      ? waypointXboxRequestPolicy.execute((ctx) =>
           haloInfiniteClient.getUserServiceRecord(focusGamertag, undefined, {
             signal: ctx.signal,
           })

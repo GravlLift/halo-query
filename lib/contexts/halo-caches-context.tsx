@@ -1,11 +1,8 @@
-import {
-  HaloCaches,
-  compareXuids,
-  requestPolicy,
-} from '@gravllift/halo-helpers';
+import { HaloCaches, compareXuids } from '@gravllift/halo-helpers';
 import { createContext, useContext } from 'react';
 import { useLeaderboard } from '../../components/leaderboard-provider/leaderboard-context';
 import { useApiClients } from './api-client-contexts';
+import { waypointXboxRequestPolicy } from '../requestPolicy';
 
 const HaloCachesContext = createContext<HaloCaches | null>(null);
 
@@ -27,17 +24,24 @@ export function HaloCachesProvider({
   return (
     <HaloCachesContext.Provider
       value={
-        new HaloCaches(haloInfiniteClient, xboxClient, requestPolicy, {
-          async fetchManyFn(keys) {
-            if (!leaderboard || (await leaderboard.initialized()) === false) {
-              return [];
-            }
-            return leaderboard.getEntries(keys);
-          },
-          resultSelector(items, key) {
-            return items.find((entry) => compareXuids(entry.xuid, key)) ?? null;
-          },
-        })
+        new HaloCaches(
+          haloInfiniteClient,
+          xboxClient,
+          waypointXboxRequestPolicy,
+          {
+            async fetchManyFn(keys) {
+              if (!leaderboard || (await leaderboard.initialized()) === false) {
+                return [];
+              }
+              return leaderboard.getEntries(keys);
+            },
+            resultSelector(items, key) {
+              return (
+                items.find((entry) => compareXuids(entry.xuid, key)) ?? null
+              );
+            },
+          }
+        )
       }
     >
       {children}

@@ -13,13 +13,13 @@ import {
 import {
   compareXuids,
   getTierSubTierForSkill,
-  requestPolicy,
   wrapXuid,
 } from '@gravllift/halo-helpers';
 import {
   BanSummary,
   Playlist,
   PlaylistAsset,
+  PlaylistCsr,
   PlaylistCsrContainer,
   ServiceRecord,
 } from 'halo-infinite-api';
@@ -33,6 +33,7 @@ import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useServiceRecord } from '../../lib/hooks/service-record';
 import { useUserData } from '../../lib/hooks/user-data';
 import { nextRedirectRejectionHandler } from '../../lib/match-query/promise-helpers';
+import { waypointXboxRequestPolicy } from '../../lib/requestPolicy';
 import { Loading } from '../loading';
 import { useNavigationController } from '../navigation-context';
 import { VerticalCenter } from '../vertical-center';
@@ -53,7 +54,7 @@ function usePlaylists(
       >({
         cacheExpirationMs: 15 * 1000,
         fetchOneFn: async ({ playlistId, seasonId, xuid }, signal) => {
-          return await requestPolicy
+          return await waypointXboxRequestPolicy
             .execute(
               (ctx) =>
                 haloInfiniteClient.getPlaylistCsr(
@@ -87,7 +88,7 @@ function usePlaylists(
   const { signal: navigationStartSignal } = useNavigationController();
   useEffect(() => {
     setPlaylists([]);
-  }, [serviceRecord, userInfo]);
+  }, [userInfo?.xuid]);
   useEffect(() => {
     (async () => {
       if (!userInfo?.xuid) return;
@@ -101,7 +102,7 @@ function usePlaylists(
             navigationStartSignal
           );
           if (playlistInfo.HasCsr) {
-            const serviceCalendar = await requestPolicy.execute(
+            const serviceCalendar = await waypointXboxRequestPolicy.execute(
               (ctx) =>
                 haloInfiniteClient.getSeasonCalendar({
                   signal: ctx.signal,
@@ -110,7 +111,7 @@ function usePlaylists(
             );
             const [lifetimeCsr, playlistAsset, ...seasonCsrs] =
               await Promise.allSettled([
-                requestPolicy
+                waypointXboxRequestPolicy
                   .execute(
                     (ctx) =>
                       haloInfiniteClient.getPlaylistCsr(
@@ -202,7 +203,7 @@ function usePlaylists(
       return order;
     }),
     loading,
-    updateCsr: (playlistId: string, newCsr: number) => {
+    updateCsr: (playlistId: string, newCsr: PlaylistCsr) => {
       setPlaylists((current) => {
         const existingIndex = current.findIndex(
           (p) => p.playlistId === playlistId
@@ -212,16 +213,16 @@ function usePlaylists(
         } else {
           const clone = [...current];
           const allTimeMax = Math.max(
-            newCsr,
+            newCsr.Value,
             clone[existingIndex].csr.AllTimeMax.Value
           );
           const allTimeMaxTierInfo = getTierSubTierForSkill(allTimeMax);
           const seasonMax = Math.max(
-            newCsr,
+            newCsr.Value,
             clone[existingIndex].csr.SeasonMax.Value
           );
           const seasonMaxTierInfo = getTierSubTierForSkill(seasonMax);
-          const newCsrTierInfo = getTierSubTierForSkill(newCsr);
+          const newCsrTierInfo = getTierSubTierForSkill(newCsr.Value);
           clone[existingIndex] = {
             ...clone[existingIndex],
             csr: {
@@ -238,8 +239,7 @@ function usePlaylists(
                 SubTier: seasonMaxTierInfo.SubTier,
               },
               Current: {
-                ...clone[existingIndex].csr.Current,
-                Value: newCsr,
+                ...newCsr,
                 Tier: newCsrTierInfo.Tier,
                 SubTier: newCsrTierInfo.SubTier,
               },
@@ -417,11 +417,11 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
                   );
                   if (
                     playerStats?.Skill &&
-                    playerStats.Skill.RankRecap.PostMatchCsr.Value >= 0
+                    playerStats.Skill.RankRecap.PostMatchCsr.Value != 0
                   ) {
                     updateCsr(
                       p.playlistId,
-                      playerStats.Skill.RankRecap.PostMatchCsr.Value
+                      playerStats.Skill.RankRecap.PostMatchCsr
                     );
                   }
                 }}

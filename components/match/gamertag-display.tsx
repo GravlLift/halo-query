@@ -13,7 +13,11 @@ export default function GamertagDisplay({
       ) : player.gamertag ? (
         <>
           <Link asChild cursor={'pointer'}>
-            <NextLink prefetch={false} href={'/players/' + player.gamertag}>
+            <NextLink
+              prefetch={false}
+              href={'/players/' + player.gamertag}
+              title={player.PlayerId}
+            >
               {player.gamertag}
             </NextLink>
           </Link>

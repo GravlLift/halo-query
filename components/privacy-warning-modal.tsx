@@ -1,12 +1,12 @@
 'use client';
 import { Button, Dialog, Link, Text, useDisclosure } from '@chakra-ui/react';
-import { requestPolicy } from '@gravllift/halo-helpers';
 import { Privacy } from 'halo-infinite-api';
 import NextLink from 'next/link';
 import { useEffect } from 'react';
 import { useApiClients } from '../lib/contexts/api-client-contexts';
 import { useCurrentUser } from '../lib/hooks/current-user';
 import { localStorageEvent } from '../lib/local-storage/event-based-localstorage';
+import { waypointXboxRequestPolicy } from '../lib/requestPolicy';
 
 export default function PrivacyWarningModal() {
   const currentUser = useCurrentUser();
@@ -20,7 +20,7 @@ export default function PrivacyWarningModal() {
     }
 
     const abortController = new AbortController();
-    requestPolicy
+    waypointXboxRequestPolicy
       .execute(
         (ctx) =>
           haloInfiniteClient.getMatchesPrivacy(currentUser.xuid, {
