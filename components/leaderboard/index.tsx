@@ -2,16 +2,15 @@
 import { Box, Flex, Heading, Tabs } from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useCurrentUserGamertag } from '../../lib/hooks/current-user';
 import { usePlaylistAssetIds } from '../../lib/leaderboard/hooks';
 import { rankedPlaylistAssetId } from '../../lib/ranked-playlist-ids';
 import { Loading } from '../loading';
 import Testing from '../testing';
-import CrawlButton from './crawl-button';
 import Peers from './peers';
 import PlaylistLeaderboard from './playlist-leaderboard';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
 
 export default function Leaderboard({
   page,

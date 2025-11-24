@@ -8,7 +8,7 @@ const url =
 const token =
   process.env['KV_REST_API_TOKEN'] || process.env['UPSTASH_REDIS_REST_TOKEN'];
 let redis: Redis | undefined;
-if (!url || !token) {
+if (url && token) {
   redis = new Redis({
     url,
     token,

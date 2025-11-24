@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.delete('origin');
   headers.set('Content-Type', 'application/json');
+  headers.delete('Content-Length');
   const fetchBody = {
     userIds: Array.from(xuidsToFetch),
     settings: requestBody.settings,
