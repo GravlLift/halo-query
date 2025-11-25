@@ -70,17 +70,6 @@ export default function Match({ matchId, filters }: MatchProps) {
         if (combinedSignal.aborted) return;
 
         setMatch(result);
-        document.title = `${
-          'PublicName' in result.MatchInfo.UgcGameVariant
-            ? result.MatchInfo.UgcGameVariant.PublicName
-            : GameVariantCategoryDisplay({
-                gameVariantCategory: result.MatchInfo.GameVariantCategory,
-              })
-        }${
-          'PublicName' in result.MatchInfo.MapVariant
-            ? ` on ${result.MatchInfo.MapVariant.PublicName}`
-            : ''
-        } | Halo Query`;
 
         matchSubscription = fetchMatchProgressive(result, {
           signal: combinedSignal,
@@ -100,6 +89,22 @@ export default function Match({ matchId, filters }: MatchProps) {
       matchSubscription?.unsubscribe();
     };
   }, [matchId, leaderboard]);
+
+  useEffect(() => {
+    document.title = match
+      ? `${
+          'PublicName' in match.MatchInfo.UgcGameVariant
+            ? match.MatchInfo.UgcGameVariant.PublicName
+            : GameVariantCategoryDisplay({
+                gameVariantCategory: match.MatchInfo.GameVariantCategory,
+              })
+        }${
+          'PublicName' in match.MatchInfo.MapVariant
+            ? ` on ${match.MatchInfo.MapVariant.PublicName}`
+            : ''
+        }`
+      : '' + ' | Halo Query';
+  }, [match]);
 
   const { focusPlayer, setFocusPlayer } = useFocusPlayer();
   const focusPlayerPromise = useMemo(
@@ -154,8 +159,6 @@ export default function Match({ matchId, filters }: MatchProps) {
       (t) => t.Stats.CoreStats.RoundsWon > 1 || t.Stats.CoreStats.RoundsLost > 1
     ) ?? false;
 
-  const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
-
   return (
     <>
       <Flex justifyContent="center">
@@ -169,20 +172,22 @@ export default function Match({ matchId, filters }: MatchProps) {
             <Box flexGrow={1}>
               <Heading size="lg">
                 {match ? (
-                  'PublicName' in match.MatchInfo.UgcGameVariant ? (
-                    match.MatchInfo.UgcGameVariant.PublicName
-                  ) : (
-                    <>
-                      <GameVariantCategoryDisplay
-                        gameVariantCategory={
-                          match.MatchInfo.GameVariantCategory
-                        }
-                      />{' '}
-                      {'PublicName' in match.MatchInfo.MapVariant
-                        ? `on ${match.MatchInfo.MapVariant.PublicName}`
-                        : ''}
-                    </>
-                  )
+                  <>
+                    {'PublicName' in match.MatchInfo.UgcGameVariant ? (
+                      match.MatchInfo.UgcGameVariant.PublicName
+                    ) : (
+                      <>
+                        <GameVariantCategoryDisplay
+                          gameVariantCategory={
+                            match.MatchInfo.GameVariantCategory
+                          }
+                        />{' '}
+                      </>
+                    )}
+                    {'PublicName' in match.MatchInfo.MapVariant
+                      ? ` on ${match.MatchInfo.MapVariant.PublicName}`
+                      : ''}
+                  </>
                 ) : (
                   matchId
                 )}
