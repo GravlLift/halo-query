@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ResolvablePromise } from '@gravllift/utilities';
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import { ResolvablePromise } from '@gravllift/utilities';
+import { useEffect, useMemo, useRef } from 'react';
 
 const callMap = new Map<
   number,
@@ -44,37 +44,15 @@ export function useWorkerLeaderboard(): ILeaderboardProvider {
       return promise as ReturnType<ILeaderboardProvider[TFunction]>;
     }
 
-    return {
-      initialized: () => callLeaderboardProviderFn('initialized', []),
-      addLeaderboardEntries: (entries) =>
-        callLeaderboardProviderFn('addLeaderboardEntries', [entries]),
-      getAllEntries: () => callLeaderboardProviderFn('getAllEntries', []),
-      getRandomEntry: () => callLeaderboardProviderFn('getRandomEntry', []),
-      getGamertagIndex: (xuid, playlistAssetId, skillProp, signal) =>
-        callLeaderboardProviderFn('getGamertagIndex', [
-          xuid,
-          playlistAssetId,
-          skillProp,
-          signal,
-        ]),
-      getSkillBuckets: (playlistAssetId, skillProp) =>
-        callLeaderboardProviderFn('getSkillBuckets', [
-          playlistAssetId,
-          skillProp,
-        ]),
-      getRankedEntries: (playlistAssetId, options, skillProp) =>
-        callLeaderboardProviderFn('getRankedEntries', [
-          playlistAssetId,
-          options,
-          skillProp,
-        ]),
-      getPlaylistEntriesCount: (playlistAssetId) =>
-        callLeaderboardProviderFn('getPlaylistEntriesCount', [playlistAssetId]),
-      getPlaylistAssetIds: () =>
-        callLeaderboardProviderFn('getPlaylistAssetIds', []),
-      containsXuid: (xuid) => callLeaderboardProviderFn('containsXuid', [xuid]),
-      getEntries: (xuid) => callLeaderboardProviderFn('getEntries', [xuid]),
-    };
+    return new Proxy({} as ILeaderboardProvider, {
+      get(_target, prop) {
+        return (...args: unknown[]) =>
+          callLeaderboardProviderFn(
+            prop as keyof ILeaderboardProvider,
+            args as any
+          );
+      },
+    });
   }, []);
 
   useEffect(() => {
