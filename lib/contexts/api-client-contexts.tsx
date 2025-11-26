@@ -7,10 +7,13 @@ import {
   XboxAuthenticationClient,
   XboxClient,
 } from 'halo-infinite-api';
-import { createContext, ReactNode, useContext } from 'react';
+import { createContext, ReactNode, useCallback, useContext } from 'react';
 import { fetcher } from '../clients/fetcher';
 import { tokenPersister } from '../token-persisters/client';
 import { useAuthentication } from './authentication-contexts';
+import { isRequestError } from '@gravllift/halo-helpers';
+import { XboxLiveError } from './xbox-live-error';
+import { localStorageEvent } from '../local-storage/event-based-localstorage';
 
 class XboxCurrentGamertagAuthenticationClient extends XboxAuthenticationClient {
   public async getCurrentGamertag() {
@@ -39,19 +42,57 @@ export function useApiClients() {
 }
 
 export function ApiClientsProvider({ children }: { children: ReactNode }) {
-  const { acquireOauth2AccessToken } = useAuthentication();
+  const { acquireOauth2AccessToken, requireInteraction, clearMsalCache } =
+    useAuthentication();
   const xboxAuthClient = new XboxCurrentGamertagAuthenticationClient(
     acquireOauth2AccessToken,
     tokenPersister,
     fetcher
   );
 
+  const getXstsTicket = useCallback(
+    async (...args: Parameters<XboxAuthenticationClient['getXstsTicket']>) => {
+      let xstsTicket: Awaited<
+        ReturnType<XboxAuthenticationClient['getXstsTicket']>
+      >;
+      try {
+        xstsTicket = await xboxAuthClient.getXstsTicket(...args);
+      } catch (e) {
+        if (
+          e instanceof Error &&
+          isRequestError(e) &&
+          e.response.status === 401
+        ) {
+          try {
+            const body: {
+              XErr: number;
+              Redirect: string;
+              Identity: string;
+              Message: string;
+            } = await e.response.json();
+
+            await clearMsalCache();
+            await requireInteraction(
+              new XboxLiveError(
+                body.Message,
+                body.XErr,
+                body.Redirect,
+                body.Identity
+              )
+            );
+          } catch {}
+        }
+        throw e;
+      }
+      return xstsTicket;
+    },
+    [requireInteraction, clearMsalCache, xboxAuthClient]
+  );
+
   const xboxClient = new XboxClient(
     {
       getXboxLiveV3Token: async () => {
-        const xstsTicket = await xboxAuthClient.getXstsTicket(
-          RelyingParty.Xbox
-        );
+        const xstsTicket = await getXstsTicket(RelyingParty.Xbox);
         return xboxAuthClient.getXboxLiveV3Token(xstsTicket);
       },
       clearXboxLiveV3Token: () =>
@@ -63,9 +104,7 @@ export function ApiClientsProvider({ children }: { children: ReactNode }) {
   const haloAuthClient = new HaloAuthenticationClient(
     {
       fetchToken: async () => {
-        const xstsTicket = await xboxAuthClient.getXstsTicket(
-          RelyingParty.Halo
-        );
+        const xstsTicket = await getXstsTicket(RelyingParty.Halo);
         return xstsTicket.Token;
       },
       clearXstsToken: () => xboxAuthClient.clearXstsTicket(RelyingParty.Halo),

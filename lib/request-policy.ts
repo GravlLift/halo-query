@@ -6,7 +6,7 @@ waypointXboxRequestPolicy.onFailure(async ({ reason }) => {
   if (
     'error' in reason &&
     isRequestError(reason.error) &&
-    reason.error.response.headers.has('x-vercel-mitigated')
+    reason.error.response.headers.get('x-vercel-mitigated') === 'challenge'
   ) {
     const searchParams = new URLSearchParams(location.search);
     if (!searchParams.has('force-reload')) {

@@ -25,6 +25,7 @@ import { fetcher } from '../clients/fetcher';
 import { localStorageEvent } from '../local-storage/event-based-localstorage';
 import { scopes } from '../msal-instance/scopes';
 import { waypointXboxRequestPolicy } from '../request-policy';
+import { XboxLiveError } from './xbox-live-error';
 
 function getHeaderDict(headers: Headers): Record<string, string> {
   const headerDict: Record<string, string> = {};
@@ -111,11 +112,15 @@ const initializePromise = msalInstance
 interface AuthenticationContextValue {
   acquireOauth2AccessToken: () => Promise<string>;
   logout: () => Promise<void>;
+  clearMsalCache: () => Promise<void>;
   interaction: {
-    authError?: AuthError;
+    authError?: AuthError | XboxLiveError;
     resolve: () => Promise<void>;
     abort: (() => void) | undefined;
   } | null;
+  requireInteraction: (
+    e?: NonNullable<AuthenticationContextValue['interaction']>['authError']
+  ) => Promise<never>;
   msalInstance: {
     getAllAccounts: () => Promise<AccountInfo[]>;
   };
@@ -149,7 +154,9 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const requireInteraction = useCallback(
-    (e?: AuthError) => {
+    (
+      e?: NonNullable<AuthenticationContextValue['interaction']>['authError']
+    ) => {
       const promise = new ResolvablePromise<never>();
       setInteraction({
         authError: e,
@@ -222,14 +229,15 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
 
   const contextValue: AuthenticationContextValue = {
     interaction,
+    requireInteraction,
     acquireOauth2AccessToken,
+    clearMsalCache: () => msalInstance.clearCache(),
     logout: async () => {
       appInsights.trackEvent({ name: 'UserLogout' });
       localStorageEvent.removeItem(`xbox.userToken`);
       localStorageEvent.removeItem(`xbox.xstsTicket.${RelyingParty.Halo}`);
       localStorageEvent.removeItem(`xbox.xstsTicket.${RelyingParty.Xbox}`);
       localStorageEvent.removeItem(`halo.authToken`);
-      await msalInstance.clearCache();
       await msalInstance.logoutRedirect();
     },
     msalInstance: {

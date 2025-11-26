@@ -8,6 +8,29 @@ import { FaMicrosoft } from 'react-icons/fa';
 import { useAuthentication } from '../lib/contexts/authentication-contexts';
 import { useCurrentUserGamertag } from '../lib/hooks/current-user';
 import { appInsights } from '../lib/application-insights/client';
+import { XboxLiveError } from '../lib/contexts/xbox-live-error';
+
+function XboxLiveErrorDisplay({ error }: { error: XboxLiveError }) {
+  switch (error.xErr) {
+    case 2148916233:
+      return (
+        <b>
+          It appears that the Microsoft account you attempted to sign in with
+          does not have an Xbox profile associated with it. Please create an
+          Xbox profile and then try authenticating again, or try a different
+          Microsoft account.
+        </b>
+      );
+
+    default:
+      return (
+        <b>
+          An Xbox Live authentication error occurred (XErr code: {error.xErr}).
+          Please try signing in with a different microsoft account.
+        </b>
+      );
+  }
+}
 
 export default function InteractionRequiredModal() {
   const { interaction } = useAuthentication();
@@ -36,7 +59,8 @@ export default function InteractionRequiredModal() {
       appInsights.trackEvent({
         name: 'InteractionRequiredModalOpened',
         properties: {
-          reason: interaction?.authError
+          name: interaction?.authError?.name,
+          message: interaction?.authError
             ? interaction.authError.message
             : undefined,
         },
@@ -90,20 +114,25 @@ export default function InteractionRequiredModal() {
                 </NextLink>
               </Link>
               .
-            </Box>
-            <Box mt={2}>
-              {interaction?.authError &&
-              interaction.authError instanceof ServerError &&
-              interaction.authError.errorCode === 'access_denied' ? (
-                <b>
-                  Make sure you actually grant the meager permissions that the
-                  SSO screen asks you for, otherwise the site won&apos;t
-                  function, and you&apos;ll just keep seeing this screen.
-                </b>
-              ) : (
-                <b>Your account details will never be saved on our servers.</b>
-              )}
-            </Box>
+            </Box>{' '}
+            {interaction?.authError && (
+              <Box mt={2}>
+                {interaction.authError instanceof ServerError &&
+                interaction.authError.errorCode === 'access_denied' ? (
+                  <b>
+                    Make sure you actually grant the meager permissions that the
+                    SSO screen asks you for, otherwise the site won&apos;t
+                    function, and you&apos;ll just keep seeing this screen.
+                  </b>
+                ) : interaction.authError instanceof XboxLiveError ? (
+                  <XboxLiveErrorDisplay error={interaction.authError} />
+                ) : (
+                  <b>
+                    Your account details will never be saved on our servers.
+                  </b>
+                )}
+              </Box>
+            )}
           </Dialog.Body>
           <Dialog.Footer>
             <Button
