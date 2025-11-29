@@ -27,7 +27,7 @@ const hooks = {
   },
 };
 
-if (!g[globalKey]) {
+if (config.connectionString && !g[globalKey]) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useAzureMonitor({
     azureMonitorExporterOptions: {
