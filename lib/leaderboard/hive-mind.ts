@@ -93,107 +93,118 @@ export function ensureJoin(leaderboard: ILeaderboardProvider) {
     console.debug('Joined room as', selfId);
   }
 
-  roomLeaderboard = {
-    room: joinRoom(
-      {
-        appId: 'halo-query',
-        rtcPolyfill: class FixedRTCPeerConnection extends RTCPeerConnection {
-          override close(): void {
-            super.close();
-            queueMicrotask(() => {
-              if (document) {
-                let img: HTMLImageElement | null =
-                  document.createElement('img');
-                img.src = window.URL.createObjectURL(
-                  new Blob([new ArrayBuffer(5e7)])
-                ); // 50Mo or less or more depending as you wish to force/invoke GC cycle run
-                img.onerror = function () {
-                  window.URL.revokeObjectURL(this.src);
-                  img = null;
-                };
+  try {
+    roomLeaderboard = {
+      room: joinRoom(
+        {
+          appId: 'halo-query',
+          rtcPolyfill: class FixedRTCPeerConnection extends RTCPeerConnection {
+            override close(): void {
+              super.close();
+              queueMicrotask(() => {
+                if (document) {
+                  let img: HTMLImageElement | null =
+                    document.createElement('img');
+                  img.src = window.URL.createObjectURL(
+                    new Blob([new ArrayBuffer(5e7)])
+                  ); // 50Mo or less or more depending as you wish to force/invoke GC cycle run
+                  img.onerror = function () {
+                    window.URL.revokeObjectURL(this.src);
+                    img = null;
+                  };
+                }
+              });
+            }
+          },
+        } as BaseRoomConfig & RelayConfig,
+        'leaderboard-2'
+      ),
+      leaderboardProvider: leaderboard,
+    };
+    sendCsrEntriesAction = makePrettyAction<LeaderboardEntry[]>(
+      roomLeaderboard.room,
+      'sendCsrs'
+    );
+    requestEntriesAction = makePrettyAction<null>(
+      roomLeaderboard.room,
+      'request'
+    );
+
+    peerJoined$.pipe(bufferTime(2000)).subscribe((newPeers) => {
+      for (const peerId of newPeers) {
+        // Roll a random number to determine if we should send all csr entries,
+        // such that the expected number of senders is 4
+        if (
+          roomLeaderboard &&
+          Math.random() <
+            4 / Math.max(1, Object.keys(roomLeaderboard.room.getPeers()).length)
+        ) {
+          // Don't await
+          leaderboard
+            .getAllEntries()
+            .then((buffer) => sendEntriesToPeer(buffer, peerId))
+            .catch((e) => {
+              if (e instanceof Error) {
+                appInsights.trackException({
+                  exception: e,
+                });
+              } else {
+                console.error(e);
               }
             });
-          }
-        },
-      } as BaseRoomConfig & RelayConfig,
-      'leaderboard-2'
-    ),
-    leaderboardProvider: leaderboard,
-  };
-  sendCsrEntriesAction = makePrettyAction<LeaderboardEntry[]>(
-    roomLeaderboard.room,
-    'sendCsrs'
-  );
-  requestEntriesAction = makePrettyAction<null>(
-    roomLeaderboard.room,
-    'request'
-  );
-
-  peerJoined$.pipe(bufferTime(2000)).subscribe((newPeers) => {
-    for (const peerId of newPeers) {
-      // Roll a random number to determine if we should send all csr entries,
-      // such that the expected number of senders is 4
-      if (
-        roomLeaderboard &&
-        Math.random() <
-          4 / Math.max(1, Object.keys(roomLeaderboard.room.getPeers()).length)
-      ) {
-        // Don't await
-        leaderboard
-          .getAllEntries()
-          .then((buffer) => sendEntriesToPeer(buffer, peerId))
-          .catch((e) => {
-            if (e instanceof Error) {
-              appInsights.trackException({
-                exception: e,
-              });
-            } else {
-              console.error(e);
-            }
-          });
+        }
       }
-    }
-  });
-  roomLeaderboard.room.onPeerJoin(async (peerId) => {
-    console.debug('Peer joined', peerId);
-    _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
-    peerJoined$.next(peerId);
-  });
-  roomLeaderboard.room.onPeerLeave((peerId) => {
-    const { [peerId]: _, ...rest } = _peerStatus$.value;
-    _peerStatus$.next(rest);
-  });
+    });
+    roomLeaderboard.room.onPeerJoin(async (peerId) => {
+      console.debug('Peer joined', peerId);
+      _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
+      peerJoined$.next(peerId);
+    });
+    roomLeaderboard.room.onPeerLeave((peerId) => {
+      const { [peerId]: _, ...rest } = _peerStatus$.value;
+      _peerStatus$.next(rest);
+    });
 
-  sendCsrEntriesAction.onProgress((percent, peerId) => {
-    _peerStatus$.next({ ..._peerStatus$.value, [peerId]: percent });
-  });
-  sendCsrEntriesAction.onReceive((data, peerId) => {
-    _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
-    console.debug(`Received ${data.length} entries from`, peerId);
-    leaderboard.addLeaderboardEntries(data);
-  });
+    sendCsrEntriesAction.onProgress((percent, peerId) => {
+      _peerStatus$.next({ ..._peerStatus$.value, [peerId]: percent });
+    });
+    sendCsrEntriesAction.onReceive((data, peerId) => {
+      _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
+      console.debug(`Received ${data.length} entries from`, peerId);
+      leaderboard.addLeaderboardEntries(data);
+    });
 
-  requestEntriesAction.onReceive(async (_, peerId) => {
-    if (requestEntriesCalls.has(peerId)) {
+    requestEntriesAction.onReceive(async (_, peerId) => {
+      if (requestEntriesCalls.has(peerId)) {
+        return;
+      }
+      requestEntriesCalls.add(peerId);
+
+      try {
+        const buffer: LeaderboardEntry[] = await leaderboard.getAllEntries();
+        await sendEntriesToPeer(buffer, peerId).finally(() => {
+          requestEntriesCalls.delete(peerId);
+        });
+      } catch (e) {
+        if (e instanceof Error) {
+          appInsights.trackException({
+            exception: e,
+          });
+        } else {
+          console.error(e);
+        }
+      }
+    });
+  } catch (e) {
+    if (
+      e instanceof DOMException &&
+      e.message ===
+        "Failed to construct 'RTCPeerConnection': Cannot create so many PeerConnections"
+    ) {
       return;
     }
-    requestEntriesCalls.add(peerId);
-
-    try {
-      const buffer: LeaderboardEntry[] = await leaderboard.getAllEntries();
-      await sendEntriesToPeer(buffer, peerId).finally(() => {
-        requestEntriesCalls.delete(peerId);
-      });
-    } catch (e) {
-      if (e instanceof Error) {
-        appInsights.trackException({
-          exception: e,
-        });
-      } else {
-        console.error(e);
-      }
-    }
-  });
+    throw e;
+  }
 }
 
 export function leave() {
