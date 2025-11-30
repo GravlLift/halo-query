@@ -1,18 +1,15 @@
 import { ReactPlugin } from '@microsoft/applicationinsights-react-js';
-import {
-  ApplicationInsights,
-  IAppInsights,
-} from '@microsoft/applicationinsights-web';
-import { handleDependencyTelemetry } from './dependency-telemetry-handler';
-import { TelemetryLevel, telemetryLevel } from '../telemetry-level';
+import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 import { config } from '../config';
+import { TelemetryLevel, telemetryLevel } from '../telemetry-level';
+import { handleDependencyTelemetry } from './dependency-telemetry-handler';
 import './websocket-dependency-tracker';
 
 declare global {
   const WorkerGlobalScope: { new (): unknown } | undefined;
 }
 
-export let appInsights: IAppInsights;
+export let appInsights: ApplicationInsights;
 if (config.connectionString) {
   const isWorkerProcess =
     typeof WorkerGlobalScope !== 'undefined' &&
@@ -100,7 +97,7 @@ if (config.connectionString) {
   appInsights = _appInsights;
 } else {
   // Create a no-op appInsights instance
-  appInsights = new Proxy({} as IAppInsights, {
+  appInsights = new Proxy({} as ApplicationInsights, {
     get: (_target, _prop) => {
       return () => {};
     },
