@@ -116,7 +116,7 @@ interface AuthenticationContextValue {
   interaction: {
     authError?: AuthError | XboxLiveError;
     resolve: () => Promise<void>;
-    abort: (() => void) | undefined;
+    abort: ((reason?: unknown) => void) | undefined;
   } | null;
   requireInteraction: (
     e?: NonNullable<AuthenticationContextValue['interaction']>['authError']

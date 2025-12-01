@@ -159,7 +159,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
 
       const newUrl = new URL(this.reason.newUrl);
       if (newUrl.pathname !== '/matches') {
-        abortController?.abort();
+        abortController?.abort('Navigating away from matches page');
       }
     }
     navigationStartSignal.addEventListener('abort', onAbort);

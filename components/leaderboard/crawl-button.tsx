@@ -24,7 +24,7 @@ export default function CrawlButton() {
               onClick={async () => {
                 if (isCrawling) {
                   setIsCrawling(false);
-                  abortController?.abort();
+                  abortController?.abort('User stopped crawl');
                   return;
                 } else {
                   setIsCrawling(true);

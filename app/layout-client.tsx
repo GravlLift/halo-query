@@ -31,7 +31,7 @@ import '../lib/client-polyfills';
 const unloadAbortController = new AbortController();
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
-    unloadAbortController.abort();
+    unloadAbortController.abort('Page unloading');
   });
 }
 

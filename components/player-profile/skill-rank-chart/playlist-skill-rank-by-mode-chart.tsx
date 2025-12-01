@@ -232,7 +232,7 @@ export default function PlaylistSkillRankByModeChart(
           typeof datapoint === 'object' &&
           'matchId' in datapoint
         ) {
-          abort();
+          abort('Navigating to match from skill chart');
           NProgress.start();
           router.push(`/matches/${datapoint.matchId}`);
         }

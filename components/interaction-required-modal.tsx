@@ -84,7 +84,7 @@ export default function InteractionRequiredModal() {
                 <CloseButton
                   onClick={() => {
                     if (interaction?.abort) {
-                      interaction.abort();
+                      interaction.abort('User cancelled authentication');
                     }
                   }}
                 />

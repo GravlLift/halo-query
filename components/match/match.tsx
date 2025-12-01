@@ -85,7 +85,7 @@ export default function Match({ matchId, filters }: MatchProps) {
         }
       });
     return () => {
-      abortController.abort();
+      abortController.abort('Component unmounted');
       matchSubscription?.unsubscribe();
     };
   }, [matchId, leaderboard]);

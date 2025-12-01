@@ -77,7 +77,7 @@ export function NavigationButtons(props: {
                 if (props.filters) {
                   url += `?filters=${props.filters}`;
                 }
-                abort();
+                abort('Navigating to previous match');
                 router.push(url);
               }
             } catch (e) {
@@ -124,7 +124,7 @@ export function NavigationButtons(props: {
               if (props.filters) {
                 url += `&filters=${props.filters}`;
               }
-              abort();
+              abort('Returning to match list');
               router.push(url);
             } catch (e) {
               if (!(e instanceof DOMException && e.name === 'AbortError')) {
@@ -170,7 +170,7 @@ export function NavigationButtons(props: {
                 if (props.filters) {
                   url += `?filters=${props.filters}`;
                 }
-                abort();
+                abort('Navigating to next match');
                 router.push(url);
               }
             } catch (e) {

@@ -152,7 +152,7 @@ export default function Matches({
           setShowRawValues,
           pageSize: savedPageSize,
           setPageSize: (val) => {
-            abortController?.abort();
+            abortController?.abort('User changed page size');
             setPageSize(val);
           },
           flattenHeaderRows: {
@@ -175,7 +175,7 @@ export default function Matches({
                 width="150px"
                 colorPalette="red"
                 onClick={() => {
-                  abortController?.abort();
+                  abortController?.abort('User initiated cancel');
                 }}
               >
                 Cancel
@@ -188,7 +188,7 @@ export default function Matches({
                   jsonLogicResult.errors && jsonLogicResult.errors.length > 0
                 }
                 onClick={async () => {
-                  abortController?.abort();
+                  abortController?.abort('User initiated new query');
                   const { immutableTree, config } =
                     await queryBuilder.getFilter();
                   const jsonLogicTree = QbUtils.jsonLogicFormat(

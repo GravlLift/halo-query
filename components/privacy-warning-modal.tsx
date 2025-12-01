@@ -37,7 +37,7 @@ export default function PrivacyWarningModal() {
         }
       });
     return () => {
-      abortController.abort();
+      abortController.abort('Component unmounted');
     };
   }, [onOpen, currentUser?.xuid]);
 

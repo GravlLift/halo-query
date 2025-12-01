@@ -22,7 +22,7 @@ async function leaderboardFn<
   if ('cancel' in event.data) {
     const controller = signalMap.get(event.data.cancel as number);
     if (controller) {
-      controller.abort();
+      controller.abort('Operation cancelled by main thread');
     }
     return;
   } else {

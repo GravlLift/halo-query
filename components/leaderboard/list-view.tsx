@@ -146,7 +146,7 @@ export default function ListView({
           }
         })();
         return () => {
-          abortController.abort();
+          abortController.abort('Component unmounted');
         };
       } else {
         setHighlight(undefined);

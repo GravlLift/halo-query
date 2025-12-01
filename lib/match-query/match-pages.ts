@@ -88,7 +88,7 @@ async function binarySearch(
   additionalSignal: AbortSignal
 ): Promise<number> {
   if (start === end) {
-    abortController.abort();
+    abortController.abort('Search complete');
     throw new Error(`Match could not be positioned in user's history.`);
   }
 
@@ -108,7 +108,7 @@ async function binarySearch(
   const midEndDate = DateTime.fromISO(midMatches[0].MatchInfo.StartTime);
   if (midStartDate <= matchStartDate && midEndDate >= matchStartDate) {
     // Found target, cancel any outstanding requests
-    abortController.abort();
+    abortController.abort('Match page found');
     return mid;
   } else if (midStartDate > matchStartDate) {
     return await binarySearch(
