@@ -38,5 +38,19 @@ function remapUrlForProxy(rawUrl: string) {
   return url.toString();
 }
 
-export const fetcher: FetchFunction = (input, init) =>
-  fetch(remapUrlForProxy(getUrl(input)), init);
+export const fetcher: FetchFunction = (input, init) => {
+  const extraHeaders = localStorage.getItem('fetch-extra-headers');
+  if (extraHeaders) {
+    try {
+      const headersObj = JSON.parse(extraHeaders);
+      init = {
+        ...init,
+        headers: {
+          ...init?.headers,
+          ...headersObj,
+        },
+      };
+    } catch {}
+  }
+  return fetch(remapUrlForProxy(getUrl(input)), init);
+};
