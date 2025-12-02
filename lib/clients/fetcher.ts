@@ -19,7 +19,7 @@ export function getUrl(input: UrlLike): string {
   return url;
 }
 
-function remapUrlForProxy(rawUrl: string) {
+export function remapUrlForProxy(rawUrl: string) {
   let url = new URL(rawUrl);
 
   if (

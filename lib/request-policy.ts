@@ -1,4 +1,5 @@
 import { isRequestError, requestPolicy } from '@gravllift/halo-helpers';
+import { remapUrlForProxy } from './clients/fetcher';
 
 export const waypointXboxRequestPolicy = requestPolicy;
 
@@ -11,7 +12,7 @@ waypointXboxRequestPolicy.onFailure(async ({ reason }) => {
     reason.error.response.headers.get('x-vercel-mitigated') === 'challenge'
   ) {
     try {
-      const responseUrl = reason.error.response.url;
+      const responseUrl = remapUrlForProxy(reason.error.response.url);
       const sameOrigin =
         new URL(responseUrl, location.href).origin === location.origin;
 
