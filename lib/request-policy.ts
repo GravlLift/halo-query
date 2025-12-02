@@ -124,10 +124,12 @@ function ensureVercelChallengeSolved(args: {
       }, 600);
     });
     iframe.addEventListener('error', () => finish(false));
-    (document as any).addEventListener?.(
+    document.addEventListener(
       'securitypolicyviolation',
-      (e: any) => {
-        if (e?.violatedDirective === 'frame-ancestors') finish(false);
+      (e) => {
+        if (e.violatedDirective === 'frame-ancestors') {
+          finish(false);
+        }
       },
       { once: true }
     );
@@ -142,19 +144,6 @@ function supportsSrcDoc(): boolean {
 
 function assignSrcdoc(iframe: HTMLIFrameElement, html: string): boolean {
   try {
-    const anyWin = window as any;
-    const tt = anyWin?.trustedTypes;
-    if (tt?.createPolicy) {
-      try {
-        const policy = tt.createPolicy('vercel-challenge', {
-          createHTML: (s: string) => s,
-        });
-        iframe.srcdoc = policy.createHTML(html) as unknown as string;
-        return true;
-      } catch {
-        // Policy creation may be restricted by CSP; fall through to raw string attempt
-      }
-    }
     // Attempt plain string assignment; will throw TypeError if Trusted Types enforcement is active
     iframe.srcdoc = html;
     return true;
