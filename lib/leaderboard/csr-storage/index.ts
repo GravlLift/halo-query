@@ -3,6 +3,7 @@ import Dexie from 'dexie';
 import { defaultBuckets } from '../default-buckets';
 import { LeaderboardEntry, entryIsValid } from '@gravllift/halo-helpers';
 import { getLeaderboardTable, transaction } from './indexed-db-repository';
+import { appInsights } from '../../application-insights/client';
 
 /** Adds entries to storage if they do not exist or are more recent than the current record */
 export async function addLeaderboardEntries(entries: LeaderboardEntry[]) {
@@ -24,13 +25,12 @@ export async function addLeaderboardEntries(entries: LeaderboardEntry[]) {
 
     for (let i = 0; i < validEntries.length; i++) {
       const entry = validEntries[i];
-      const wrappedXuid = wrapXuid(entry.xuid);
       const existingEntry = existingEntries[i];
 
       if (!existingEntry) {
         entriesAdded.push({
           ...entry,
-          xuid: wrappedXuid,
+          xuid: wrapXuid(entry.xuid),
         });
       } else if (existingEntry.matchDate < entry.matchDate) {
         entriesAdded.push({
@@ -201,10 +201,22 @@ export async function getRankedEntries(
 }
 
 export async function getPlaylistEntriesCount(playlistAssetId: string) {
-  return await (await getLeaderboardTable())
+  return await (
+    await getLeaderboardTable()
+  )
     .where(['playlistAssetId', 'xuid'])
     .between([playlistAssetId, Dexie.minKey], [playlistAssetId, Dexie.maxKey])
-    .count();
+    .count()
+    .then((count) => {
+      appInsights.trackMetric({
+        name: 'PlaylistEntriesCount',
+        average: count,
+        properties: {
+          playlistAssetId,
+        },
+      });
+      return count;
+    });
 }
 
 export async function getPlaylistAssetIds() {
