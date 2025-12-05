@@ -15,11 +15,17 @@ import { Tooltip } from '../ui/tooltip';
 export default function Peers() {
   const hiveMind = useHiveMind();
   const peerStatus = useObservable(hiveMind?.peerStatus$, {});
+  const peerCount = Object.keys(peerStatus).length;
+
+  if (!hiveMind?.selfId) {
+    return null;
+  }
+
   return (
     <HoverCard.Root>
       <HoverCard.Trigger>
         <Text as="span" cursor="pointer">
-          {Object.keys(peerStatus).length} Peers
+          {peerCount} Peers
         </Text>
       </HoverCard.Trigger>
       <Portal>

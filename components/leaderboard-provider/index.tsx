@@ -1,13 +1,13 @@
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
 import { SeverityLevel } from '@microsoft/applicationinsights-web';
 import Dexie from 'dexie';
-import { ReactNode, useEffect, useMemo, useRef } from 'react';
+import { Context, ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Observable, Subject } from 'rxjs';
 import { appInsights } from '../../lib/application-insights/client';
 import { LeaderboardEntry } from '../../lib/leaderboard';
 import {
   ensureJoin,
-  selfId as hiveMindSelfId,
+  selfId,
   leave,
   peerStatus$,
   requestEntries,
@@ -75,11 +75,15 @@ export default function LeaderboardProvider({
     return provider;
   }, [leaderboard, newEntries$]);
 
-  const hiveMindProvider = useRef<ReturnType<typeof useHiveMind>>();
+  const hiveMindProvider = useRef<
+    typeof HiveMindContext extends Context<infer T> ? T : never
+  >({
+    selfId,
+    peerStatus$,
+  });
 
   useEffect(() => {
     ensureJoin(leaderboardProvider);
-    hiveMindProvider.current = { selfId: hiveMindSelfId, peerStatus$ };
     return () => {
       leave();
     };
