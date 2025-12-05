@@ -3,10 +3,18 @@ import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 import { config } from '../config';
 import { TelemetryLevel, telemetryLevel } from '../telemetry-level';
 import { handleDependencyTelemetry } from './dependency-telemetry-handler';
-import './websocket-dependency-tracker';
+// import './websocket-dependency-tracker';
 
 declare global {
   const WorkerGlobalScope: { new (): unknown } | undefined;
+}
+
+function safeEval(predicate: () => boolean): boolean {
+  try {
+    return predicate();
+  } catch (e) {
+    return false;
+  }
 }
 
 export let appInsights: ApplicationInsights;
@@ -39,14 +47,10 @@ if (config.connectionString) {
         [reactPlugin.identifier]: { history: browserHistory },
       },
       maxAjaxCallsPerView: -1,
-      maxBatchInterval:
-        typeof window !== 'undefined' &&
-        window.location.hostname === 'localhost'
-          ? 0
-          : undefined,
-      enableDebug:
-        typeof window !== 'undefined' &&
-        window.location.hostname === 'localhost',
+      maxBatchInterval: safeEval(() => window.location.hostname === 'localhost')
+        ? 0
+        : undefined,
+      enableDebug: safeEval(() => window.location.hostname === 'localhost'),
     },
   });
   _appInsights.addDependencyInitializer((envelope) => {

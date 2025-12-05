@@ -15,14 +15,14 @@ import {
 } from '../../lib/leaderboard/hive-mind';
 import { HiveMindContext, type useHiveMind } from './hive-mind-context';
 import { LeaderboardContext } from './leaderboard-context';
-import { useNonWorkerLeaderboard } from './non-worker-leaderboard';
+import { useLeaderboardProvider } from './worker-leaderboard';
 
 export default function LeaderboardProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const leaderboard = useNonWorkerLeaderboard();
+  const leaderboard = useLeaderboardProvider();
   const newEntries$ = useMemo(() => new Subject<LeaderboardEntry[]>(), []);
   const leaderboardProvider = useMemo<
     ILeaderboardProvider & { newEntries$: Observable<LeaderboardEntry[]> }

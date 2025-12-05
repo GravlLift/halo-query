@@ -8,7 +8,7 @@ const callMap = new Map<
     Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
   >
 >();
-export function useWorkerLeaderboard(): ILeaderboardProvider {
+export function useLeaderboardProvider(): ILeaderboardProvider {
   const workerRef = useRef<Worker | null>(null);
 
   const workerLeaderboard = useMemo((): ILeaderboardProvider => {

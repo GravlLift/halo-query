@@ -1,6 +1,6 @@
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
 
-export function useNonWorkerLeaderboard(): ILeaderboardProvider {
+export function useLeaderboardProvider(): ILeaderboardProvider {
   const providerPromise = import('../../lib/leaderboard');
   async function callLeaderboardProviderFn<
     TFunction extends keyof ILeaderboardProvider

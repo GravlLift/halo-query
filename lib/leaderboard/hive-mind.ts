@@ -306,7 +306,7 @@ export const requestEntries = async () => {
       if (newPeers.length === 0) {
         // Wait for another peer to connect.
         newPeers = await firstValueFrom(
-          peerStatus$.pipe(
+          _peerStatus$.pipe(
             map((peers) =>
               Object.keys(peers)
                 .filter((peer) => !chosenPeers.has(peer))
