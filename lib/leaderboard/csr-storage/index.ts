@@ -7,21 +7,9 @@ import { appInsights } from '../../application-insights/client';
 import { handleType, retry } from 'cockatiel';
 
 const policy = retry(
-  handleType(
-    Dexie.DexieError,
-    (err) =>
-      err.name === 'AbortError' ||
-      err.name === 'TimeoutError' ||
-      err.name === 'DatabaseClosedError'
-  ).orType(Dexie.BulkError, (err) =>
-    err.failures.every(
-      (f) =>
-        f instanceof Dexie.DexieError &&
-        (f.name === 'AbortError' ||
-          f.name === 'TimeoutError' ||
-          f.name === 'DatabaseClosedError')
-    )
-  ),
+  handleType(Dexie.DexieError)
+    .orType(Dexie.BulkError)
+    .orType(Dexie.ModifyError),
   {
     maxAttempts: 3,
   }
