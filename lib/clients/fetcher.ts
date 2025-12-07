@@ -1,4 +1,5 @@
 import type { FetchFunction } from 'halo-infinite-api';
+import { vercelRequestPolicy } from '../vercel/vercel-request-policy';
 
 type UrlLike =
   | string
@@ -39,4 +40,7 @@ export function remapUrlForProxy(rawUrl: string) {
 }
 
 export const fetcher: FetchFunction = (input, init) =>
-  fetch(remapUrlForProxy(getUrl(input)), init);
+  vercelRequestPolicy.execute(
+    ({ signal }) => fetch(remapUrlForProxy(getUrl(input)), { ...init, signal }),
+    init?.signal ?? undefined
+  );
