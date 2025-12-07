@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Spinner } from '@chakra-ui/react';
 import { useState } from 'react';
-import { abortSignalAny } from '@gravllift/utilities';
+import { abortSignalAny, isAbortError } from '@gravllift/utilities';
 import { crawlMatches } from '../../lib/crawler';
 import { useCurrentUserGamertag } from '../../lib/hooks/current-user';
 import { useNavigationController } from '../navigation-context';
@@ -57,10 +57,7 @@ export default function CrawlButton() {
                           haloCaches
                         );
                       } catch (e) {
-                        if (
-                          e instanceof DOMException &&
-                          e.name === 'AbortError'
-                        ) {
+                        if (isAbortError(e)) {
                           break;
                         } else {
                           throw e;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { isUnloading } from '../lib/unload';
 
 // NOTE:
 // global-error.tsx is NOT wrapped by app/layout.tsx. We must render our own
@@ -23,6 +24,7 @@ export default function GlobalError({
 
   // Telemetry (client-only)
   useEffect(() => {
+    if (isUnloading) return; // skip noisy teardown exceptions
     import('../lib/application-insights/client').then(({ appInsights }) => {
       appInsights.trackException({
         exception: error,

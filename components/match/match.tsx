@@ -18,15 +18,18 @@ import {
   skillRank,
   skillRankCombined,
 } from '@gravllift/halo-helpers';
+import {
+  abortSignalAny,
+  isAbortError,
+  ResolvablePromise,
+} from '@gravllift/utilities';
 import { MatchSkill } from 'halo-infinite-api';
 import { ExternalLink } from 'lucide-react';
 import { DateTime, Duration } from 'luxon';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Unsubscribable } from 'rxjs';
-import {
-  abortSignalAny,
-  ResolvablePromise,
-} from '../../../../libs/utilities/src';
+import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { aggregatePlayersStats } from '../../lib/stats/aggregate-team-player-stats';
 import { getObjectivePoints } from '../../lib/stats/objective-points';
 import { playerStatsCategory } from '../columns/base-columns';
@@ -43,8 +46,6 @@ import PlayerCategoryTable from './player-category-table';
 import Score from './score';
 import SkillRankingsTable from './skill-rankings-table';
 import { useTeamPresets } from './team-presets';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
 
 export interface MatchProps {
   matchId: string;
@@ -80,7 +81,7 @@ export default function Match({ matchId, filters }: MatchProps) {
       })
       .catch((error) => {
         // Handle promise rejection to prevent unhandled errors
-        if (error.name !== 'AbortError') {
+        if (!isAbortError(error)) {
           console.error('Error fetching match:', error);
         }
       });

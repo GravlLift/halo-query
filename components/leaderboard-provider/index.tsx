@@ -13,9 +13,9 @@ import {
   requestEntries,
   sendLeaderboardEntriesToAllPeers,
 } from '../../lib/leaderboard/hive-mind';
-import { HiveMindContext, type useHiveMind } from './hive-mind-context';
+import { HiveMindContext } from './hive-mind-context';
 import { LeaderboardContext } from './leaderboard-context';
-import { useLeaderboardProvider } from './worker-leaderboard';
+import { useLeaderboardProvider } from './non-worker-leaderboard';
 
 export default function LeaderboardProvider({
   children,

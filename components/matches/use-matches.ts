@@ -1,20 +1,22 @@
 'use client';
-import { PlayerMatchHistoryStatsSkill } from '@gravllift/halo-helpers';
+import {
+  compareXuids,
+  isRequestError,
+  PlayerMatchHistoryStatsSkill,
+} from '@gravllift/halo-helpers';
+import { isAbortError } from '@gravllift/utilities';
 import type { JsonLogicTree } from '@react-awesome-query-builder/ui';
-import { RequestError } from 'halo-infinite-api';
-import { apply, is_logic, get_operator, get_values } from 'json-logic-js';
+import { apply, get_operator, get_values } from 'json-logic-js';
+import { DateTime } from 'luxon';
 import { useCallback, useEffect, useState } from 'react';
 import { Observable } from 'rxjs';
 import { appInsights } from '../../lib/application-insights/client';
-import { useNavigationController } from '../navigation-context';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { getPlayerMatches } from '../../lib/match-query/player-matches';
 import { ColumnName, columns } from '../columns/base-columns';
 import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
-import { compareXuids } from '@gravllift/halo-helpers';
+import { useNavigationController } from '../navigation-context';
 import { toaster } from '../ui/toaster';
-import { DateTime } from 'luxon';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { isRequestError } from '@gravllift/halo-helpers';
 
 function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
   // Traverse the object looking for gamertag references
@@ -272,7 +274,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
             }
             setMatches([]);
             return;
-          } else if (e instanceof DOMException && e.name === 'AbortError') {
+          } else if (isAbortError(e)) {
             return;
           }
           error = e;

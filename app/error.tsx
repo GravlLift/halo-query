@@ -2,6 +2,7 @@
 import { Box, Button, Code, Heading, VStack } from '@chakra-ui/react';
 import { TriangleAlert } from 'lucide-react';
 import { useEffect } from 'react';
+import { isUnloading } from '../lib/unload';
 
 export default function Error({
   error,
@@ -11,7 +12,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    if (error) {
+    if (error && !isUnloading) {
       import('../lib/application-insights/client').then(({ appInsights }) => {
         appInsights.trackException({ exception: error });
       });

@@ -4,6 +4,7 @@ import { useNavigationController } from '../../components/navigation-context';
 import { toaster } from '../../components/ui/toaster';
 import { useHaloCaches } from '../contexts/halo-caches-context';
 import { isRequestError } from '@gravllift/halo-helpers';
+import { isAbortError } from '@gravllift/utilities';
 
 export function useUserData(gamerTag: string | null) {
   const { usersCache } = useHaloCaches();
@@ -27,7 +28,7 @@ export function useUserData(gamerTag: string | null) {
         ) {
           setUser(undefined);
         } else {
-          if (e instanceof DOMException && e.name === 'AbortError') {
+          if (isAbortError(e)) {
             // Ignore
           } else if (e instanceof Error) {
             toaster.create({

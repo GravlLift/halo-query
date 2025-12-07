@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { isAbortError } from '@gravllift/utilities';
 
 interface NavigationContextValue {
   signal: AbortSignal;
@@ -107,7 +108,7 @@ export function useNavigationController() {
 
 // This is the error handler function
 export function abortErrorCatch(e: unknown) {
-  if (!(e instanceof DOMException && e.name === 'AbortError')) {
+  if (!isAbortError(e)) {
     throw e;
   }
 }

@@ -27,24 +27,20 @@ import { Toaster } from '../components/ui/toaster';
 import { VerticalCenter } from '../components/vertical-center';
 import { appInsights } from '../lib/application-insights/client';
 import '../lib/client-polyfills';
-
-const unloadAbortController = new AbortController();
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    unloadAbortController.abort('Page unloading');
-  });
-}
+import { isAbortError } from '@gravllift/utilities';
+import { isUnloading } from '../lib/unload';
 
 function shouldIgnoreError(e: Error) {
   return (
-    e.name === 'AbortError' ||
+    isUnloading ||
     (e instanceof TypeError &&
       e.message ===
         'WeakMap key undefined must be an object or an unregistered symbol' &&
       e.stack?.includes('commandsListener') &&
       e.stack?.includes('executeCommands')) ||
     (e instanceof ClientAuthError &&
-      [ClientAuthErrorCodes.networkError].includes(e.errorCode))
+      [ClientAuthErrorCodes.networkError].includes(e.errorCode)) ||
+    isAbortError(e)
   );
 }
 
@@ -94,8 +90,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         errorHandler(e.reason);
       }
     },
-    undefined,
-    { signal: unloadAbortController.signal }
+    undefined
   );
   useEventListener(
     'error',
@@ -104,8 +99,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         errorHandler(e.error);
       }
     },
-    undefined,
-    { signal: unloadAbortController.signal }
+    undefined
   );
 
   const logoFilename = useBreakpointValue({

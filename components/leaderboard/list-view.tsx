@@ -8,7 +8,7 @@ import {
   Table,
   Text,
 } from '@chakra-ui/react';
-import { abortSignalAny } from '@gravllift/utilities';
+import { abortSignalAny, isAbortError } from '@gravllift/utilities';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { DateTime } from 'luxon';
 import NextLink from 'next/link';
@@ -137,7 +137,7 @@ export default function ListView({
             const newPage = Math.floor(gamertagIndex / pageSize);
             setPage(newPage + 1);
           } catch (e) {
-            if (e instanceof DOMException && e.name === 'AbortError') {
+            if (isAbortError(e)) {
               return;
             }
             throw e;

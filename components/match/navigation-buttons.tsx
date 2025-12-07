@@ -13,6 +13,7 @@ import { toaster } from '../ui/toaster';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import type { JsonLogicTree } from '@react-awesome-query-builder/ui';
 import { useMemo } from 'react';
+import { isAbortError } from '@gravllift/utilities';
 
 function focusPlayerCoalesce(focusPlayer: string | string[]): string {
   if (Array.isArray(focusPlayer)) {
@@ -81,7 +82,7 @@ export function NavigationButtons(props: {
                 router.push(url);
               }
             } catch (e) {
-              if (!(e instanceof DOMException && e.name === 'AbortError')) {
+              if (!isAbortError(e)) {
                 throw e;
               }
             } finally {
@@ -127,7 +128,7 @@ export function NavigationButtons(props: {
               abort('Returning to match list');
               router.push(url);
             } catch (e) {
-              if (!(e instanceof DOMException && e.name === 'AbortError')) {
+              if (!isAbortError(e)) {
                 throw e;
               }
             } finally {
@@ -174,7 +175,7 @@ export function NavigationButtons(props: {
                 router.push(url);
               }
             } catch (e) {
-              if (!(e instanceof DOMException && e.name === 'AbortError')) {
+              if (!isAbortError(e)) {
                 throw e;
               }
             } finally {

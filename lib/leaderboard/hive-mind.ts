@@ -197,9 +197,15 @@ export function ensureJoin(leaderboard: ILeaderboardProvider) {
     });
   } catch (e) {
     if (
-      e instanceof DOMException &&
-      e.message ===
-        "Failed to construct 'RTCPeerConnection': Cannot create so many PeerConnections"
+      e instanceof Error &&
+      (e.message ===
+        "Failed to construct 'RTCPeerConnection': Cannot create so many PeerConnections" ||
+        (e instanceof AggregateError &&
+          e.errors.some(
+            (err) =>
+              err.message ===
+              "Failed to construct 'RTCPeerConnection': Cannot create so many PeerConnections"
+          )))
     ) {
       return;
     }

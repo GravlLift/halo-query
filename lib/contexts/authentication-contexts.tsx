@@ -23,9 +23,10 @@ import {
 import { appInsights } from '../application-insights/client';
 import { fetcher } from '../clients/fetcher';
 import { localStorageEvent } from '../local-storage/event-based-localstorage';
-import { scopes } from '../msal-instance/scopes';
 import { waypointXboxRequestPolicy } from '../request-policy';
 import { XboxLiveError } from './xbox-live-error';
+
+const scopes = ['Xboxlive.signin'];
 
 function getHeaderDict(headers: Headers): Record<string, string> {
   const headerDict: Record<string, string> = {};

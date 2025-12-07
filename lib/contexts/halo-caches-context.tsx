@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import { useLeaderboard } from '../../components/leaderboard-provider/leaderboard-context';
 import { useApiClients } from './api-client-contexts';
 import { waypointXboxRequestPolicy } from '../request-policy';
+import { TaskCancelledError, timeout, TimeoutStrategy } from 'cockatiel';
 
 const HaloCachesContext = createContext<HaloCaches | null>(null);
 
@@ -13,6 +14,11 @@ export function useHaloCaches() {
   }
   return context;
 }
+
+const policy = timeout(5000, {
+  abortOnReturn: false,
+  strategy: TimeoutStrategy.Aggressive,
+});
 
 export function HaloCachesProvider({
   children,
@@ -30,10 +36,22 @@ export function HaloCachesProvider({
           waypointXboxRequestPolicy,
           {
             async fetchManyFn(keys) {
-              if (!leaderboard || (await leaderboard.initialized()) === false) {
-                return [];
+              try {
+                return await policy.execute(async () => {
+                  if (
+                    !leaderboard ||
+                    (await leaderboard.initialized()) === false
+                  ) {
+                    return [];
+                  }
+                  return await leaderboard.getEntries(keys);
+                });
+              } catch (e) {
+                if (e instanceof TaskCancelledError) {
+                  return [];
+                }
+                throw e;
               }
-              return leaderboard.getEntries(keys);
             },
             resultSelector(items, key) {
               return (
