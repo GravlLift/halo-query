@@ -27,21 +27,20 @@ export function HaloCachesProvider({
         new HaloCaches(
           haloInfiniteClient,
           xboxClient,
-          waypointXboxRequestPolicy
-          // Leaderboard fetcher (disabled in favor of redis)
-          // {
-          //   async fetchManyFn(keys) {
-          //     if (!leaderboard || (await leaderboard.initialized()) === false) {
-          //       return [];
-          //     }
-          //     return leaderboard.getEntries(keys);
-          //   },
-          //   resultSelector(items, key) {
-          //     return (
-          //       items.find((entry) => compareXuids(entry.xuid, key)) ?? null
-          //     );
-          //   },
-          // }
+          waypointXboxRequestPolicy,
+          {
+            async fetchManyFn(keys) {
+              if (!leaderboard || (await leaderboard.initialized()) === false) {
+                return [];
+              }
+              return leaderboard.getEntries(keys);
+            },
+            resultSelector(items, key) {
+              return (
+                items.find((entry) => compareXuids(entry.xuid, key)) ?? null
+              );
+            },
+          }
         )
       }
     >
