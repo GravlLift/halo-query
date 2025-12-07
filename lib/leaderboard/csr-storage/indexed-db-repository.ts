@@ -2,14 +2,16 @@
 import { LeaderboardEntry, entryIsValid } from '@gravllift/halo-helpers';
 import Dexie, { Table, Transaction, TransactionMode } from 'dexie';
 
-let _database: Promise<Dexie> | undefined;
+let _database: Dexie | null = null;
+let _databaseOpenPromise: Promise<Dexie> | null = null;
 async function getOrCreataDatabase() {
   if (!_database) {
-    const db = new Dexie('Leaderboard');
-    db.version(1).stores({
+    _database = new Dexie('Leaderboard');
+    _database.version(1).stores({
       csr: '[xuid+playlistAssetId],[playlistAssetId],xuid,csr',
     });
-    db.version(2)
+    _database
+      .version(2)
       .stores({
         csr: '[xuid+playlistAssetId],[playlistAssetId],xuid,csr,gamertag,matchDate',
       })
@@ -21,20 +23,25 @@ async function getOrCreataDatabase() {
             delete entry.fetchedTime;
           })
       );
-    db.version(3).stores({
+    _database.version(3).stores({
       csr: '[playlistAssetId+xuid],[matchDate+playlistAssetId+gamertag],[playlistAssetId+csr]',
     });
-    db.version(4).stores({
+    _database.version(4).stores({
       leaderboard:
         '[playlistAssetId+xuid],[matchDate+playlistAssetId+gamertag],[playlistAssetId+csr],[playlistAssetId+esr]',
     });
+  }
 
-    _database = db.open().catch(async (e) => {
-      await db?.delete();
+  if (!_databaseOpenPromise || _database.isOpen() === false) {
+    _databaseOpenPromise = _database.open().catch(async (e) => {
+      await _database?.delete();
+      _database = null;
       throw e;
     });
   }
-  return await _database;
+
+  await _databaseOpenPromise;
+  return _database;
 }
 
 let leaderboardTable:
