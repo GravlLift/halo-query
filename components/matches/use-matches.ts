@@ -249,7 +249,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
       );
       setLogger$(logger$);
       setLoading(true);
-      let error: Error | undefined = undefined;
+      let error: Error | undefined;
       //appInsights.startTrackEvent('MatchesQuery');
       try {
         for await (const match of iterator) {
