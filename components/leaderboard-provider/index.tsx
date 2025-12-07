@@ -15,7 +15,7 @@ import {
 } from '../../lib/leaderboard/hive-mind';
 import { HiveMindContext } from './hive-mind-context';
 import { LeaderboardContext } from './leaderboard-context';
-import { useLeaderboardProvider } from './non-worker-leaderboard';
+import { useLeaderboardProvider } from './worker-leaderboard';
 
 export default function LeaderboardProvider({
   children,
