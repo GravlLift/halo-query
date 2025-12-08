@@ -1,12 +1,10 @@
-import { isRequestError } from '@gravllift/halo-helpers';
+import { ConstantBackoff, handleResultType, retry } from 'cockatiel';
 import { remapUrlForProxy } from '../clients/fetcher';
-import { ConstantBackoff, handleWhen, retry } from 'cockatiel';
 
-export const vercelRequestPolicy = retry(
-  handleWhen(
-    (err) =>
-      isRequestError(err) &&
-      err.response.headers.get('x-vercel-mitigated') === 'challenge'
+export const vercelResponsePolicy = retry(
+  handleResultType(
+    Response,
+    (res) => res.headers.get('x-vercel-mitigated') === 'challenge'
   ),
   {
     maxAttempts: 2,
@@ -16,10 +14,10 @@ export const vercelRequestPolicy = retry(
 
 let solvingPromise: Promise<boolean> | null = null;
 
-vercelRequestPolicy.onFailure(async ({ reason }) => {
-  if ('error' in reason && isRequestError(reason.error)) {
+vercelResponsePolicy.onFailure(async ({ reason }) => {
+  if ('value' in reason && reason.value instanceof Response) {
     try {
-      const responseUrl = remapUrlForProxy(reason.error.response.url);
+      const responseUrl = remapUrlForProxy(reason.value.url);
       const sameOrigin =
         new URL(responseUrl, location.href).origin === location.origin;
 
@@ -27,7 +25,7 @@ vercelRequestPolicy.onFailure(async ({ reason }) => {
         if (!solvingPromise) {
           let html: string | undefined;
           try {
-            html = await reason.error.response.clone().text();
+            html = await reason.value.clone().text();
           } catch {}
           solvingPromise = ensureVercelChallengeSolved({
             url: responseUrl,
