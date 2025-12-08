@@ -64,7 +64,7 @@
   "devDependencies": {
     "@types/json-logic-js": "^2.0.8",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^20.11.30",
+    "@types/node": "^22.19.1",
     "@types/nprogress": "^0.2.3",
     "@types/react": "^18.3.4",
     "eslint-config-next": "^15.0.0",
