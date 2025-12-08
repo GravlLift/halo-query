@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       try {
         const entry = await getBlackListEntry(xuid);
         if (entry) {
-          defaultClient.trackEvent({
+          defaultClient?.trackEvent({
             name: 'UserBlacklisted',
             properties: {
               RelyingParty: JSON.parse(requestBody).RelyingParty,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (err) {
         if (err instanceof Error) {
-          defaultClient.trackException({ exception: err });
+          defaultClient?.trackException({ exception: err });
         }
       }
     }
