@@ -42,10 +42,12 @@ function reconnect() {
 let sendCsrEntriesAction: PrettyAction<LeaderboardEntry[]>;
 let requestEntriesAction: PrettyAction<null>;
 const reconnectPolicy = retry(
-  handleWhen((e) => e.name === 'InvalidStateError'),
+  handleWhen(
+    (e) =>
+      e.name === 'InvalidStateError' || e.message.includes('InvalidStateError')
+  ),
   {
     maxAttempts: 2,
-    backoff: new ConstantBackoff(0),
   }
 );
 reconnectPolicy.onFailure(({ handled }) => {
