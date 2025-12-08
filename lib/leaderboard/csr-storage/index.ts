@@ -15,6 +15,19 @@ const policy = retry(
   }
 );
 
+policy.onFailure(({ handled, reason }) => {
+  if (handled) {
+    if (
+      'error' in reason &&
+      reason.error instanceof Dexie.UnknownError &&
+      reason.error.name === 'UnknownError' &&
+      reason.error.message.includes('Refresh the page to try again')
+    ) {
+      location.reload();
+    }
+  }
+});
+
 /** Adds entries to storage if they do not exist or are more recent than the current record */
 export async function addLeaderboardEntries(entries: LeaderboardEntry[]) {
   // Most recent match per user/playlist combo
@@ -114,10 +127,8 @@ export async function getGamertagIndex(
   return index;
 }
 
-export async function getAllEntries() {
-  return await policy.execute(async () =>
-    (await getLeaderboardTable()).toArray()
-  );
+export function getAllEntries() {
+  return policy.execute(async () => (await getLeaderboardTable()).toArray());
 }
 
 export async function getSkillBuckets(
@@ -158,7 +169,7 @@ export async function getSkillBuckets(
   return buckets;
 }
 
-export async function getRankedEntries(
+export function getRankedEntries(
   playlistAssetId: string,
   options: {
     offset: number;
@@ -210,11 +221,9 @@ export async function getRankedEntries(
   );
 }
 
-export async function getPlaylistEntriesCount(playlistAssetId: string) {
-  return await policy.execute(async () =>
-    (
-      await getLeaderboardTable()
-    )
+export function getPlaylistEntriesCount(playlistAssetId: string) {
+  return policy.execute(async () =>
+    (await getLeaderboardTable())
       .where(['playlistAssetId', 'xuid'])
       .between([playlistAssetId, Dexie.minKey], [playlistAssetId, Dexie.maxKey])
       .count()
