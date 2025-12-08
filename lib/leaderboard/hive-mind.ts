@@ -91,10 +91,6 @@ const requestEntriesCalls = new Set<string>();
 const peerJoined$ = new Subject<string>();
 
 export function ensureJoin(leaderboard: ILeaderboardProvider) {
-  if (!roomLeaderboard) {
-    console.debug('Joined room as', selfId);
-  }
-
   try {
     roomLeaderboard = {
       room: joinRoom(
@@ -158,7 +154,6 @@ export function ensureJoin(leaderboard: ILeaderboardProvider) {
       }
     });
     roomLeaderboard.room.onPeerJoin(async (peerId) => {
-      console.debug('Peer joined', peerId);
       _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
       peerJoined$.next(peerId);
     });
@@ -172,7 +167,6 @@ export function ensureJoin(leaderboard: ILeaderboardProvider) {
     });
     sendCsrEntriesAction.onReceive((data, peerId) => {
       _peerStatus$.next({ ..._peerStatus$.value, [peerId]: null });
-      console.debug(`Received ${data.length} entries from`, peerId);
       leaderboard.addLeaderboardEntries(data);
     });
 
@@ -228,7 +222,6 @@ const sendQueue = new Map<
   { entries: LeaderboardEntry[]; promise: Promise<void> }[]
 >();
 async function _sendEntriesToPeer(entries: LeaderboardEntry[], peerId: string) {
-  console.debug('Sending entries to', peerId);
   await reconnectPolicy.execute(() =>
     sendCsrEntriesAction.send(entries, peerId)
   );
@@ -328,7 +321,6 @@ export const requestEntries = async () => {
     }
 
     const peerId = chosenPeers.values().next();
-    console.debug('Requesting entries from', peerId);
     // Don't await
     reconnectPolicy.execute(() =>
       requestEntriesAction.send(null, peerId.value)

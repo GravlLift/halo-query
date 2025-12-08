@@ -1,6 +1,7 @@
 import Dexie from 'dexie';
 import leaderboard from '../../lib/leaderboard';
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import { closeDatabase } from '../../lib/leaderboard/csr-storage/indexed-db-repository';
 
 const signalMap = new Map<number, AbortController>();
 
@@ -17,9 +18,22 @@ async function leaderboardFn<
         callId: number;
         cancel: unknown;
       }
+    | {
+        terminate: true;
+      }
   >
 ) {
-  if ('cancel' in event.data) {
+  if ('terminate' in event.data) {
+    try {
+      for (const controller of signalMap.values()) {
+        controller.abort('Worker terminating');
+      }
+      signalMap.clear();
+      closeDatabase();
+    } finally {
+      close();
+    }
+  } else if ('cancel' in event.data) {
     const controller = signalMap.get(event.data.cancel as number);
     if (controller) {
       controller.abort('Operation cancelled by main thread');

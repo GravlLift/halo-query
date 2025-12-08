@@ -44,6 +44,14 @@ async function getOrCreataDatabase() {
   return _database;
 }
 
+export function closeDatabase() {
+  if (_database) {
+    _database.close();
+    _database = null;
+    _databaseOpenPromise = null;
+  }
+}
+
 let leaderboardTable:
   | Promise<Dexie.Table<LeaderboardEntry, [string, string]>>
   | undefined;
@@ -52,7 +60,6 @@ export function getLeaderboardTable() {
   if (!leaderboardTable) {
     leaderboardTable = getOrCreataDatabase().then(async (db) => {
       const table = db.table<LeaderboardEntry, [string, string]>('leaderboard');
-      console.debug('Ensuring leaderboard table is valid...');
       await table
         .toCollection()
         .modify(
@@ -62,7 +69,6 @@ export function getLeaderboardTable() {
             }
           }
         );
-      console.debug('Ensured leaderboard table is valid');
       databaseInitialized = true;
       return table;
     });

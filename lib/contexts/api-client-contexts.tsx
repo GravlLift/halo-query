@@ -1,4 +1,5 @@
 'use client';
+import { isRequestError } from '@gravllift/halo-helpers';
 import { SpreadableClassShape } from '@gravllift/utilities';
 import {
   HaloAuthenticationClient,
@@ -11,9 +12,7 @@ import { createContext, ReactNode, useCallback, useContext } from 'react';
 import { fetcher } from '../clients/fetcher';
 import { tokenPersister } from '../token-persisters/client';
 import { useAuthentication } from './authentication-contexts';
-import { isRequestError } from '@gravllift/halo-helpers';
 import { XboxLiveError } from './xbox-live-error';
-import { localStorageEvent } from '../local-storage/event-based-localstorage';
 
 class XboxCurrentGamertagAuthenticationClient extends XboxAuthenticationClient {
   public async getCurrentGamertag() {
@@ -24,9 +23,7 @@ class XboxCurrentGamertagAuthenticationClient extends XboxAuthenticationClient {
 
 interface ApiClientsContextValue {
   haloInfiniteClient: HaloInfiniteClient;
-  xboxAuthClient: SpreadableClassShape<typeof XboxAuthenticationClient> & {
-    getCurrentGamertag: () => Promise<string>;
-  };
+  xboxAuthClient: XboxCurrentGamertagAuthenticationClient;
   xboxClient: XboxClient;
   haloAuthClient: HaloAuthenticationClient;
 }

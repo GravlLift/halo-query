@@ -4,6 +4,8 @@ import { useLeaderboard } from '../../components/leaderboard-provider/leaderboar
 import { useApiClients } from './api-client-contexts';
 import { waypointXboxRequestPolicy } from '../request-policy';
 import { TaskCancelledError, timeout, TimeoutStrategy } from 'cockatiel';
+import { RelyingParty, XboxAuthenticationClient } from 'halo-infinite-api';
+import { tokenPersister } from '../token-persisters/client';
 
 const HaloCachesContext = createContext<HaloCaches | null>(null);
 
@@ -30,11 +32,24 @@ export function HaloCachesProvider({
   return (
     <HaloCachesContext.Provider
       value={
-        new HaloCaches(
-          haloInfiniteClient,
-          xboxClient,
-          waypointXboxRequestPolicy,
-          {
+        new HaloCaches(haloInfiniteClient, xboxClient, {
+          requestPolicy: waypointXboxRequestPolicy,
+          xuidIsCurrentUser: async (xuid: string) => {
+            const xstsTicket = await tokenPersister.load<{
+              DisplayClaims: {
+                xui: [
+                  {
+                    xid: string;
+                  }
+                ];
+              };
+            }>(XboxAuthenticationClient.xstsTicketName(RelyingParty.Xbox));
+            return (
+              xstsTicket != null &&
+              compareXuids(xuid, xstsTicket.DisplayClaims.xui[0].xid)
+            );
+          },
+          additionalXuidFetcher: {
             async fetchManyFn(keys) {
               try {
                 return await policy.execute(async () => {
@@ -58,8 +73,8 @@ export function HaloCachesProvider({
                 items.find((entry) => compareXuids(entry.xuid, key)) ?? null
               );
             },
-          }
-        )
+          },
+        })
       }
     >
       {children}

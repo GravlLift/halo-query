@@ -15,19 +15,6 @@ const policy = retry(
   }
 );
 
-policy.onFailure(({ handled, reason }) => {
-  if (handled) {
-    if (
-      'error' in reason &&
-      reason.error instanceof Dexie.UnknownError &&
-      reason.error.name === 'UnknownError' &&
-      reason.error.message.includes('Refresh the page to try again')
-    ) {
-      location.reload();
-    }
-  }
-});
-
 /** Adds entries to storage if they do not exist or are more recent than the current record */
 export async function addLeaderboardEntries(entries: LeaderboardEntry[]) {
   // Most recent match per user/playlist combo

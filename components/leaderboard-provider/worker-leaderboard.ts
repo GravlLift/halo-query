@@ -8,6 +8,7 @@ const callMap = new Map<
     Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
   >
 >();
+let workerRestarts = 0;
 export function useLeaderboardProvider(): ILeaderboardProvider {
   const workerRef = useRef<Worker | null>(null);
 
@@ -82,12 +83,21 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         if (typeof event.data.error === 'string') {
           event.data.error = JSON.parse(event.data.error);
         }
-        if (event.data.forceReload) {
-          // Prevent infinite reload loop
-          const searchParams = new URLSearchParams(location.search);
-          if (!searchParams.has('force-reload')) {
-            searchParams.set('force-reload', '1');
-            location.search = searchParams.toString();
+        if (event.data.forceReload && workerRef.current) {
+          if (workerRestarts < 3) {
+            workerRef.current.postMessage({ terminate: true });
+            workerRef.current.removeEventListener('message', messageHandler);
+
+            workerRef.current = new Worker(
+              new URL('./worker.ts', import.meta.url)
+            );
+            workerRestarts++;
+          } else {
+            const searchParams = new URLSearchParams(location.search);
+            if (!searchParams.has('force-reload')) {
+              searchParams.set('force-reload', '1');
+              location.search = searchParams.toString();
+            }
           }
         }
         promise.reject(event.data.error);
@@ -97,8 +107,8 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
     workerRef.current.addEventListener('message', messageHandler);
 
     return () => {
+      workerRef.current?.postMessage({ terminate: true });
       workerRef.current?.removeEventListener('message', messageHandler);
-      workerRef.current?.terminate();
     };
   }, []);
 
