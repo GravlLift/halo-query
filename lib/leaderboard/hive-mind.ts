@@ -65,6 +65,12 @@ setInterval(() => {
   }
 }, 60000);
 
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    reconnect();
+  }
+});
+
 interface PrettyAction<T> {
   send: ActionSender<T>;
   onReceive: ActionReceiver<T>;
