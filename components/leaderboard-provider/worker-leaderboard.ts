@@ -1,6 +1,9 @@
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { useEffect, useMemo, useRef } from 'react';
+import { handleAll, retry } from 'cockatiel';
+
+const retryEverythingPolicy = retry(handleAll, { maxAttempts: 3 });
 
 const callMap = new Map<
   number,
@@ -48,9 +51,11 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
     return new Proxy({} as ILeaderboardProvider, {
       get(_target, prop) {
         return (...args: unknown[]) =>
-          callLeaderboardProviderFn(
-            prop as keyof ILeaderboardProvider,
-            args as any
+          retryEverythingPolicy.execute(async () =>
+            callLeaderboardProviderFn(
+              prop as keyof ILeaderboardProvider,
+              args as any
+            )
           );
       },
     });
