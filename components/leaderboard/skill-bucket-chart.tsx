@@ -34,7 +34,10 @@ export default function SkillBucketChart({
     return Array.from(skillBuckets).reduce((acc, [, count]) => acc + count, 0);
   }, [skillBuckets]);
   const sortedSkillBuckets = useMemo(
-    () => Array.from(skillBuckets).sortBy(([skill]) => skill),
+    () =>
+      Array.from(skillBuckets)
+        .filter(([skill]) => skill > 0)
+        .sortBy(([skill]) => skill),
     [skillBuckets]
   );
   const labels = useMemo(() => {
