@@ -63,7 +63,7 @@ setInterval(() => {
   ) {
     reconnect();
   }
-}, 60000);
+}, 5000);
 
 interface PrettyAction<T> {
   send: ActionSender<T>;
@@ -191,14 +191,6 @@ export function ensureJoin(leaderboard: ILeaderboardProvider) {
         }
       }
     });
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          reconnect();
-        }
-      });
-    }
   } catch (e) {
     if (
       e instanceof Error &&
