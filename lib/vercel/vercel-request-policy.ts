@@ -1,5 +1,6 @@
 import { ConstantBackoff, handleResultType, retry } from 'cockatiel';
 import { remapUrlForProxy } from '../clients/fetcher';
+import { appInsights } from '../application-insights/client';
 
 export const vercelResponsePolicy = retry(
   handleResultType(
@@ -39,6 +40,10 @@ vercelResponsePolicy.onFailure(async ({ reason }) => {
         }
         const solved = await solvingPromise;
         if (solved) {
+          appInsights.trackEvent({
+            name: 'VercelChallengeSolved',
+            properties: { url: responseUrl },
+          });
           // Allow policy's automatic retry without reload.
           return;
         }
