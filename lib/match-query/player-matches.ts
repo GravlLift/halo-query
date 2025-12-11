@@ -11,7 +11,7 @@ import { HaloCaches } from '@gravllift/halo-helpers';
 
 export function getPlayerMatches(
   leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'containsXuid'>
+    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
     | undefined,
   gamertags: string[],
   options: Parameters<typeof _getPlayerMatches>[2],
@@ -31,7 +31,7 @@ export function getPlayerMatches(
 
 export async function getMatch(
   leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'containsXuid'>
+    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
     | undefined,
   matchId: string,
   haloCaches: HaloCaches,
@@ -50,7 +50,7 @@ export async function getMatch(
 
 export function getPlayerEsrA(
   leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'containsXuid'>
+    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
     | undefined,
   playlistVersionLink: Omit<AssetVersionLink, 'AssetKind'>,
   xuid: string,

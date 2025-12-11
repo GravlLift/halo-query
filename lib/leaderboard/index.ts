@@ -8,7 +8,6 @@ import {
   getRandomEntry,
   getRankedEntries,
   getSkillBuckets,
-  containsXuid,
   getEntries,
 } from './csr-storage';
 import { databaseInitialized } from './csr-storage/indexed-db-repository';
@@ -24,7 +23,6 @@ const provider: ILeaderboardProvider = {
   getRankedEntries,
   getPlaylistEntriesCount,
   getPlaylistAssetIds,
-  containsXuid,
   getEntries,
 };
 

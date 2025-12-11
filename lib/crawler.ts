@@ -6,7 +6,7 @@ import { HaloCaches } from '@gravllift/halo-helpers';
 
 export async function crawlMatches(
   leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'containsXuid'>
+    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
     | undefined,
   xuid: string,
   visitedMatches: Set<string>,

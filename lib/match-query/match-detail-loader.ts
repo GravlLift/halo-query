@@ -8,7 +8,7 @@ import { HaloCaches } from '@gravllift/halo-helpers';
 
 export function fetchFullyLoadedMatch(
   leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'containsXuid'>
+    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
     | undefined,
   match: { MatchId: string; MatchInfo: MatchInfo },
   users: { xuid: string }[],

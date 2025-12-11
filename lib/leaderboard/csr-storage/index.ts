@@ -236,16 +236,6 @@ export function getPlaylistAssetIds() {
   );
 }
 
-export function containsXuid(xuid: string): Promise<boolean> {
-  return policy.execute(async () =>
-    (await getLeaderboardTable())
-      .where(['playlistAssetId', 'xuid'])
-      .between([Dexie.minKey, wrapXuid(xuid)], [Dexie.maxKey, wrapXuid(xuid)])
-      .count()
-      .then((count) => count > 0)
-  );
-}
-
 export function getEntries(keys: string[]): Promise<
   {
     xuid: string;
