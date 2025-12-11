@@ -106,9 +106,6 @@ const msalInstance = new PublicClientApplication({
     },
   },
 });
-const initializePromise = msalInstance
-  .initialize()
-  .then(() => msalInstance.handleRedirectPromise());
 
 interface AuthenticationContextValue {
   acquireOauth2AccessToken: () => Promise<string>;
@@ -144,6 +141,19 @@ export function useAuthentication(): AuthenticationContextValue {
 export function AuthenticationProvider({ children }: { children: ReactNode }) {
   const [interaction, setInteraction] =
     useState<AuthenticationContextValue['interaction']>(null);
+  const initializePromise = useRef(
+    msalInstance
+      .initialize()
+      .then(() => msalInstance.handleRedirectPromise())
+      .catch(async (e) => {
+        if (e instanceof ServerError && e.errorCode === 'access_denied') {
+          // User has explicitly revoked our app's access. We need to ask for permission again.
+          return await requireInteraction(e);
+        }
+
+        throw e;
+      })
+  );
 
   const redirect = useCallback(async () => {
     await msalInstance.acquireTokenRedirect({
@@ -180,7 +190,7 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
     if (!currentPromise) {
       currentPromise = (async () => {
         try {
-          const maybeRedirectToken = await initializePromise;
+          const maybeRedirectToken = await initializePromise.current;
           if (maybeRedirectToken?.accessToken) {
             return maybeRedirectToken.accessToken;
           }
@@ -208,14 +218,9 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
           } else if (e instanceof ServerError) {
             // Something is wrong with our current login state, clear and re-auth
             await msalInstance.clearCache();
-            if (e.errorCode === 'access_denied') {
-              // User has explicitly revoked our app's access. We need to ask for permission again.
-              return await requireInteraction(e);
-            } else {
-              // Assume user needs to non-interactively re-authenticate
-              appInsights.trackException({ exception: e });
-              return await redirect();
-            }
+            // Assume user needs to non-interactively re-authenticate
+            appInsights.trackException({ exception: e });
+            return await redirect();
           } else {
             throw e;
           }
@@ -244,7 +249,7 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
     msalInstance: {
       getAllAccounts: async () => {
         try {
-          await initializePromise;
+          await initializePromise.current;
           return msalInstance.getAllAccounts();
         } catch (err) {
           return [];
