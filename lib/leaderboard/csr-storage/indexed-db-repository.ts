@@ -1,6 +1,7 @@
 'use client';
 import { LeaderboardEntry, entryIsValid } from '@gravllift/halo-helpers';
 import Dexie, { Table, Transaction, TransactionMode } from 'dexie';
+import { appInsights } from '../../application-insights/client';
 
 let _database: Dexie | null = null;
 let _databaseOpenPromise: Promise<Dexie> | null = null;
@@ -60,7 +61,7 @@ export function getLeaderboardTable() {
   if (!leaderboardTable) {
     leaderboardTable = getOrCreataDatabase().then(async (db) => {
       const table = db.table<LeaderboardEntry, [string, string]>('leaderboard');
-      await table
+      table
         .toCollection()
         .modify(
           (entry: LeaderboardEntry, ref: { value?: LeaderboardEntry }) => {
@@ -68,7 +69,14 @@ export function getLeaderboardTable() {
               delete ref.value;
             }
           }
-        );
+        )
+        .catch((err) => {
+          if (err instanceof Error) {
+            appInsights.trackException({ exception: err });
+          } else {
+            throw err;
+          }
+        });
       databaseInitialized = true;
       return table;
     });

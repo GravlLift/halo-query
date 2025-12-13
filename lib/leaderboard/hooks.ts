@@ -152,7 +152,7 @@ export function useSkillBuckets(
     [leaderboard, playlistAssetId, skillProp]
   );
   return {
-    buckets: useObservable(observable$.pipe(), defaultBuckets),
+    buckets: useObservable(observable$, defaultBuckets),
     loading,
   };
 }
