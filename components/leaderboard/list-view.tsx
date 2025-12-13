@@ -110,14 +110,7 @@ export default function ListView({
             if (gamertagIndex === -1) {
               // Gamertag exists but is not in the leaderboard,
               // so we need to crawl it
-              await crawlMatches(
-                leaderboard,
-                xuid,
-                new Set(),
-                1,
-                signal,
-                haloCaches
-              );
+              await crawlMatches(xuid, 1, { leaderboard, signal, haloCaches });
               gamertagIndex = await leaderboard.getGamertagIndex(
                 xuid,
                 playlistAssetId,

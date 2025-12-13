@@ -48,14 +48,11 @@ export default function CrawlButton() {
                       }
 
                       try {
-                        await crawlMatches(
-                          leaderboard,
-                          xuid,
-                          new Set(),
-                          -1,
+                        await crawlMatches(xuid, 10, {
                           signal,
-                          haloCaches
-                        );
+                          haloCaches,
+                          leaderboard,
+                        });
                       } catch (e) {
                         if (isAbortError(e)) {
                           break;
