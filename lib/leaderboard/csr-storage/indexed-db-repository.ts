@@ -5,7 +5,7 @@ import { appInsights } from '../../application-insights/client';
 
 let _database: Dexie | null = null;
 let _databaseOpenPromise: Promise<Dexie> | null = null;
-async function getOrCreataDatabase() {
+async function getOrCreateDatabase() {
   if (!_database) {
     _database = new Dexie('Leaderboard');
     _database.version(1).stores({
@@ -59,7 +59,7 @@ let leaderboardTable:
 export let databaseInitialized = false;
 export function getLeaderboardTable() {
   if (!leaderboardTable) {
-    leaderboardTable = getOrCreataDatabase().then(async (db) => {
+    leaderboardTable = getOrCreateDatabase().then(async (db) => {
       const table = db.table<LeaderboardEntry, [string, string]>('leaderboard');
       table
         .toCollection()
@@ -88,4 +88,4 @@ export const transaction = <U>(
   mode: TransactionMode,
   table: Table,
   scope: (trans: Transaction) => PromiseLike<U> | U
-) => getOrCreataDatabase().then((db) => db.transaction(mode, table, scope));
+) => getOrCreateDatabase().then((db) => db.transaction(mode, table, scope));

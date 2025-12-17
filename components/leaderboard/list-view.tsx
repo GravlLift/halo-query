@@ -15,7 +15,6 @@ import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { map } from 'rxjs';
-import { crawlMatches } from '../../lib/crawler';
 import { useNavigationController } from '../navigation-context';
 import { useObservable } from '../../lib/hooks/use-observable';
 import {
@@ -30,6 +29,7 @@ import TableLoading from '../table-loading';
 import { VerticalCenter } from '../vertical-center';
 import { toaster } from '../ui/toaster';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import { crawlMatches } from '@gravllift/halo-helpers';
 const pageSize = 100;
 
 export default function ListView({

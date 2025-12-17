@@ -25,7 +25,8 @@
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "../../libs/halo-helpers/src/hive-mind.ts"
   ],
   "exclude": [
     "node_modules",

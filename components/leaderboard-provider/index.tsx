@@ -12,7 +12,7 @@ import {
   peerStatus$,
   requestEntries,
   sendLeaderboardEntriesToAllPeers,
-} from '../../lib/leaderboard/hive-mind';
+} from '@gravllift/halo-helpers/src/hive-mind';
 import { HiveMindContext } from './hive-mind-context';
 import { LeaderboardContext } from './leaderboard-context';
 import { useLeaderboardProvider } from './worker-leaderboard';
@@ -83,7 +83,26 @@ export default function LeaderboardProvider({
   });
 
   useEffect(() => {
-    ensureJoin(leaderboardProvider);
+    ensureJoin(
+      leaderboardProvider,
+      class FixedRTCPeerConnection extends RTCPeerConnection {
+        override close(): void {
+          super.close();
+          queueMicrotask(() => {
+            if (document) {
+              let img: HTMLImageElement | null = document.createElement('img');
+              img.src = window.URL.createObjectURL(
+                new Blob([new ArrayBuffer(5e7)])
+              ); // 50Mo or less or more depending as you wish to force/invoke GC cycle run
+              img.onerror = function () {
+                window.URL.revokeObjectURL(this.src);
+                img = null;
+              };
+            }
+          });
+        }
+      }
+    );
     return () => {
       leave();
     };

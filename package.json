@@ -44,7 +44,7 @@
     "expiry-set": "^1.0.0",
     "file-system-access": "^1.0.4",
     "framer-motion": "^10.16.4",
-    "halo-infinite-api": "^14.1.0",
+    "halo-infinite-api": "^14.2.1",
     "immutable": "^5.1.4",
     "json-logic-js": "^2.0.5",
     "lodash": "^4.17.21",

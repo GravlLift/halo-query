@@ -1,12 +1,12 @@
 import { Box, Button, Flex, Spinner } from '@chakra-ui/react';
 import { useState } from 'react';
 import { abortSignalAny, isAbortError } from '@gravllift/utilities';
-import { crawlMatches } from '../../lib/crawler';
 import { useCurrentUserGamertag } from '../../lib/hooks/current-user';
 import { useNavigationController } from '../navigation-context';
 import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import Testing from '../testing';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import { crawlMatches } from '@gravllift/halo-helpers';
 
 export default function CrawlButton() {
   const leaderboard = useLeaderboard();
