@@ -170,6 +170,7 @@ export function PlaylistTabContent({
       return {
         matchId: m.MatchId,
         matchStart: m.MatchInfo.StartTime,
+        matchEnd: m.MatchInfo.EndTime,
         outcome: player.Outcome,
         gameVariantName:
           'PublicName' in m.MatchInfo.UgcGameVariant
@@ -215,7 +216,7 @@ export function PlaylistTabContent({
     getTierSubTierForSkill(esr);
 
   const matchAggregate = playlistMatches
-    .sortByDesc((m) => m.MatchInfo.StartTime)
+    .sortByDesc((m) => m.MatchInfo.EndTime)
     .map((m) => {
       const player = m.MatchStats.Players.find((p) =>
         compareXuids(user.xuid, p.PlayerId)

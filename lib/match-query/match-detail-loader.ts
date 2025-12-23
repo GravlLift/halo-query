@@ -1,15 +1,13 @@
 import {
   fetchFullyLoadedMatch as _fetchFullyLoadedMatch,
-  ILeaderboardProvider,
+  HaloCaches,
+  HiveMindLeaderboardProvider,
   PlayerMatchHistoryStatsSkill,
 } from '@gravllift/halo-helpers';
 import { MatchInfo } from 'halo-infinite-api';
-import { HaloCaches } from '@gravllift/halo-helpers';
 
 export function fetchFullyLoadedMatch(
-  leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
-    | undefined,
+  leaderboard: HiveMindLeaderboardProvider | undefined,
   match: { MatchId: string; MatchInfo: MatchInfo },
   users: { xuid: string }[],
   signal: AbortSignal,

@@ -34,6 +34,7 @@ export type PlaylistSkillRankByModeChartProps = {
     matchId: string;
     gameVariantName: string;
     matchStart: string;
+    matchEnd: string;
     mapName: string;
     skill: MatchSkill;
     teamSkills: (MatchSkill | undefined)[];
@@ -60,7 +61,8 @@ export default function PlaylistSkillRankByModeChart(
   const { abort } = useNavigationController();
   const router = useRouter();
   const { fontColor, gridColor } = useChartTheme();
-  const sortedSkills = props.skills.sortBy((m) => m.matchStart);
+  // Sort by match end, label by match start
+  const sortedSkills = props.skills.sortBy((m) => m.matchEnd);
   const gameVariants = sortedSkills
     .map((m) => m.gameVariantName)
     .distinct()

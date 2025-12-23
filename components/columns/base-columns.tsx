@@ -52,6 +52,19 @@ export const columns = {
     format: (startTime) =>
       DateTime.fromISO(startTime).toLocaleString(DateTime.DATETIME_SHORT),
   } as TableColumnWithFormat<string>,
+  'End Time': {
+    id: 212,
+    text: 'End Time',
+    level: 'Match',
+    rawValue: ({ match }) => match.MatchInfo.EndTime,
+    queryValue: ({ match }) =>
+      DateTime.fromISO(match.MatchInfo.EndTime).set({
+        second: 0,
+        millisecond: 0,
+      }),
+    format: (endTime) =>
+      DateTime.fromISO(endTime).toLocaleString(DateTime.DATETIME_SHORT),
+  } as TableColumnWithFormat<string>,
   Playlist: {
     id: 2,
     text: 'Playlist',
@@ -827,9 +840,13 @@ export const columns = {
 } satisfies Record<string, TableColumn>;
 
 // throw if any column's id is not unique
-Object.values(columns).forEach((column, index) => {
+Object.values(columns).forEach((column) => {
   if (Object.values(columns).some((c) => c.id === column.id && c !== column)) {
-    throw new Error(`Duplicate column id found: ${column.id}`);
+    throw new Error(
+      `Duplicate column id found: ${column.id}. Next available ID is ${
+        Math.max(...Object.values(columns).map((c) => c.id)) + 1
+      }.`
+    );
   }
 });
 
@@ -842,6 +859,7 @@ export const categories: TableCategory<TableCategory>[] = [
         children: [
           columns['Match Id'],
           columns['Start Time'],
+          columns['End Time'],
           columns['Playlist'],
           columns['Map'],
           columns['Game Variant Category'],

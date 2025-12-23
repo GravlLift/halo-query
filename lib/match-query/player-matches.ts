@@ -1,4 +1,5 @@
 import {
+  HiveMindLeaderboardProvider,
   ILeaderboardProvider,
   getPlayerEsrA as _getPlayerEsrA,
   getPlayerMatches as _getPlayerMatches,
@@ -10,9 +11,7 @@ import { Subject } from 'rxjs';
 import { HaloCaches } from '@gravllift/halo-helpers';
 
 export function getPlayerMatches(
-  leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
-    | undefined,
+  leaderboard: ILeaderboardProvider | undefined,
   gamertags: string[],
   options: Parameters<typeof _getPlayerMatches>[2],
   haloCaches: HaloCaches
@@ -30,9 +29,7 @@ export function getPlayerMatches(
 }
 
 export async function getMatch(
-  leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
-    | undefined,
+  leaderboard: ILeaderboardProvider | undefined,
   matchId: string,
   haloCaches: HaloCaches,
   signal?: AbortSignal
@@ -47,11 +44,8 @@ export async function getMatch(
     true
   );
 }
-
 export function getPlayerEsrA(
-  leaderboard:
-    | Pick<ILeaderboardProvider, 'addLeaderboardEntries' | 'getEntries'>
-    | undefined,
+  leaderboard: HiveMindLeaderboardProvider | undefined,
   playlistVersionLink: Omit<AssetVersionLink, 'AssetKind'>,
   xuid: string,
   asOf: DateTime,

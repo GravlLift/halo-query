@@ -278,7 +278,7 @@ export default function MatchesTable({
           </Table.Header>
           <Table.Body>
             {matches
-              ?.sortByDesc((m) => m.MatchInfo.StartTime)
+              ?.sortByDesc((m) => m.MatchInfo.EndTime)
               .flatMap((match) => {
                 return match.Players.sortBy((p) => p.gamertag).map(
                   (player, i, { length }) => {

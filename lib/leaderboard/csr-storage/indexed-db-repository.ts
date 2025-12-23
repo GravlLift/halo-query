@@ -1,5 +1,9 @@
 'use client';
-import { LeaderboardEntry, entryIsValid } from '@gravllift/halo-helpers';
+import {
+  LeaderboardEntry,
+  entryIsValid,
+  LeaderboardEntryKeys,
+} from '@gravllift/halo-helpers';
 import Dexie, { Table, Transaction, TransactionMode } from 'dexie';
 import { appInsights } from '../../application-insights/client';
 
@@ -9,12 +13,12 @@ async function getOrCreateDatabase() {
   if (!_database) {
     _database = new Dexie('Leaderboard');
     _database.version(1).stores({
-      csr: '[xuid+playlistAssetId],[playlistAssetId],xuid,csr',
+      csr: `[${LeaderboardEntryKeys.Xuid}+${LeaderboardEntryKeys.PlaylistAssetId}],[${LeaderboardEntryKeys.PlaylistAssetId}],${LeaderboardEntryKeys.Xuid},${LeaderboardEntryKeys.Csr}`,
     });
     _database
       .version(2)
       .stores({
-        csr: '[xuid+playlistAssetId],[playlistAssetId],xuid,csr,gamertag,matchDate',
+        csr: `[${LeaderboardEntryKeys.Xuid}+${LeaderboardEntryKeys.PlaylistAssetId}],[${LeaderboardEntryKeys.PlaylistAssetId}],${LeaderboardEntryKeys.Xuid},${LeaderboardEntryKeys.Csr},${LeaderboardEntryKeys.Gamertag},${LeaderboardEntryKeys.MatchDate}`,
       })
       .upgrade((trans) =>
         trans
@@ -25,17 +29,31 @@ async function getOrCreateDatabase() {
           })
       );
     _database.version(3).stores({
-      csr: '[playlistAssetId+xuid],[matchDate+playlistAssetId+gamertag],[playlistAssetId+csr]',
+      csr: `[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.MatchDate}+${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Gamertag}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}]`,
     });
     _database.version(4).stores({
-      leaderboard:
-        '[playlistAssetId+xuid],[matchDate+playlistAssetId+gamertag],[playlistAssetId+csr],[playlistAssetId+esr]',
+      leaderboard: `[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.MatchDate}+${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Gamertag}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}]`,
     });
+    _database
+      .version(5)
+      .stores({
+        leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[${LeaderboardEntryKeys.DiscoverySource}+${LeaderboardEntryKeys.DiscoveryVersion}],${LeaderboardEntryKeys.DiscoverySource}`,
+      })
+      .upgrade((trans) =>
+        trans
+          .table('leaderboard')
+          .toCollection()
+          .modify(async (entry) => {
+            if (entry[LeaderboardEntryKeys.DiscoverySource] === undefined) {
+              entry[LeaderboardEntryKeys.DiscoverySource] = '';
+              entry[LeaderboardEntryKeys.DiscoveryVersion] = 0;
+            }
+          })
+      );
   }
 
   if (!_databaseOpenPromise || _database.isOpen() === false) {
     _databaseOpenPromise = _database.open().catch(async (e) => {
-      await _database?.delete();
       _database = null;
       throw e;
     });
@@ -53,9 +71,8 @@ export function closeDatabase() {
   }
 }
 
-let leaderboardTable:
-  | Promise<Dexie.Table<LeaderboardEntry, [string, string]>>
-  | undefined;
+export type LeaderboardTable = Dexie.Table<LeaderboardEntry, [string, string]>;
+let leaderboardTable: Promise<LeaderboardTable> | undefined;
 export let databaseInitialized = false;
 export function getLeaderboardTable() {
   if (!leaderboardTable) {
@@ -84,8 +101,14 @@ export function getLeaderboardTable() {
   return leaderboardTable;
 }
 
-export const transaction = <U>(
+export const transaction = <U, T, TKey, TInsertType>(
   mode: TransactionMode,
-  table: Table,
-  scope: (trans: Transaction) => PromiseLike<U> | U
-) => getOrCreateDatabase().then((db) => db.transaction(mode, table, scope));
+  table: Table<T, TKey, TInsertType>,
+  scope: (
+    trans: Transaction,
+    table: Table<T, TKey, TInsertType>
+  ) => PromiseLike<U> | U
+) =>
+  getOrCreateDatabase().then((db) =>
+    db.transaction(mode, table, (trans) => scope(trans, table))
+  );

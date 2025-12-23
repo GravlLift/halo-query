@@ -50,6 +50,7 @@ export type PlaylistSkillRankChartProps = {
   skills: {
     matchId: string;
     matchStart: string;
+    matchEnd: string;
     gameVariantName: string;
     mapName: string;
     skill: MatchSkill<1 | 0>;
@@ -86,7 +87,7 @@ export default function PlaylistSkillRankChart(
   const router = useRouter();
   const { fontColor, annotationLabelColor, gridColor } = useChartTheme();
   const allGameVariants = props.skills.map((s) => s.gameVariantName).distinct();
-  const sortedSkills = props.skills.sortBy((m) => m.matchStart);
+  const sortedSkills = props.skills.sortBy((m) => m.matchEnd);
   const chartRef = useRef<ChartJS<'line', ChartDataPoint[]>>(null);
   // Keep a ref to sorted skills for stable tooltip callbacks
   const sortedSkillsRef = useRef(sortedSkills);

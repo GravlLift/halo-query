@@ -17,7 +17,7 @@ export async function getMatchPage(
   const match = await matchStatsCache.get(matchId);
   let low = 0;
   let high = 1;
-  const matchStartDate = DateTime.fromISO(match.MatchInfo.StartTime);
+  const matchStartDate = DateTime.fromISO(match.MatchInfo.EndTime);
 
   const matches = await Promise.allSettled([
     matchPageCache.get({ xuid, start: low * pageSize, pageSize }, signal),
@@ -35,7 +35,7 @@ export async function getMatchPage(
   }
 
   let rangeStartDate: DateTime = DateTime.fromISO(
-    furthestPastMatches[furthestPastMatches.length - 1].MatchInfo.StartTime
+    furthestPastMatches[furthestPastMatches.length - 1].MatchInfo.EndTime
   );
   while (rangeStartDate > matchStartDate) {
     low = high + 1;
@@ -57,7 +57,7 @@ export async function getMatchPage(
     }
 
     rangeStartDate = DateTime.fromISO(
-      furthestPastMatches[furthestPastMatches.length - 1].MatchInfo.StartTime
+      furthestPastMatches[furthestPastMatches.length - 1].MatchInfo.EndTime
     );
   }
 
@@ -103,9 +103,9 @@ async function binarySearch(
   );
 
   const midStartDate = DateTime.fromISO(
-    midMatches[midMatches.length - 1].MatchInfo.StartTime
+    midMatches[midMatches.length - 1].MatchInfo.EndTime
   );
-  const midEndDate = DateTime.fromISO(midMatches[0].MatchInfo.StartTime);
+  const midEndDate = DateTime.fromISO(midMatches[0].MatchInfo.EndTime);
   if (midStartDate <= matchStartDate && midEndDate >= matchStartDate) {
     // Found target, cancel any outstanding requests
     abortController.abort('Match page found');
