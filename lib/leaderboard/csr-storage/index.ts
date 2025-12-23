@@ -331,28 +331,69 @@ export async function getDeltaEntries(
   const entries: LeaderboardEntry[] = [];
   return policy.execute(async () =>
     transaction('r', await getLeaderboardTable(), async (_, table) => {
-      await table
+      // Determine whether we can early-stop (only when we have a cutoff for every source)
+      const allSources = (await table
         .orderBy(LeaderboardEntryKeys.DiscoverySource)
-        .eachKey(async (source) => {
-          if (typeof source === 'string') {
-            entries.push(
-              ...(await table
-                .where([
-                  LeaderboardEntryKeys.DiscoverySource,
-                  LeaderboardEntryKeys.DiscoveryVersion,
-                ])
-                .between(
-                  [source, knowledges[source] ?? Dexie.minKey],
-                  [source, Dexie.maxKey]
-                )
-                .toArray())
-            );
-          } else {
-            throw new Error(
-              `Unexpected non-string ${LeaderboardEntryKeys.DiscoverySource} key: ${source}`
-            );
-          }
-        });
+        .uniqueKeys()) as string[];
+      const canEarlyStop = allSources.every((s) => knowledges[s] !== undefined);
+
+      if (canEarlyStop) {
+        const done = new Set<string>();
+        await table
+          .where([
+            LeaderboardEntryKeys.DiscoverySource,
+            LeaderboardEntryKeys.DiscoveryVersion,
+          ])
+          .between([Dexie.minKey, Dexie.minKey], [Dexie.maxKey, Dexie.maxKey])
+          .reverse()
+          .until(() => done.size === allSources.length)
+          .each((entry) => {
+            const source = entry[LeaderboardEntryKeys.DiscoverySource];
+            const version = entry[LeaderboardEntryKeys.DiscoveryVersion];
+            const cutoff = knowledges[source] as number; // defined due to canEarlyStop
+
+            if (version >= cutoff) {
+              entries.push(entry);
+            } else if (!done.has(source)) {
+              done.add(source);
+            }
+          });
+      } else {
+        // Fallback: single forward scan preserving original ordering
+        await table
+          .where([
+            LeaderboardEntryKeys.DiscoverySource,
+            LeaderboardEntryKeys.DiscoveryVersion,
+          ])
+          .between([Dexie.minKey, Dexie.minKey], [Dexie.maxKey, Dexie.maxKey])
+          .each((entry) => {
+            const source = entry[LeaderboardEntryKeys.DiscoverySource];
+            const version = entry[LeaderboardEntryKeys.DiscoveryVersion];
+            const cutoff = knowledges[source];
+            if (cutoff === undefined || version >= cutoff) {
+              entries.push(entry);
+            }
+          });
+      }
+
+      // Keep behaviorally consistent ordering: source ASC, version ASC
+      entries.sort((a, b) => {
+        const sa = a[
+          LeaderboardEntryKeys.DiscoverySource
+        ] as unknown as string as string;
+        const sb = b[
+          LeaderboardEntryKeys.DiscoverySource
+        ] as unknown as string as string;
+        const cmp = sa.localeCompare(sb);
+        if (cmp !== 0) return cmp;
+        const va = a[
+          LeaderboardEntryKeys.DiscoveryVersion
+        ] as unknown as number;
+        const vb = b[
+          LeaderboardEntryKeys.DiscoveryVersion
+        ] as unknown as number;
+        return va - vb;
+      });
 
       return entries;
     })
