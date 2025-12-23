@@ -42,16 +42,25 @@ export async function addLeaderboardEntries(
 
   await policy.execute(async () =>
     transaction('rw', await getLeaderboardTable(), async (_, table) => {
-      const [existingEntries, currentKnowledge] = await Promise.all([
+      const [existingEntries, lastVersion] = await Promise.all([
         table.bulkGet(
           validEntries.map((entry) => [
             entry.playlistAssetId,
             wrapXuid(entry.xuid),
           ])
         ),
-        getCurrentKnowledgeWithinTransaction(table),
+        table
+          .where([
+            LeaderboardEntryKeys.DiscoverySource,
+            LeaderboardEntryKeys.DiscoveryVersion,
+          ])
+          .between(
+            [fallbackDiscovererId, Dexie.minKey],
+            [fallbackDiscovererId, Dexie.maxKey]
+          )
+          .lastKey()
+          .then((lastKey) => (lastKey ? (lastKey as [string, number])[1] : 0)),
       ]);
-      const lastVersion = currentKnowledge.get(fallbackDiscovererId) ?? 0;
 
       for (let i = 0; i < validEntries.length; i++) {
         const entry = validEntries[i];
@@ -97,7 +106,7 @@ export async function addLeaderboardEntries(
             ...existingEntry,
             ...determineDiscoveryInfo(existingEntry, entry, {
               discovererId: fallbackDiscovererId,
-              lastVersion: lastVersion,
+              lastVersion,
             }),
           });
           continue;
@@ -299,29 +308,25 @@ export function getEntries(keys: string[]): Promise<
   });
 }
 
-async function getCurrentKnowledgeWithinTransaction(table: LeaderboardTable) {
-  const knowledgeMap = new Map<string, number>();
-  await table
-    .orderBy([
-      LeaderboardEntryKeys.DiscoverySource,
-      LeaderboardEntryKeys.DiscoveryVersion,
-    ])
-    .reverse()
-    .eachKey((key) => {
-      const [source, version] = key as [string, number];
-      if (!knowledgeMap.has(source)) {
-        knowledgeMap.set(source, version);
-      }
-    });
-
-  return knowledgeMap;
-}
-
 export async function getCurrentKnowledge() {
   return policy.execute(async () =>
-    transaction('r', await getLeaderboardTable(), async (_, table) =>
-      getCurrentKnowledgeWithinTransaction(table)
-    )
+    transaction('r', await getLeaderboardTable(), async (_, table) => {
+      const knowledgeMap = new Map<string, number>();
+      await table
+        .orderBy([
+          LeaderboardEntryKeys.DiscoverySource,
+          LeaderboardEntryKeys.DiscoveryVersion,
+        ])
+        .reverse()
+        .eachKey((key) => {
+          const [source, version] = key as [string, number];
+          if (!knowledgeMap.has(source)) {
+            knowledgeMap.set(source, version);
+          }
+        });
+
+      return knowledgeMap;
+    })
   );
 }
 
