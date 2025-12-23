@@ -50,6 +50,9 @@ async function getOrCreateDatabase() {
             }
           })
       );
+    _database.version(6).stores({
+      settings: 'key',
+    });
   }
 
   if (!_databaseOpenPromise || _database.isOpen() === false) {
@@ -112,3 +115,37 @@ export const transaction = <U, T, TKey, TInsertType>(
   getOrCreateDatabase().then((db) =>
     db.transaction(mode, table, (trans) => scope(trans, table))
   );
+
+export type Setting = { key: string; value: string };
+export type SettingsTable = Dexie.Table<Setting, string>;
+let settingsTable: Promise<SettingsTable> | undefined;
+export function getSettingsTable() {
+  if (!settingsTable) {
+    settingsTable = getOrCreateDatabase().then((db) =>
+      db.table<Setting, string>('settings')
+    );
+  }
+  return settingsTable;
+}
+
+export async function getDiscovererId(): Promise<string> {
+  const table = await getSettingsTable();
+  const existing = await table.get('discovererId');
+  if (existing && existing.value) {
+    return existing.value;
+  }
+  const id = crypto.randomUUID();
+  try {
+    // Prefer add so concurrent callers don't overwrite each other.
+    await table.add({ key: 'discovererId', value: id });
+    return id;
+  } catch (err) {
+    // If another caller won the race, read the persisted value.
+    const now = await table.get('discovererId');
+    if (now && now.value) {
+      return now.value;
+    }
+    // Fallback: return the generated id.
+    return id;
+  }
+}
