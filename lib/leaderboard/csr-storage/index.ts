@@ -302,20 +302,15 @@ export function getEntries(keys: string[]): Promise<
 async function getCurrentKnowledgeWithinTransaction(table: LeaderboardTable) {
   const knowledgeMap = new Map<string, number>();
   await table
-    .orderBy(LeaderboardEntryKeys.DiscoverySource)
-    .eachKey(async (source) => {
-      if (typeof source === 'string') {
-        const key = await table
-          .where([
-            LeaderboardEntryKeys.DiscoverySource,
-            LeaderboardEntryKeys.DiscoveryVersion,
-          ])
-          .between([source, Dexie.minKey], [source, Dexie.maxKey])
-          .lastKey();
-
-        if (key) {
-          knowledgeMap.set(source, (key as number[])[1]);
-        }
+    .orderBy([
+      LeaderboardEntryKeys.DiscoverySource,
+      LeaderboardEntryKeys.DiscoveryVersion,
+    ])
+    .reverse()
+    .eachKey((key) => {
+      const [source, version] = key as [string, number];
+      if (!knowledgeMap.has(source)) {
+        knowledgeMap.set(source, version);
       }
     });
 
