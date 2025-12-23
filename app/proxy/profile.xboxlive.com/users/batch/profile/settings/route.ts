@@ -1,8 +1,12 @@
-import { compareXuids, getGamerpicUrl } from '@gravllift/halo-helpers';
+import {
+  addUserInfo,
+  compareXuids,
+  getByXuid,
+  getGamerpicUrl,
+} from '@gravllift/halo-helpers';
 import type { XboxClient } from 'halo-infinite-api';
 import { UserInfo } from 'halo-infinite-api';
 import { after, NextRequest, NextResponse } from 'next/server';
-import { addUserInfo, getByXuid } from '../../../../../../../lib/user-cache';
 
 type ResponseBody = Awaited<ReturnType<XboxClient['getProfiles']>>;
 type ProfileUser = ResponseBody['profileUsers'][number];

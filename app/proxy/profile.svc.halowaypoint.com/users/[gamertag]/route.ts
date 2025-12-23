@@ -1,5 +1,5 @@
+import { addUserInfo, getByGamertag } from '@gravllift/halo-helpers';
 import { after, NextRequest, NextResponse } from 'next/server';
-import { addUserInfo, getByGamertag } from '../../../../../lib/user-cache';
 import { proxyFetch } from '../../../proxyRoute';
 
 export async function GET(

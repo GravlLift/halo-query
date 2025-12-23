@@ -1,9 +1,8 @@
+import { addUserInfo, compareXuids, getByXuid } from '@gravllift/halo-helpers';
+import type { HaloInfiniteClient } from 'halo-infinite-api';
+import { UserInfo } from 'halo-infinite-api';
 import { after, NextRequest, NextResponse } from 'next/server';
 import { proxyFetch } from '../../proxyRoute';
-import { addUserInfo, getByXuid } from '../../../../lib/user-cache';
-import { UserInfo } from 'halo-infinite-api';
-import { compareXuids } from '@gravllift/halo-helpers';
-import type { HaloInfiniteClient } from 'halo-infinite-api';
 
 export async function GET(request: NextRequest) {
   const xuidParam = request.nextUrl.searchParams.get('xuids');
