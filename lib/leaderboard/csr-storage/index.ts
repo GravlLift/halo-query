@@ -10,11 +10,7 @@ import { handleType, retry } from 'cockatiel';
 import Dexie from 'dexie';
 import { appInsights } from '../../application-insights/client';
 import { defaultBuckets } from '../default-buckets';
-import {
-  getLeaderboardTable,
-  LeaderboardTable,
-  transaction,
-} from './indexed-db-repository';
+import { getLeaderboardTable, transaction } from './indexed-db-repository';
 
 const policy = retry(
   handleType(Dexie.DexieError)
@@ -345,11 +341,10 @@ export async function getDeltaEntries(
       if (canEarlyStop) {
         const done = new Set<string>();
         await table
-          .where([
+          .orderBy([
             LeaderboardEntryKeys.DiscoverySource,
             LeaderboardEntryKeys.DiscoveryVersion,
           ])
-          .between([Dexie.minKey, Dexie.minKey], [Dexie.maxKey, Dexie.maxKey])
           .reverse()
           .until(() => done.size === allSources.length)
           .each((entry) => {
@@ -357,7 +352,7 @@ export async function getDeltaEntries(
             const version = entry[LeaderboardEntryKeys.DiscoveryVersion];
             const cutoff = knowledges[source] as number; // defined due to canEarlyStop
 
-            if (version >= cutoff) {
+            if (version > cutoff) {
               entries.push(entry);
             } else if (!done.has(source)) {
               done.add(source);
@@ -366,39 +361,19 @@ export async function getDeltaEntries(
       } else {
         // Fallback: single forward scan preserving original ordering
         await table
-          .where([
+          .orderBy([
             LeaderboardEntryKeys.DiscoverySource,
             LeaderboardEntryKeys.DiscoveryVersion,
           ])
-          .between([Dexie.minKey, Dexie.minKey], [Dexie.maxKey, Dexie.maxKey])
           .each((entry) => {
             const source = entry[LeaderboardEntryKeys.DiscoverySource];
             const version = entry[LeaderboardEntryKeys.DiscoveryVersion];
             const cutoff = knowledges[source];
-            if (cutoff === undefined || version >= cutoff) {
+            if (cutoff === undefined || version > cutoff) {
               entries.push(entry);
             }
           });
       }
-
-      // Keep behaviorally consistent ordering: source ASC, version ASC
-      entries.sort((a, b) => {
-        const sa = a[
-          LeaderboardEntryKeys.DiscoverySource
-        ] as unknown as string as string;
-        const sb = b[
-          LeaderboardEntryKeys.DiscoverySource
-        ] as unknown as string as string;
-        const cmp = sa.localeCompare(sb);
-        if (cmp !== 0) return cmp;
-        const va = a[
-          LeaderboardEntryKeys.DiscoveryVersion
-        ] as unknown as number;
-        const vb = b[
-          LeaderboardEntryKeys.DiscoveryVersion
-        ] as unknown as number;
-        return va - vb;
-      });
 
       return entries;
     })
