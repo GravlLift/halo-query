@@ -1,4 +1,4 @@
-import { Link, Table } from '@chakra-ui/react';
+import { Link, Text, Table } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
 import { compareXuids, wrapXuid, skillRank } from '@gravllift/halo-helpers';
 import { PlayerMatchHistoryStatsSkill } from '@gravllift/halo-helpers';
@@ -155,12 +155,16 @@ export function TeammatesTable({
           <Table.ColumnHeader textAlign="right">Game Time</Table.ColumnHeader>
           <Table.ColumnHeader textAlign="right">Record</Table.ColumnHeader>
           <Table.ColumnHeader textAlign="right">
-            <Tooltip content="Weighted average by match duration">
+            <Tooltip
+              content={`${focusPlayer}'s average PSR-K weighted by match duration`}
+            >
               PSR-K
             </Tooltip>
           </Table.ColumnHeader>
           <Table.ColumnHeader textAlign="right">
-            <Tooltip content="Weighted average by match duration">
+            <Tooltip
+              content={`${focusPlayer}'s average PSR-D weighted by match duration`}
+            >
               PSR-D
             </Tooltip>
           </Table.ColumnHeader>
