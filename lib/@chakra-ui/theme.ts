@@ -343,7 +343,8 @@ export const system = createSystem(
               value: '{colors.haloQuery.700}',
             },
             emphasized: {
-              value: '{colors.haloQuery.700}',
+              // Make emphasized distinct from panel so Skeletons remain visible in Cards
+              value: '{colors.haloQuery.600}',
             },
           },
           fg: {

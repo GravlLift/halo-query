@@ -13,6 +13,7 @@ import PsrRemoval from './articles/psr-removal';
 import QuerySavingSharing from './articles/query-saving-sharing';
 import Post from './post';
 import OpenSource from './articles/open-source';
+import Teammates from './articles/teammates';
 
 const articles: Record<
   string,
@@ -22,6 +23,11 @@ const articles: Record<
     Component: () => JSX.Element;
   }
 > = {
+  teammates: {
+    date: '2025-12-23',
+    title: 'Teammates Table',
+    Component: Teammates,
+  },
   'open-source': {
     date: '2025-11-06',
     title: 'Halo Query is Open Source',

@@ -137,7 +137,7 @@ export default function PlayerCategoryTable({
                     }
                   >
                     <Table.Cell>
-                      <GamertagDisplay player={p} />
+                      <GamertagDisplay player={p} fetchIfMissing />
                     </Table.Cell>
                     {category.children.flatMap((c, i) =>
                       c.children

@@ -61,6 +61,7 @@ import PlaylistSkillRankChart, {
 } from './skill-rank-chart/playlist-skill-rank-chart';
 import { WinRateTable } from './win-rate-table';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import { TeammatesTable } from './teammates-table';
 
 const maxMatches: number = +getLocalStorageValueOrDefault(
   'SKILL_CHART_MAX',
@@ -280,6 +281,14 @@ export function PlaylistTabContent({
         showLastXGames === 'all' ? undefined : showLastXGames
       ),
     [matchAggregate, showLastXGames]
+  );
+
+  const slicedPlaylistMatches = useMemo(
+    () =>
+      playlistMatches
+        .sortByDesc((m) => m.MatchInfo.EndTime)
+        .slice(0, showLastXGames === 'all' ? undefined : showLastXGames),
+    [playlistMatches, showLastXGames]
   );
 
   const colors = useColors();
@@ -759,10 +768,29 @@ export function PlaylistTabContent({
               {matchesLoading && slicedMatchAggregate.length === 0 ? (
                 <Loading centerProps={{ height: '300px' }} />
               ) : (
-                <Box overflowX="auto">
+                <Box overflowX="auto" w="100%">
                   <WinRateTable
                     matches={slicedMatchAggregate}
                     playlistName={playlist.playlistAsset.PublicName}
+                  />
+                </Box>
+              )}
+            </Center>
+          </Card.Body>
+        </Card.Root>
+        <Card.Root>
+          <Card.Header>
+            <Heading size="md">Teammates</Heading>
+          </Card.Header>
+          <Card.Body>
+            <Center>
+              {matchesLoading && slicedPlaylistMatches.length === 0 ? (
+                <Loading centerProps={{ height: '300px' }} />
+              ) : (
+                <Box overflowX="auto" w="100%">
+                  <TeammatesTable
+                    matches={slicedPlaylistMatches}
+                    userXuid={user.xuid}
                   />
                 </Box>
               )}

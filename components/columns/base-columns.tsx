@@ -242,7 +242,9 @@ export const columns = {
     format: (_, { team }) =>
       team &&
       'Players' in team &&
-      team.Players.map((g) => <GamertagDisplay player={g} key={g.PlayerId} />),
+      team.Players.map((g) => (
+        <GamertagDisplay player={g} key={g.PlayerId} fetchIfMissing />
+      )),
   },
   'Enemy Team Members': {
     id: 85,
@@ -256,7 +258,10 @@ export const columns = {
     format: (_, { match, team }) =>
       'MatchStats' in match &&
       match.MatchStats.Teams.filter((t) => t.TeamId != team?.TeamId).flatMap(
-        (t) => t.Players.map((g) => <GamertagDisplay player={g} key={g.xuid} />)
+        (t) =>
+          t.Players.map((g) => (
+            <GamertagDisplay player={g} key={g.xuid} fetchIfMissing />
+          ))
       ),
   },
   'Team Expected Skill Rank Average': {
@@ -616,7 +621,7 @@ export const columns = {
       player.PlayerId,
     format: (_, { player }) =>
       ('gamertag' in player || 'PlayerId' in player) && (
-        <GamertagDisplay player={player} />
+        <GamertagDisplay player={player} fetchIfMissing />
       ),
   },
   ...playerStatsColumns.columns,

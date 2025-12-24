@@ -53,8 +53,8 @@ function usePlaylists(
         string
       >({
         cacheExpirationMs: 15 * 1000,
-        fetchOneFn: async ({ playlistId, seasonId, xuid }, signal) => {
-          return await waypointXboxRequestPolicy
+        fetchOneFn: async ({ playlistId, seasonId, xuid }, signal) =>
+          await waypointXboxRequestPolicy
             .execute(
               (ctx) =>
                 haloInfiniteClient.getPlaylistCsr(
@@ -68,8 +68,7 @@ function usePlaylists(
               signal
             )
             .then((r) => r[0].Result)
-            .catch(() => null);
-        },
+            .catch(() => null),
         keyTransformer: ({ xuid, playlistId, seasonId }) =>
           `${xuid}-${playlistId}-${seasonId}`,
       }),

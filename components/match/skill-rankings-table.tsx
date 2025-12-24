@@ -165,7 +165,7 @@ export default function SkillRankingsTable({
                         }
                       >
                         <Table.Cell>
-                          <GamertagDisplay player={p} />
+                          <GamertagDisplay player={p} fetchIfMissing />
                         </Table.Cell>
                         {csrExists ? (
                           p.Skill?.RankRecap.PreMatchCsr.Value === -1 ? (
