@@ -11,7 +11,6 @@ import { Loading } from '../loading';
 import Testing from '../testing';
 import Peers from './peers';
 import PlaylistLeaderboard from './playlist-leaderboard';
-import CrawlButton from './crawl-button';
 
 export default function Leaderboard({
   page,
@@ -102,7 +101,6 @@ export default function Leaderboard({
             </Box>
           </Testing>
         </Flex>
-        <CrawlButton/>
         {playlistAssetId == null ||
         playlists.some((p) => p.AssetId === playlistAssetId) ? (
           <Tabs.Root
