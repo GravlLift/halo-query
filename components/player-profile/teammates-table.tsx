@@ -156,14 +156,14 @@ export function TeammatesTable({
           <Table.ColumnHeader textAlign="right">Record</Table.ColumnHeader>
           <Table.ColumnHeader textAlign="right">
             <Tooltip
-              content={`${focusPlayer}'s average PSR-K weighted by match duration`}
+              content={`${focusPlayer}'s average Performance Skill Ranking (Kills) weighted by match duration`}
             >
               PSR-K
             </Tooltip>
           </Table.ColumnHeader>
           <Table.ColumnHeader textAlign="right">
             <Tooltip
-              content={`${focusPlayer}'s average PSR-D weighted by match duration`}
+              content={`${focusPlayer}'s average Performance Skill Ranking (Deaths) weighted by match duration`}
             >
               PSR-D
             </Tooltip>

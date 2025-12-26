@@ -19,12 +19,12 @@ export default function Teammates() {
       </Center>
       <Text>
         This is Frosty's Teammates table, for example. The columns are fairly
-        self explanatory, but the PSR ones have a slight nuance to them: These
-        are Frosty's PSR values when playing with that teammate, and they are
-        weighted averages based on match duration. This means that a 20 minute
-        game will have more impact on the average than a 5 minute game. This
-        should give you a good idea of how well you're playing with that
-        teammate, regardless of sample size.
+        self explanatory, but the Performance Skill Ranking (PSR) ones have a
+        slight nuance to them: These are Frosty's PSR values when playing with
+        that teammate, and they are weighted averages based on match duration.
+        This means that a 20 minute game will have more impact on the average
+        than a 5 minute game. This should give you a good idea of how well
+        you're playing with that teammate, regardless of sample size.
       </Text>
       <Text>
         You can find this table at the bottom of the player profiles. Shout out
