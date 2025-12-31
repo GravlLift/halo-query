@@ -283,7 +283,7 @@ export function getPlaylistAssetIds() {
   );
 }
 
-export function getEntries(keys: string[]): Promise<
+export function getEntries(xuids: string[]): Promise<
   {
     xuid: string;
     gamertag: string;
@@ -293,13 +293,15 @@ export function getEntries(keys: string[]): Promise<
     const leaderboardTable = await getLeaderboardTable();
     const seenXuids = new Set<string>();
     const distinctEntries: { xuid: string; gamertag: string }[] = [];
-    await leaderboardTable.each((entry) => {
-      if (keys.includes(entry.xuid) && !seenXuids.has(entry.xuid)) {
-        seenXuids.add(entry.xuid);
-        distinctEntries.push({ xuid: entry.xuid, gamertag: entry.gamertag });
-      }
-    });
-
+    await leaderboardTable
+      .where(LeaderboardEntryKeys.Xuid)
+      .anyOf(xuids.map((xuid) => wrapXuid(xuid)))
+      .each((entry) => {
+        if (!seenXuids.has(entry.xuid)) {
+          seenXuids.add(entry.xuid);
+          distinctEntries.push({ xuid: entry.xuid, gamertag: entry.gamertag });
+        }
+      });
     return distinctEntries;
   });
 }

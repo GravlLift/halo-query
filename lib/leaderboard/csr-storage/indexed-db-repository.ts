@@ -53,6 +53,10 @@ async function getOrCreateDatabase() {
     _database.version(6).stores({
       settings: 'key',
     });
+    _database.version(7).stores({
+      csr: null,
+      leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[${LeaderboardEntryKeys.DiscoverySource}+${LeaderboardEntryKeys.DiscoveryVersion}],${LeaderboardEntryKeys.DiscoverySource},${LeaderboardEntryKeys.Xuid}`,
+    });
   }
 
   if (!_databaseOpenPromise || _database.isOpen() === false) {
