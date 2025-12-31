@@ -7,8 +7,8 @@ export default function Teammates() {
         Halo Query has always taken pride in showing you the statistics of your
         game that might be holding you back. But as we all know, the only real
         thing holding <b>you</b> back is your teammates. No doubt you&apos;d be
-        putting Last Shot out of a job if only your matchmaking teammates would
-        stop holding you back.
+        putting Last Shot out of a job if only your matchmaking teammates could
+        get their act together.
       </Text>
       <Text>
         Let&apos;s take a look at the newest tool you can use to avoid taking
