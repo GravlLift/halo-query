@@ -46,7 +46,7 @@ import { useNavigationController } from '../../navigation-context';
 import { useHaloCaches } from '../../../lib/contexts/halo-caches-context';
 
 export type PlaylistSkillRankChartProps = {
-  xuid: string;
+  target: { xuid: string; gamertag: string };
   skills: {
     matchId: string;
     matchStart: string;
@@ -55,6 +55,7 @@ export type PlaylistSkillRankChartProps = {
     mapName: string;
     skill: MatchSkill<1 | 0>;
     teamSkills: (MatchSkill<1 | 0> | undefined)[];
+    enemySkills: (MatchSkill<1 | 0> | undefined)[];
   }[];
   showLastXGames: number | null;
   showCsrDeltas: boolean;
@@ -100,6 +101,10 @@ export default function PlaylistSkillRankChart(
     psrD: ChartDataPoint[] = [],
     psrKTrailingAverage: ChartDataPoint[] = [],
     psrDTrailingAverage: ChartDataPoint[] = [],
+    teamPsrKs: ChartDataPoint[] = [],
+    teamPsrDs: ChartDataPoint[] = [],
+    enemyPsrKs: ChartDataPoint[] = [],
+    enemyPsrDs: ChartDataPoint[] = [],
     annotations: AnnotationOptions[] =
       useTierBackgroundColorAnnotations(chartRef);
   for (let i = 0; i < sortedSkills.length; i++) {
@@ -179,6 +184,45 @@ export default function PlaylistSkillRankChart(
           : null,
       x: matchStartLabel,
     });
+    // Team PSR-K and PSR-D
+    m.teamSkills.forEach((teamSkill) => {
+      if (!teamSkill) return;
+      const teamPsrKValue = skillRank(teamSkill, 'Kills', 'Count');
+      const teamPsrDValue = skillRank(teamSkill, 'Deaths', 'Count');
+      if (teamPsrKValue != null) {
+        teamPsrKs.push({
+          matchId: m.matchId,
+          y: teamPsrKValue,
+          x: matchStartLabel,
+        });
+      }
+      if (teamPsrDValue != null) {
+        teamPsrDs.push({
+          matchId: m.matchId,
+          y: teamPsrDValue,
+          x: matchStartLabel,
+        });
+      }
+    });
+    m.enemySkills.forEach((enemySkill) => {
+      if (!enemySkill) return;
+      const enemyPsrKValue = skillRank(enemySkill, 'Kills', 'Count');
+      const enemyPsrDValue = skillRank(enemySkill, 'Deaths', 'Count');
+      if (enemyPsrKValue != null) {
+        enemyPsrKs.push({
+          matchId: m.matchId,
+          y: enemyPsrKValue,
+          x: matchStartLabel,
+        });
+      }
+      if (enemyPsrDValue != null) {
+        enemyPsrDs.push({
+          matchId: m.matchId,
+          y: enemyPsrDValue,
+          x: matchStartLabel,
+        });
+      }
+    });
     if (props.showCsrDeltas) {
       if (m.skill.RankRecap.PreMatchCsr.Value > -1) {
         const delta =
@@ -229,22 +273,26 @@ export default function PlaylistSkillRankChart(
     psrKColor,
     psrDTrailingAverageColor,
     psrDColor,
+    psrDTeamColor,
+    psrKTeamColor,
+    enemyPsrKColor,
+    enemyPsrDColor,
   ] = useColors();
   const datasets: ChartData<'line', ChartDataPoint[], string>['datasets'] = [
     {
-      label: 'CSR',
+      label: `${props.target.gamertag} CSR`,
       data: csr,
       backgroundColor: csrColor,
       borderColor: csrColor,
     },
     {
-      label: `ESR-A`,
+      label: `${props.target.gamertag} ESR-A`,
       data: esrA,
       backgroundColor: esrTrailingAverageColor,
       borderColor: esrTrailingAverageColor,
     },
     {
-      label: 'ESR',
+      label: `${props.target.gamertag} ESR`,
       data: esr,
       backgroundColor: esrColor,
       borderColor: esrColor,
@@ -252,14 +300,14 @@ export default function PlaylistSkillRankChart(
       showLine: false,
     },
     {
-      label: `PSR-K-${trailingAverageWindow}`,
+      label: `${props.target.gamertag} PSR-K-${trailingAverageWindow}`,
       data: psrKTrailingAverage,
       backgroundColor: psrKTrailingAverageColor,
       borderColor: psrKTrailingAverageColor,
       hidden: true,
     },
     {
-      label: 'PSR-K',
+      label: `${props.target.gamertag} PSR-K`,
       data: psrK,
       backgroundColor: psrKColor,
       borderColor: psrKColor,
@@ -267,17 +315,49 @@ export default function PlaylistSkillRankChart(
       showLine: false,
     },
     {
-      label: `PSR-D-${trailingAverageWindow}`,
+      label: `${props.target.gamertag} PSR-D-${trailingAverageWindow}`,
       data: psrDTrailingAverage,
       backgroundColor: psrDTrailingAverageColor,
       borderColor: psrDTrailingAverageColor,
       hidden: true,
     },
     {
-      label: 'PSR-D',
+      label: `${props.target.gamertag} PSR-D`,
       data: psrD,
       backgroundColor: psrDColor,
       borderColor: psrDColor,
+      hidden: true,
+      showLine: false,
+    },
+    {
+      label: 'Team PSR-K',
+      data: teamPsrKs,
+      backgroundColor: psrKTeamColor,
+      borderColor: psrKTeamColor,
+      hidden: true,
+      showLine: false,
+    },
+    {
+      label: 'Team PSR-D',
+      data: teamPsrDs,
+      backgroundColor: psrDTeamColor,
+      borderColor: psrDTeamColor,
+      hidden: true,
+      showLine: false,
+    },
+    {
+      label: 'Enemy PSR-K',
+      data: enemyPsrKs,
+      backgroundColor: enemyPsrKColor,
+      borderColor: enemyPsrKColor,
+      hidden: true,
+      showLine: false,
+    },
+    {
+      label: 'Enemy PSR-D',
+      data: enemyPsrDs,
+      backgroundColor: enemyPsrDColor,
+      borderColor: enemyPsrDColor,
       hidden: true,
       showLine: false,
     },
@@ -413,7 +493,7 @@ export default function PlaylistSkillRankChart(
             aria-label="Export CSV"
             cursor="pointer"
             onClick={async () => {
-              const user = await usersCache.get(wrapXuid(props.xuid));
+              const user = await usersCache.get(wrapXuid(props.target.xuid));
               const csv = [
                 [
                   'Match Id',

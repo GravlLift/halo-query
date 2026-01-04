@@ -185,6 +185,9 @@ export function PlaylistTabContent({
         teamSkills: m.MatchStats.Players.filter(
           (p) => p.LastTeamId === player?.LastTeamId
         ).map((p) => p.Skill),
+        enemySkills: m.MatchStats.Players.filter(
+          (p) => p.LastTeamId !== player?.LastTeamId
+        ).map((p) => p.Skill),
         allFinished: m.MatchStats.Players.every(
           (p) => p.ParticipationInfo.PresentAtCompletion
         ),
@@ -578,7 +581,7 @@ export function PlaylistTabContent({
                 <Loading centerProps={{ height: '400px' }} />
               ) : (
                 <PlaylistSkillRankChart
-                  xuid={user.xuid}
+                  target={user}
                   skills={matchSkills}
                   showLastXGames={
                     showLastXGames === 'all' ? null : showLastXGames
