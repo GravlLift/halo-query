@@ -11,9 +11,12 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { skillRank, skillRankCombined } from '@gravllift/halo-helpers';
+import {
+  skillRank,
+  skillRankCombined,
+  wrapXuid,
+} from '@gravllift/halo-helpers';
 import '@gravllift/utilities';
-import { wrapXuid } from '@gravllift/halo-helpers';
 import {
   CategoryScale,
   ChartData,
@@ -30,20 +33,20 @@ import {
 import AnnotationPlugin, { AnnotationOptions } from 'chartjs-plugin-annotation';
 import { MatchSkill } from 'halo-infinite-api';
 import { CircleHelp, DownloadIcon, ExternalLink } from 'lucide-react';
-import { DateTime } from 'luxon';
+import { DateTime, Duration } from 'luxon';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import NProgress from 'nprogress';
 import { useEffect, useMemo, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
-import { useColors } from '../../../lib/hooks/colors';
+import { useHaloCaches } from '../../../lib/contexts/halo-caches-context';
 import { useChartTheme } from '../../../lib/hooks/chart-theme';
+import { useColors } from '../../../lib/hooks/colors';
 import { getLocalStorageValueOrDefault } from '../../../lib/next-local-storage';
+import { useNavigationController } from '../../navigation-context';
 import { tierBackgroundColorsPlugin } from './tier-background-colors-plugin';
 import { useTierBackgroundColorAnnotations } from './tier-lines-annotation-options';
 import { useZoomPlugin } from './use-zoom-plugin';
-import { useNavigationController } from '../../navigation-context';
-import { useHaloCaches } from '../../../lib/contexts/halo-caches-context';
 
 export type PlaylistSkillRankChartProps = {
   target: { xuid: string; gamertag: string };
@@ -56,6 +59,7 @@ export type PlaylistSkillRankChartProps = {
     skill: MatchSkill<1 | 0>;
     teamSkills: (MatchSkill<1 | 0> | undefined)[];
     enemySkills: (MatchSkill<1 | 0> | undefined)[];
+    duration: Duration;
   }[];
   showLastXGames: number | null;
   showCsrDeltas: boolean;
@@ -70,18 +74,39 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  AnnotationPlugin
+  AnnotationPlugin,
 );
 
 const trailingAverageWindow = +getLocalStorageValueOrDefault(
   'TRAILING_AVERAGE',
-  '10'
+  '10',
 );
 
 type ChartDataPoint = { y: number | null; x: string; matchId: string };
 
+function trailingAverage(
+  datapoints: { y: number | null; duration: Duration }[],
+  windowSize: number,
+  index: number,
+) {
+  if (index < windowSize) {
+    return null;
+  }
+
+  const yPoints = [];
+  const durations = [];
+  for (let i = 0; i < windowSize; i++) {
+    const entry = datapoints[index - windowSize + 1 + i];
+    if (entry.y !== null) {
+      yPoints.push(entry.y);
+      durations.push(entry.duration.as('seconds'));
+    }
+  }
+  return yPoints.weightedAverage(durations);
+}
+
 export default function PlaylistSkillRankChart(
-  props: PlaylistSkillRankChartProps
+  props: PlaylistSkillRankChartProps,
 ) {
   const { usersCache } = useHaloCaches();
   const { abort } = useNavigationController();
@@ -99,6 +124,14 @@ export default function PlaylistSkillRankChart(
     esrA: ChartDataPoint[] = [],
     psrK: ChartDataPoint[] = [],
     psrD: ChartDataPoint[] = [],
+    durationsPsrKs: {
+      duration: Duration;
+      y: number | null;
+    }[] = [],
+    durationPsrDs: {
+      duration: Duration;
+      y: number | null;
+    }[] = [],
     psrKTrailingAverage: ChartDataPoint[] = [],
     psrDTrailingAverage: ChartDataPoint[] = [],
     teamPsrKs: ChartDataPoint[] = [],
@@ -115,7 +148,7 @@ export default function PlaylistSkillRankChart(
       matchStartLabel = DateTime.fromISO(m.matchStart).toFormat('MM-dd h:mm a');
     } else {
       matchStartLabel = DateTime.fromISO(m.matchStart).toFormat(
-        'MM-dd-yyyy h:mm a'
+        'MM-dd-yyyy h:mm a',
       );
     }
     labels.push(matchStartLabel);
@@ -125,8 +158,8 @@ export default function PlaylistSkillRankChart(
         m.skill.RankRecap.PreMatchCsr.Value > -1
           ? m.skill.RankRecap.PreMatchCsr.Value
           : i > 0 && sortedSkills[i - 1].skill.RankRecap.PostMatchCsr.Value > -1
-          ? sortedSkills[i - 1].skill.RankRecap.PostMatchCsr.Value
-          : null,
+            ? sortedSkills[i - 1].skill.RankRecap.PostMatchCsr.Value
+            : null,
       x: matchStartLabel,
     });
     esr.push({
@@ -140,7 +173,7 @@ export default function PlaylistSkillRankChart(
       .map((v) => [v, skillRankCombined(v.skill, 'Expected')] as const)
       .filter((v) => v[1] != undefined);
     const mostRecentGameVariantSkill = Array.from(
-      priorSkills.groupBy(([v]) => v.gameVariantName)
+      priorSkills.groupBy(([v]) => v.gameVariantName),
     ).map(([, v]) => v[v.length - 1][1]);
     esrA.push({
       matchId: m.matchId,
@@ -150,38 +183,34 @@ export default function PlaylistSkillRankChart(
           ? null
           : mostRecentGameVariantSkill.average(),
     });
+    const psrKValue = skillRank(m.skill, 'Kills', 'Count') ?? null;
     psrK.push({
       matchId: m.matchId,
-      y: skillRank(m.skill, 'Kills', 'Count') ?? null,
+      y: psrKValue,
       x: matchStartLabel,
     });
+    durationsPsrKs.push({
+      duration: m.duration,
+      y: psrKValue,
+    });
+    const psrDValue = skillRank(m.skill, 'Deaths', 'Count') ?? null;
     psrD.push({
       matchId: m.matchId,
-      y: skillRank(m.skill, 'Deaths', 'Count') ?? null,
+      y: psrDValue,
       x: matchStartLabel,
+    });
+    durationPsrDs.push({
+      duration: m.duration,
+      y: psrDValue,
     });
     psrKTrailingAverage.push({
       matchId: m.matchId,
-      y:
-        i >= 10
-          ? psrK
-              .slice(i - trailingAverageWindow + 1, i + 1)
-              .map((v) => v?.y)
-              .filter((v) => v)
-              .average()
-          : null,
+      y: trailingAverage(durationsPsrKs, trailingAverageWindow, i),
       x: matchStartLabel,
     });
     psrDTrailingAverage.push({
       matchId: m.matchId,
-      y:
-        i >= 10
-          ? psrD
-              .slice(i - trailingAverageWindow + 1, i + 1)
-              .map((v) => v?.y)
-              .filter((v) => v)
-              .average()
-          : null,
+      y: trailingAverage(durationPsrDs, trailingAverageWindow, i),
       x: matchStartLabel,
     });
     // Team PSR-K and PSR-D
@@ -461,7 +490,7 @@ export default function PlaylistSkillRankChart(
         event: ChartEvent & {
           native: { target: { style: { cursor: string } } };
         },
-        elements
+        elements,
       ) {
         if (event.native?.target == null) {
           return;
@@ -469,7 +498,7 @@ export default function PlaylistSkillRankChart(
         event.native.target.style.cursor = elements[0] ? 'pointer' : 'default';
       },
     }),
-    [router, fontColor]
+    [router, fontColor],
   );
   if (options.plugins?.annotation) {
     options.plugins.annotation.annotations = annotations;
