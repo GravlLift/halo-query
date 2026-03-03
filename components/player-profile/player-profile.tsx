@@ -41,7 +41,7 @@ import { PlaylistTabContent } from './playlist-tab-content';
 
 function usePlaylists(
   serviceRecord: ServiceRecord | undefined,
-  userInfo: { xuid: string } | undefined
+  userInfo: { xuid: string } | undefined,
 ) {
   const { playlistCache, playlistVersionCache } = useHaloCaches();
   const { haloInfiniteClient } = useApiClients();
@@ -63,16 +63,16 @@ function usePlaylists(
                   seasonId,
                   {
                     signal: ctx.signal,
-                  }
+                  },
                 ),
-              signal
+              signal,
             )
             .then((r) => r[0].Result)
             .catch(() => null),
         keyTransformer: ({ xuid, playlistId, seasonId }) =>
           `${xuid}-${playlistId}-${seasonId}`,
       }),
-    [haloInfiniteClient]
+    [haloInfiniteClient],
   );
 
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ function usePlaylists(
         playlistIds.map(async (playlistId) => {
           const playlistInfo = await playlistCache.get(
             playlistId,
-            navigationStartSignal
+            navigationStartSignal,
           );
           if (playlistInfo.HasCsr) {
             const serviceCalendar = await waypointXboxRequestPolicy.execute(
@@ -106,7 +106,7 @@ function usePlaylists(
                 haloInfiniteClient.getSeasonCalendar({
                   signal: ctx.signal,
                 }),
-              navigationStartSignal
+              navigationStartSignal,
             );
             const [lifetimeCsr, playlistAsset, ...seasonCsrs] =
               await Promise.allSettled([
@@ -119,9 +119,9 @@ function usePlaylists(
                         undefined,
                         {
                           signal: ctx.signal,
-                        }
+                        },
                       ),
-                    navigationStartSignal
+                    navigationStartSignal,
                   )
                   .then((r) => r[0].Result),
                 playlistVersionCache.get(
@@ -129,17 +129,18 @@ function usePlaylists(
                     AssetId: playlistId,
                     VersionId: playlistInfo.UgcPlaylistVersion,
                   },
-                  navigationStartSignal
+                  navigationStartSignal,
                 ),
                 ...serviceCalendar.Seasons.filter(
-                  (s) => s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json'
+                  (s) =>
+                    s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
                 ).map(({ CsrSeasonFilePath }) => {
                   const seasonId = /\/([^/]+).json$/.exec(
-                    CsrSeasonFilePath
+                    CsrSeasonFilePath,
                   )?.[1];
                   if (!seasonId) {
                     throw new Error(
-                      `Failed to parse season id from ${CsrSeasonFilePath}`
+                      `Failed to parse season id from ${CsrSeasonFilePath}`,
                     );
                   }
                   return seasonCache.get(
@@ -148,7 +149,7 @@ function usePlaylists(
                       seasonId,
                       xuid: userInfo.xuid,
                     },
-                    navigationStartSignal
+                    navigationStartSignal,
                   );
                 }),
               ]).then(nextRedirectRejectionHandler);
@@ -162,7 +163,7 @@ function usePlaylists(
 
             setPlaylists((current) => {
               const existingIndex = current.findIndex(
-                (p) => p.playlistId === playlistId
+                (p) => p.playlistId === playlistId,
               );
               if (existingIndex == -1) {
                 return [
@@ -186,7 +187,7 @@ function usePlaylists(
               }
             });
           }
-        })
+        }),
       );
       setLoading(false);
     })();
@@ -194,7 +195,7 @@ function usePlaylists(
   return {
     playlists: playlists.sortBy((p) => {
       const order = ['Ranked Arena', 'Ranked Doubles'].indexOf(
-        p.playlistAsset.PublicName
+        p.playlistAsset.PublicName,
       );
       if (order === -1) {
         return Number.MAX_SAFE_INTEGER;
@@ -205,7 +206,7 @@ function usePlaylists(
     updateCsr: (playlistId: string, newCsr: PlaylistCsr) => {
       setPlaylists((current) => {
         const existingIndex = current.findIndex(
-          (p) => p.playlistId === playlistId
+          (p) => p.playlistId === playlistId,
         );
         if (existingIndex == -1) {
           return current;
@@ -213,15 +214,23 @@ function usePlaylists(
           const clone = [...current];
           const allTimeMax = Math.max(
             newCsr.Value,
-            clone[existingIndex].csr.AllTimeMax.Value
+            clone[existingIndex].csr.AllTimeMax.Value,
           );
           const allTimeMaxTierInfo = getTierSubTierForSkill(allTimeMax);
           const seasonMax = Math.max(
             newCsr.Value,
-            clone[existingIndex].csr.SeasonMax.Value
+            clone[existingIndex].csr.SeasonMax.Value,
           );
           const seasonMaxTierInfo = getTierSubTierForSkill(seasonMax);
-          const newCsrTierInfo = getTierSubTierForSkill(newCsr.Value);
+          const newCsrTierInfo =
+            newCsr.Value === -1
+              ? {
+                  Tier: 'Unranked',
+                  SubTier:
+                    newCsr.InitialMeasurementMatches -
+                    newCsr.MeasurementMatchesRemaining,
+                }
+              : getTierSubTierForSkill(newCsr.Value);
           clone[existingIndex] = {
             ...clone[existingIndex],
             csr: {
@@ -264,7 +273,7 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
     } | Halo Query`;
   }, [gamerTag, user]);
   const { serviceRecord, loading: serviceRecordLoading } = useServiceRecord(
-    user ? wrapXuid(user.xuid) : null
+    user ? wrapXuid(user.xuid) : null,
   );
   const {
     playlists,
@@ -282,8 +291,9 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
         setBans(
           result.Results[0].Result.BansInEffect.filter(
             (ban) =>
-              DateTime.fromISO(ban.EnforceUntilUtc.ISO8601Date) > DateTime.utc()
-          )
+              DateTime.fromISO(ban.EnforceUntilUtc.ISO8601Date) >
+              DateTime.utc(),
+          ),
         );
       });
     }
@@ -309,7 +319,7 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
                   {bans
                     .reduce((latest, ban) => {
                       const banEnd = DateTime.fromISO(
-                        ban.EnforceUntilUtc.ISO8601Date
+                        ban.EnforceUntilUtc.ISO8601Date,
                       );
                       return banEnd > latest ? banEnd : latest;
                     }, DateTime.fromMillis(0))
@@ -412,7 +422,7 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
                 playlist={p}
                 newLatestMatch={(m) => {
                   const playerStats = m.MatchStats.Players.find((p) =>
-                    compareXuids(p.PlayerId, user.xuid)
+                    compareXuids(p.PlayerId, user.xuid),
                   );
                   if (
                     playerStats?.Skill &&
@@ -420,7 +430,7 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
                   ) {
                     updateCsr(
                       p.playlistId,
-                      playerStats.Skill.RankRecap.PostMatchCsr
+                      playerStats.Skill.RankRecap.PostMatchCsr,
                     );
                   }
                 }}
