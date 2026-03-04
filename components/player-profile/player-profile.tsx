@@ -135,9 +135,9 @@ function usePlaylists(
                   (s) =>
                     s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
                 ).map(({ CsrSeasonFilePath }) => {
-                  const seasonId = /\/([^/]+).json$/.exec(
-                    CsrSeasonFilePath,
-                  )?.[1];
+                  const seasonId = /\/([^/]+).json$/
+                    .exec(CsrSeasonFilePath)?.[1]
+                    .replace('13-2', '13-1');
                   if (!seasonId) {
                     throw new Error(
                       `Failed to parse season id from ${CsrSeasonFilePath}`,
