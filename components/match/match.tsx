@@ -110,7 +110,7 @@ export default function Match({ matchId, filters }: MatchProps) {
   const { focusPlayer, setFocusPlayer } = useFocusPlayer();
   const focusPlayerPromise = useMemo(
     () => new ResolvablePromise<string | string[]>(),
-    []
+    [],
   );
   const matchFocusPlayer = useMemo(() => {
     if (typeof window === 'undefined') return undefined;
@@ -120,7 +120,7 @@ export default function Match({ matchId, filters }: MatchProps) {
       match?.Players.some(
         (p) =>
           'gamertag' in p &&
-          p.gamertag?.toLowerCase() === focusPlayer.toLowerCase()
+          p.gamertag?.toLowerCase() === focusPlayer.toLowerCase(),
       )
     ) {
       return focusPlayer;
@@ -144,10 +144,10 @@ export default function Match({ matchId, filters }: MatchProps) {
   }, [focusPlayer, setFocusPlayer, match?.Players.length]);
 
   const csrExists = match?.Players.some(
-    (p) => 'Skill' in p && p.Skill?.RankRecap.PreMatchCsr.Value
+    (p) => 'Skill' in p && p.Skill?.RankRecap.PreMatchCsr.Value,
   );
   const tierCounterfactualsExist = match?.Players.some(
-    (p) => 'Skill' in p && p.Skill?.Counterfactuals?.TierCounterfactuals.Bronze
+    (p) => 'Skill' in p && p.Skill?.Counterfactuals?.TierCounterfactuals.Bronze,
   );
 
   const playersByTeam = match
@@ -157,7 +157,8 @@ export default function Match({ matchId, filters }: MatchProps) {
   const teamPresets = useTeamPresets();
   const roundBased =
     match?.Teams.some(
-      (t) => t.Stats.CoreStats.RoundsWon > 1 || t.Stats.CoreStats.RoundsLost > 1
+      (t) =>
+        t.Stats.CoreStats.RoundsWon > 1 || t.Stats.CoreStats.RoundsLost > 1,
     ) ?? false;
 
   return (
@@ -196,7 +197,7 @@ export default function Match({ matchId, filters }: MatchProps) {
               <Box flexGrow={1}>
                 {match &&
                   DateTime.fromISO(match.MatchInfo.StartTime).toLocaleString(
-                    DateTime.DATETIME_SHORT
+                    DateTime.DATETIME_SHORT,
                   )}
               </Box>
             </Box>
@@ -272,7 +273,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                     bgImage={`url(${
                       match.MatchInfo.MapVariant.Files.Prefix +
                       match.MatchInfo.MapVariant.Files.FileRelativePaths.find(
-                        (f) => f.startsWith('images/hero')
+                        (f) => f.startsWith('images/hero'),
                       )
                     })`}
                     bgRepeat={'no-repeat'}
@@ -283,7 +284,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                       <VerticalCenter backgroundColor="gray.500" px={2}>
                         <Heading size="md">
                           {Duration.fromISO(
-                            match.MatchInfo.PlayableDuration
+                            match.MatchInfo.PlayableDuration,
                           ).toFormat('m:ss')}
                         </Heading>
                       </VerticalCenter>
@@ -305,34 +306,34 @@ export default function Match({ matchId, filters }: MatchProps) {
                   {match.MatchInfo.TeamsEnabled ? (
                     <SimpleGrid minChildWidth={{ md: '400px' }} width="100%">
                       {match.Teams.filter((t) =>
-                        match.Players.some((p) => p.LastTeamId === t.TeamId)
+                        match.Players.some((p) => p.LastTeamId === t.TeamId),
                       ).map((t) => {
                         const teamPlayers = match.Players.filter(
-                          (p) => p.LastTeamId === t.TeamId
+                          (p) => p.LastTeamId === t.TeamId,
                         );
                         // Halo's total summation seems to be broken, use our own
                         const teamTotals = {
                           kills: teamPlayers?.sum(
                             (p) =>
                               p.PlayerTeamStats.find(
-                                (s) => s.TeamId === t.TeamId
-                              )?.Stats.CoreStats.Kills ?? 0
+                                (s) => s.TeamId === t.TeamId,
+                              )?.Stats.CoreStats.Kills ?? 0,
                           ),
                           assists: teamPlayers?.sum(
                             (p) =>
                               p.PlayerTeamStats.find(
-                                (s) => s.TeamId === t.TeamId
-                              )?.Stats.CoreStats.Assists ?? 0
+                                (s) => s.TeamId === t.TeamId,
+                              )?.Stats.CoreStats.Assists ?? 0,
                           ),
                           damage: teamPlayers?.sum(
                             (p) =>
                               p.PlayerTeamStats.find(
-                                (s) => s.TeamId === t.TeamId
-                              )?.Stats.CoreStats.DamageDealt ?? 0
+                                (s) => s.TeamId === t.TeamId,
+                              )?.Stats.CoreStats.DamageDealt ?? 0,
                           ),
                           objective: getObjectivePoints(
                             match.MatchInfo.GameVariantCategory,
-                            aggregatePlayersStats(teamPlayers ?? [], t.TeamId)
+                            aggregatePlayersStats(teamPlayers ?? [], t.TeamId),
                           ),
                         };
                         return (
@@ -344,17 +345,17 @@ export default function Match({ matchId, filters }: MatchProps) {
                                   ?.map((p) => {
                                     const playerTeamStat =
                                       p.PlayerTeamStats.find(
-                                        (t2) => t2.TeamId === t.TeamId
+                                        (t2) => t2.TeamId === t.TeamId,
                                       );
                                     if (!playerTeamStat) {
                                       throw new Error(
-                                        `Team stat not found for player ${p.PlayerId}`
+                                        `Team stat not found for player ${p.PlayerId}`,
                                       );
                                     }
 
                                     const objectivePoints = getObjectivePoints(
                                       match.MatchInfo.GameVariantCategory,
-                                      playerTeamStat.Stats
+                                      playerTeamStat.Stats,
                                     );
                                     return {
                                       gamertag:
@@ -455,7 +456,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                       .sortBy(
                         ([teamId]) =>
                           match.Teams.find((t) => t.TeamId === teamId)?.Rank ??
-                          Number.MAX_SAFE_INTEGER
+                          Number.MAX_SAFE_INTEGER,
                       )
                       .map(([teamId, players]) => {
                         const sortedTeamPlayers = players.sortByDesc(
@@ -465,14 +466,14 @@ export default function Match({ matchId, filters }: MatchProps) {
                                 (p.Skill &&
                                   'Kills' in p.Skill.StatPerformances &&
                                   p.Skill.StatPerformances.Kills.Count))) ||
-                            0
+                            0,
                         );
                         const teamPlayersWithPreCsr = sortedTeamPlayers.filter(
                           (p) =>
                             'Skill' in p &&
                             p.Skill &&
                             !isNaN(p.Skill.RankRecap.PreMatchCsr.Value) &&
-                            p.Skill.RankRecap.PreMatchCsr.Value > -1
+                            p.Skill.RankRecap.PreMatchCsr.Value > -1,
                         );
                         let teamMmr: number | 'Infinity' | undefined =
                           undefined;
@@ -499,7 +500,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                               {(players.length === 1 &&
                                 'gamertag' in players[0] &&
                                 players[0].gamertag) ||
-                                teamPresets[teamId].name}
+                                teamPresets[teamId]?.name}
                             </Table.Cell>
                             {csrExists ? (
                               <Table.Cell textAlign="end">
@@ -508,7 +509,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                                       .map(
                                         (p) =>
                                           'Skill' in p &&
-                                          p.Skill?.RankRecap.PreMatchCsr.Value
+                                          p.Skill?.RankRecap.PreMatchCsr.Value,
                                       )
                                       .average()
                                       .toFixed(2)
@@ -521,9 +522,9 @@ export default function Match({ matchId, filters }: MatchProps) {
                                 : teamMmr ||
                                   players.find(
                                     (
-                                      p
+                                      p,
                                     ): p is typeof p & { Skill?: MatchSkill } =>
-                                      'Skill' in p
+                                      'Skill' in p,
                                   )?.Skill?.TeamMmr}
                             </Table.Cell>
                             {tierCounterfactualsExist ? (
@@ -533,7 +534,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                                     .map(
                                       (p) =>
                                         'Skill' in p &&
-                                        skillRankCombined(p.Skill, 'Expected')
+                                        skillRankCombined(p.Skill, 'Expected'),
                                     )
                                     .average()
                                     .toFixed(2)}
@@ -543,7 +544,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                                     .map(
                                       (p) =>
                                         'Skill' in p &&
-                                        skillRank(p.Skill, 'Kills', 'Count')
+                                        skillRank(p.Skill, 'Kills', 'Count'),
                                     )
                                     .average()
                                     .toFixed(2)}
@@ -553,7 +554,7 @@ export default function Match({ matchId, filters }: MatchProps) {
                                     .map(
                                       (p) =>
                                         'Skill' in p &&
-                                        skillRank(p.Skill, 'Deaths', 'Count')
+                                        skillRank(p.Skill, 'Deaths', 'Count'),
                                     )
                                     .average()
                                     .toFixed(2)}
