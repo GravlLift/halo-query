@@ -83,26 +83,7 @@ export default function LeaderboardProvider({
   });
 
   useEffect(() => {
-    ensureJoin(
-      leaderboardProvider,
-      class FixedRTCPeerConnection extends RTCPeerConnection {
-        override close(): void {
-          super.close();
-          queueMicrotask(() => {
-            if (document) {
-              let img: HTMLImageElement | null = document.createElement('img');
-              img.src = window.URL.createObjectURL(
-                new Blob([new ArrayBuffer(5e7)])
-              ); // 50Mo or less or more depending as you wish to force/invoke GC cycle run
-              img.onerror = function () {
-                window.URL.revokeObjectURL(this.src);
-                img = null;
-              };
-            }
-          });
-        }
-      }
-    );
+    ensureJoin(leaderboardProvider);
     return () => {
       leave();
     };
