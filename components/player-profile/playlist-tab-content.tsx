@@ -11,6 +11,7 @@ import {
   Image,
   Link,
   Portal,
+  RadioCard,
   Select,
   SimpleGrid,
   Spacer,
@@ -23,6 +24,7 @@ import {
   useBreakpointValue,
 } from '@chakra-ui/react';
 import {
+  MatchPlayers,
   PlayerMatchHistoryStatsSkill,
   divisionImageSrc,
   getTierSubTierForSkill,
@@ -36,7 +38,7 @@ import {
   Stats,
 } from 'halo-infinite-api';
 import { CircleHelp, ExternalLink } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { FaRedo, FaSearchPlus } from 'react-icons/fa';
 import { compareXuids, wrapXuid } from '@gravllift/halo-helpers';
 import { useColors } from '../../lib/hooks/colors';
@@ -59,10 +61,13 @@ import PlaylistSkillRankByModeChart, {
 import PlaylistSkillRankChart, {
   PlaylistSkillRankChartProps,
 } from './skill-rank-chart/playlist-skill-rank-chart';
-import { WinRateTable } from './win-rate-table';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { TeammatesTable } from './teammates-table';
 import { Duration } from 'luxon';
+import { GameTypeTable } from './game-type-table';
+import { PerformanceSkillCell } from './game-type-table/performance-skill-cell';
+import { WinRateCell } from './game-type-table/win-rate-cell';
+import { VerticalCenter } from '../vertical-center';
 
 const maxMatches: number = +getLocalStorageValueOrDefault(
   'SKILL_CHART_MAX',
@@ -233,9 +238,11 @@ export function PlaylistTabContent({
         (pts) => pts.TeamId === player.LastTeamId,
       )?.Stats;
 
-      const teamStats = m.MatchStats.Players.filter(
+      const teamPlayers: MatchPlayers = m.MatchStats.Players.filter(
         (p) => p.LastTeamId === player?.LastTeamId,
-      ).map(
+      );
+
+      const teamStats = teamPlayers.map(
         (p) =>
           p.PlayerTeamStats.find((pts) => pts.TeamId === player?.LastTeamId)
             ?.Stats,
@@ -248,6 +255,12 @@ export function PlaylistTabContent({
 
       return {
         outcome: player?.Outcome,
+        playerDuration: Duration.fromISO(
+          player?.ParticipationInfo.TimePlayed ||
+            m.MatchInfo.PlayableDuration ||
+            m.MatchInfo.Duration,
+        ),
+        playerSkill: player?.Skill,
         mapName:
           'PublicName' in m.MatchInfo.MapVariant
             ? m.MatchInfo.MapVariant.PublicName
@@ -317,6 +330,9 @@ export function PlaylistTabContent({
 
   const [showCsrDeltas, setShowCsrDeltas] = useState<boolean>(false);
   const skillWidth = 140;
+  const [gameTypeCellType, setGameTypeCellType] = useState<
+    'win' | 'psrk' | 'psrd'
+  >('psrk');
   return (
     <Tabs.Content value={playlist.playlistId}>
       <VStack gap={2} align={'stretch'}>
@@ -768,7 +784,44 @@ export function PlaylistTabContent({
         </Card.Root>
         <Card.Root>
           <Card.Header>
-            <Heading size="md">Win Rates</Heading>
+            <Flex>
+              <VerticalCenter flexGrow={1}>
+                <Heading size="md">Game Types</Heading>{' '}
+              </VerticalCenter>
+              <Box flexGrow={1}>
+                <RadioCard.Root
+                  value={gameTypeCellType}
+                  onValueChange={(e) =>
+                    setGameTypeCellType(e.value as 'win' | 'psrk' | 'psrd')
+                  }
+                  justifyContent={'center'}
+                >
+                  <HStack align="stretch">
+                    <RadioCard.Item key={'psrk'} value={'psrk'}>
+                      <RadioCard.ItemHiddenInput />
+                      <RadioCard.ItemControl>
+                        <RadioCard.ItemText>PSR-K</RadioCard.ItemText>
+                        <RadioCard.ItemIndicator />
+                      </RadioCard.ItemControl>
+                    </RadioCard.Item>
+                    <RadioCard.Item key={'psrd'} value={'psrd'}>
+                      <RadioCard.ItemHiddenInput />
+                      <RadioCard.ItemControl>
+                        <RadioCard.ItemText>PSR-D</RadioCard.ItemText>
+                        <RadioCard.ItemIndicator />
+                      </RadioCard.ItemControl>
+                    </RadioCard.Item>
+                    <RadioCard.Item key={'win'} value={'win'}>
+                      <RadioCard.ItemHiddenInput />
+                      <RadioCard.ItemControl>
+                        <RadioCard.ItemText>Win Rate</RadioCard.ItemText>
+                        <RadioCard.ItemIndicator />
+                      </RadioCard.ItemControl>
+                    </RadioCard.Item>
+                  </HStack>
+                </RadioCard.Root>
+              </Box>
+            </Flex>
           </Card.Header>
           <Card.Body>
             <Center>
@@ -776,10 +829,28 @@ export function PlaylistTabContent({
                 <Loading centerProps={{ height: '300px' }} />
               ) : (
                 <Box overflowX="auto" w="100%">
-                  <WinRateTable
-                    matches={slicedMatchAggregate}
-                    playlistName={playlist.playlistAsset.PublicName}
-                  />
+                  {gameTypeCellType === 'win' ? (
+                    <GameTypeTable
+                      matches={slicedMatchAggregate}
+                      playlistName={playlist.playlistAsset.PublicName}
+                      CellType={WinRateCell}
+                      performanceSkillType={'Deaths'}
+                    />
+                  ) : gameTypeCellType === 'psrk' ? (
+                    <GameTypeTable
+                      matches={slicedMatchAggregate}
+                      playlistName={playlist.playlistAsset.PublicName}
+                      CellType={PerformanceSkillCell}
+                      performanceSkillType={'Kills'}
+                    />
+                  ) : (
+                    <GameTypeTable
+                      matches={slicedMatchAggregate}
+                      playlistName={playlist.playlistAsset.PublicName}
+                      CellType={PerformanceSkillCell}
+                      performanceSkillType={'Deaths'}
+                    />
+                  )}
                 </Box>
               )}
             </Center>

@@ -93,103 +93,109 @@ function usePlaylists(
       if (!userInfo?.xuid) return;
 
       setLoading(true);
-      const playlistIds = serviceRecord?.Subqueries.PlaylistAssetIds ?? [];
-      await Promise.allSettled(
-        playlistIds.map(async (playlistId) => {
-          const playlistInfo = await playlistCache.get(
-            playlistId,
-            navigationStartSignal,
-          );
-          if (playlistInfo.HasCsr) {
-            const serviceCalendar = await waypointXboxRequestPolicy.execute(
-              (ctx) =>
-                haloInfiniteClient.getSeasonCalendar({
-                  signal: ctx.signal,
-                }),
+      try {
+        const playlistIds = serviceRecord?.Subqueries.PlaylistAssetIds ?? [];
+        await Promise.allSettled(
+          playlistIds.map(async (playlistId) => {
+            const playlistInfo = await playlistCache.get(
+              playlistId,
               navigationStartSignal,
             );
-            const [lifetimeCsr, playlistAsset, ...seasonCsrs] =
-              await Promise.allSettled([
-                waypointXboxRequestPolicy
-                  .execute(
-                    (ctx) =>
-                      haloInfiniteClient.getPlaylistCsr(
-                        playlistId,
-                        [userInfo.xuid],
-                        undefined,
-                        {
-                          signal: ctx.signal,
-                        },
-                      ),
-                    navigationStartSignal,
-                  )
-                  .then((r) => r[0].Result),
-                playlistVersionCache.get(
-                  {
-                    AssetId: playlistId,
-                    VersionId: playlistInfo.UgcPlaylistVersion,
-                  },
-                  navigationStartSignal,
-                ),
-                ...serviceCalendar.Seasons.filter(
-                  (s) =>
-                    s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
-                ).map(({ CsrSeasonFilePath }) => {
-                  const seasonId = /\/([^/]+).json$/
-                    .exec(CsrSeasonFilePath)?.[1]
-                    .replace('13-2', '13-1');
-                  if (!seasonId) {
-                    throw new Error(
-                      `Failed to parse season id from ${CsrSeasonFilePath}`,
-                    );
-                  }
-                  return seasonCache.get(
+            if (playlistInfo.HasCsr) {
+              const serviceCalendar = await waypointXboxRequestPolicy.execute(
+                (ctx) =>
+                  haloInfiniteClient.getSeasonCalendar({
+                    signal: ctx.signal,
+                  }),
+                navigationStartSignal,
+              );
+              const [lifetimeCsr, playlistAsset, ...seasonCsrs] =
+                await Promise.allSettled([
+                  waypointXboxRequestPolicy
+                    .execute(
+                      (ctx) =>
+                        haloInfiniteClient.getPlaylistCsr(
+                          playlistId,
+                          [userInfo.xuid],
+                          undefined,
+                          {
+                            signal: ctx.signal,
+                          },
+                        ),
+                      navigationStartSignal,
+                    )
+                    .then((r) => r[0].Result),
+                  playlistVersionCache.get(
                     {
-                      playlistId,
-                      seasonId,
-                      xuid: userInfo.xuid,
+                      AssetId: playlistId,
+                      VersionId: playlistInfo.UgcPlaylistVersion,
                     },
                     navigationStartSignal,
-                  );
-                }),
-              ]).then(nextRedirectRejectionHandler);
+                  ),
+                  ...serviceCalendar.Seasons.filter(
+                    (s) =>
+                      s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
+                  ).map(({ CsrSeasonFilePath }) => {
+                    const seasonId = /\/([^/]+).json$/
+                      .exec(CsrSeasonFilePath)?.[1]
+                      .replace('13-2', '13-1');
+                    if (!seasonId) {
+                      throw new Error(
+                        `Failed to parse season id from ${CsrSeasonFilePath}`,
+                      );
+                    }
+                    return seasonCache.get(
+                      {
+                        playlistId,
+                        seasonId,
+                        xuid: userInfo.xuid,
+                      },
+                      navigationStartSignal,
+                    );
+                  }),
+                ]).then(nextRedirectRejectionHandler);
 
-            const validSeasonCsrs = seasonCsrs.filter((s) => s != null);
-            if (validSeasonCsrs.length > 0) {
-              lifetimeCsr.AllTimeMax = validSeasonCsrs
-                .map((s) => s.SeasonMax)
-                .maxBy((seasonMax) => seasonMax.Value);
-            }
+              const validSeasonCsrs = seasonCsrs.filter((s) => s != null);
+              if (validSeasonCsrs.length > 0) {
+                lifetimeCsr.AllTimeMax = validSeasonCsrs
+                  .map((s) => s.SeasonMax)
+                  .maxBy((seasonMax) => seasonMax.Value);
+              }
 
-            setPlaylists((current) => {
-              const existingIndex = current.findIndex(
-                (p) => p.playlistId === playlistId,
-              );
-              if (existingIndex == -1) {
-                return [
-                  ...current,
-                  {
+              setPlaylists((current) => {
+                const existingIndex = current.findIndex(
+                  (p) => p.playlistId === playlistId,
+                );
+                if (existingIndex == -1) {
+                  return [
+                    ...current,
+                    {
+                      playlistId,
+                      csr: lifetimeCsr,
+                      playlistInfo,
+                      playlistAsset: playlistAsset as PlaylistAsset,
+                    },
+                  ];
+                } else {
+                  const clone = [...current];
+                  clone[existingIndex] = {
                     playlistId,
                     csr: lifetimeCsr,
                     playlistInfo,
                     playlistAsset: playlistAsset as PlaylistAsset,
-                  },
-                ];
-              } else {
-                const clone = [...current];
-                clone[existingIndex] = {
-                  playlistId,
-                  csr: lifetimeCsr,
-                  playlistInfo,
-                  playlistAsset: playlistAsset as PlaylistAsset,
-                };
-                return clone;
-              }
-            });
-          }
-        }),
-      );
-      setLoading(false);
+                  };
+                  return clone;
+                }
+              });
+            }
+          }),
+        );
+      } catch (err) {
+        console.error('Failed to load playlist CSRs', err);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [serviceRecord, userInfo, navigationStartSignal]);
   return {

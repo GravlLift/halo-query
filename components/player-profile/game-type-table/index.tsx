@@ -1,120 +1,32 @@
-import { Table, Link } from '@chakra-ui/react';
-import { MatchOutcome } from 'halo-infinite-api';
-import { percentFormatter } from '../../lib/formatters';
-import NextLink from 'next/link';
-import { ColumnName } from '../columns/base-columns';
-import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
+import { Table } from '@chakra-ui/react';
+import { MatchOutcome, MatchSkill } from 'halo-infinite-api';
+import { skillRank } from '@gravllift/halo-helpers';
+import { Duration } from 'luxon';
+import { useEffect, useState } from 'react';
+import { PerformanceSkillCell } from './performance-skill-cell';
+import { WinRateCell } from './win-rate-cell';
 
-function WinRateCell({
+export function GameTypeTable({
   matches,
+  playlistName,
   CellType,
-  playlistName,
-  mapName,
-  gameVariantName,
-}: {
-  playlistName: string;
-  mapName: string | null;
-  gameVariantName: string | null;
-  matches:
-    | {
-        outcome: MatchOutcome | undefined;
-      }[]
-    | undefined;
-  CellType: typeof Table.Cell | typeof Table.ColumnHeader;
-}) {
-  const { focusPlayer } = useFocusPlayer();
-
-  if (matches?.length && focusPlayer) {
-    const wins = matches?.count((m) => m.outcome === MatchOutcome.Win);
-    const losses = matches?.count((m) => m.outcome === MatchOutcome.Loss);
-    const ties = matches?.count((m) => m.outcome === MatchOutcome.Tie);
-    const winLosses = wins + losses;
-    const winRate = winLosses > 0 ? wins / winLosses : 0;
-    let color: string | undefined = undefined;
-    if (winRate > 2 / 3) {
-      color = 'green.500';
-    } else if (winRate < 1 / 3) {
-      color = 'red.500';
-    }
-    const filter: {
-      and: {
-        '==': [
-          {
-            var: ColumnName;
-          },
-          string
-        ];
-      }[];
-    } = {
-      and: [
-        {
-          '==': [
-            {
-              var: 'Playlist',
-            },
-            playlistName,
-          ],
-        },
-      ],
-    };
-    if (mapName) {
-      filter.and.push({
-        '==': [
-          {
-            var: 'Map',
-          },
-          mapName,
-        ],
-      });
-    }
-    if (gameVariantName) {
-      filter.and.push({
-        '==': [
-          {
-            var: 'Game Variant',
-          },
-          gameVariantName,
-        ],
-      });
-    }
-    const urlParams = new URLSearchParams({
-      gamertag: focusPlayer,
-      filters: JSON.stringify(filter),
-    });
-    return (
-      <CellType
-        textAlign="center"
-        borderBottomColor={color}
-        borderBottomWidth="2px"
-      >
-        <Link asChild>
-          <NextLink href={`/matches?${urlParams}`}>
-            {wins}-{losses}
-            {ties > 0 ? `-${ties}` : ''} ({percentFormatter.format(winRate)})
-          </NextLink>
-        </Link>
-      </CellType>
-    );
-  } else {
-    return <CellType></CellType>;
-  }
-}
-
-export function WinRateTable({
-  matches,
-  playlistName,
+  performanceSkillType,
 }: {
   playlistName: string;
   matches: {
     outcome: MatchOutcome | undefined;
     mapName: string;
     gameVariantName: string;
+    playerSkill: MatchSkill<1 | 0> | undefined;
+    playerDuration: Duration;
   }[];
+  CellType: typeof WinRateCell | typeof PerformanceSkillCell;
+  performanceSkillType: 'Kills' | 'Deaths';
 }) {
   const filteredMatches = matches.filter((m) =>
     [MatchOutcome.Win, MatchOutcome.Loss, MatchOutcome.Tie].includes(
-      m.outcome as MatchOutcome
-    )
+      m.outcome as MatchOutcome,
+    ),
   );
   const gameVariants = filteredMatches
     .map((m) => m.gameVariantName)
@@ -127,8 +39,48 @@ export function WinRateTable({
   const matchAggregateByGameVariant = matches.groupBy((m) => m.gameVariantName);
   const matchAggregateByMap = matches.groupBy((m) => m.mapName);
   const matchAggregateByGameVariantAndMap = matches.groupBy(
-    (m) => `${m.gameVariantName}_${m.mapName}`
+    (m) => `${m.gameVariantName}_${m.mapName}`,
   );
+  const getCellPsr = (
+    groupedMatches:
+      | {
+          playerDuration: Duration;
+          playerSkill: MatchSkill<1 | 0> | undefined;
+        }[]
+      | undefined,
+  ): number | undefined => {
+    if (!groupedMatches?.length) {
+      return undefined;
+    }
+
+    const values: number[] = [];
+    const weights: number[] = [];
+    for (const m of groupedMatches) {
+      const maybePsr = m.playerSkill
+        ? skillRank(m.playerSkill, performanceSkillType, 'Count')
+        : undefined;
+      if (maybePsr != null) {
+        values.push(maybePsr);
+        weights.push(m.playerDuration.toMillis());
+      }
+    }
+
+    return values.length ? values.weightedAverage(weights) : undefined;
+  };
+  const allSkillValues = [
+    ...Array.from(matchAggregateByGameVariantAndMap.values()).map(getCellPsr),
+    ...Array.from(matchAggregateByMap.values()).map(getCellPsr),
+    ...Array.from(matchAggregateByGameVariant.values()).map(getCellPsr),
+    gameVariants.length > 1 && maps.length > 1
+      ? getCellPsr(filteredMatches)
+      : undefined,
+  ].filter((v): v is number => v != null);
+  const tableSkillMin = allSkillValues.length
+    ? Math.min(...allSkillValues)
+    : undefined;
+  const tableSkillMax = allSkillValues.length
+    ? Math.max(...allSkillValues)
+    : undefined;
 
   return (
     <Table.Root size="sm">
@@ -153,26 +105,32 @@ export function WinRateTable({
             <Table.ColumnHeader>{map}</Table.ColumnHeader>
             {gameVariants.map((gameVariant) => {
               const matches = matchAggregateByGameVariantAndMap.get(
-                `${gameVariant}_${map}`
+                `${gameVariant}_${map}`,
               );
               return (
-                <WinRateCell
+                <CellType
                   key={gameVariant}
                   matches={matches}
                   CellType={Table.Cell}
                   playlistName={playlistName}
                   mapName={map}
                   gameVariantName={gameVariant}
+                  skillType={performanceSkillType}
+                  tableSkillMin={tableSkillMin}
+                  tableSkillMax={tableSkillMax}
                 />
               );
             })}
             {gameVariants.length > 1 ? (
-              <WinRateCell
+              <CellType
                 matches={matchAggregateByMap.get(map)}
                 CellType={Table.Cell}
                 playlistName={playlistName}
                 mapName={map}
                 gameVariantName={null}
+                skillType={performanceSkillType}
+                tableSkillMin={tableSkillMin}
+                tableSkillMax={tableSkillMax}
               />
             ) : (
               <></>
@@ -185,23 +143,29 @@ export function WinRateTable({
             {gameVariants.map((gameVariant) => {
               const matches = matchAggregateByGameVariant.get(gameVariant);
               return (
-                <WinRateCell
+                <CellType
                   key={gameVariant}
                   matches={matches}
                   CellType={Table.Cell}
                   playlistName={playlistName}
                   gameVariantName={gameVariant}
                   mapName={null}
+                  skillType={performanceSkillType}
+                  tableSkillMin={tableSkillMin}
+                  tableSkillMax={tableSkillMax}
                 />
               );
             })}
             {gameVariants.length > 1 ? (
-              <WinRateCell
+              <CellType
                 matches={filteredMatches}
                 CellType={Table.Cell}
                 playlistName={playlistName}
                 gameVariantName={null}
                 mapName={null}
+                skillType={performanceSkillType}
+                tableSkillMin={tableSkillMin}
+                tableSkillMax={tableSkillMax}
               />
             ) : (
               <></>
