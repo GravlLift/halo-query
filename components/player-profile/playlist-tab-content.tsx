@@ -784,17 +784,21 @@ export function PlaylistTabContent({
         </Card.Root>
         <Card.Root>
           <Card.Header>
-            <Flex>
-              <VerticalCenter flexGrow={1}>
-                <Heading size="md">Game Types</Heading>{' '}
+            <Flex
+              wrap={{ base: 'wrap', md: 'nowrap' }}
+              align={{ base: 'stretch', md: 'center' }}
+              gap={2}
+            >
+              <VerticalCenter flex={{ base: '1 1 100%', md: '1 1 auto' }}>
+                <Heading size="md">Game Types</Heading>
               </VerticalCenter>
-              <Box flexGrow={1}>
+              <Box flex={{ base: '1 1 100%', md: '1 1 auto' }}>
                 <RadioCard.Root
                   value={gameTypeCellType}
                   onValueChange={(e) =>
                     setGameTypeCellType(e.value as 'win' | 'psrk' | 'psrd')
                   }
-                  justifyContent={'center'}
+                  justifyContent={{ base: 'flex-start', md: 'center' }}
                 >
                   <HStack align="stretch">
                     <RadioCard.Item key={'psrk'} value={'psrk'}>
