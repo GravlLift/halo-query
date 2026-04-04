@@ -179,7 +179,7 @@ export default function PlaylistSkillRankChart(
       matchId: m.matchId,
       x: matchStartLabel,
       y:
-        mostRecentGameVariantSkill.length < allGameVariants.length / 2
+        mostRecentGameVariantSkill.length < allGameVariants.length * 0.75
           ? null
           : mostRecentGameVariantSkill.average(),
     });
