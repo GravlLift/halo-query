@@ -100,7 +100,13 @@ function useMatches(
         },
         haloCaches,
       ),
-    [leaderboard, user.xuid, playlistAssetId, navigationStartSignal],
+    [
+      leaderboard,
+      user.xuid,
+      navigationStartSignal,
+      haloCaches,
+      playlistAssetId,
+    ],
   );
 
   useEffect(() => {
@@ -334,91 +340,37 @@ export function PlaylistTabContent({
     'win' | 'psrk' | 'psrd'
   >('psrk');
   return (
-    <Tabs.Content value={playlist.playlistId}>
-      <VStack gap={2} align={'stretch'}>
-        <Card.Root overflow="hidden" variant="outline" size="sm">
-          <Card.Body>
-            <Flex
-              flexWrap="wrap"
-              justifyContent={'space-around'}
-              alignItems={'flex-start'}
-              direction={'row'}
-              w="100%"
-              gap={2}
-            >
-              <Box minW={`${skillWidth}px`}>
-                <PlaylistCsrDisplay
-                  label="Current CSR"
-                  playlistCsr={playlist.csr.Current}
-                />
-              </Box>
-              <Box minW={`${skillWidth}px`}>
-                <PlaylistCsrDisplay
-                  label="Season Peak CSR"
-                  playlistCsr={playlist.csr.SeasonMax}
-                />
-              </Box>
-              <Box minW={`${skillWidth}px`}>
-                <Stat.Root>
-                  <Stat.Label>
-                    <HStack>
-                      <Box>All Time Peak CSR</Box>
-                      <HoverCard.Root positioning={{ placement: 'top' }}>
-                        <HoverCard.Trigger>
-                          <CircleHelp />
-                        </HoverCard.Trigger>
-                        <Portal>
-                          <HoverCard.Positioner>
-                            <HoverCard.Content>
-                              <HoverCard.Arrow />
-                              <Text className="paragraph">
-                                <Link
-                                  target="_blank"
-                                  href="https://www.halowaypoint.com/news/halo-infinite-playlist-challenge-update"
-                                >
-                                  Season 1 CSR excluded due to rank inflation.
-                                  <ExternalLink />
-                                </Link>
-                              </Text>
-                            </HoverCard.Content>
-                          </HoverCard.Positioner>
-                        </Portal>
-                      </HoverCard.Root>
-                    </HStack>
-                  </Stat.Label>
-                  <HStack>
-                    <Image
-                      objectFit="contain"
-                      maxW={'25px'}
-                      src={divisionImageSrc(playlist.csr.AllTimeMax)}
-                      alt={`${playlist.csr.AllTimeMax.Tier} ${
-                        playlist.csr.AllTimeMax.SubTier + 1
-                      }`}
-                    />
-
-                    <Flex flexDir={'column'}>
-                      <Spacer />
-                      <Stat.ValueText>
-                        {playlist.csr.AllTimeMax.Value.toFixed(0)}
-                      </Stat.ValueText>
-                      <Spacer />
-                    </Flex>
-                  </HStack>
-                  <Stat.HelpText>
-                    {playlist.csr.AllTimeMax.Tier}
-                    {playlist.csr.AllTimeMax.Tier === 'Onyx'
-                      ? ''
-                      : ` ${playlist.csr.AllTimeMax.SubTier + 1}`}
-                  </Stat.HelpText>
-                </Stat.Root>
-              </Box>
-              {esr ? (
+    <>
+      <Tabs.Content value={playlist.playlistId}>
+        <VStack gap={2} align={'stretch'}>
+          <Card.Root overflow="hidden" variant="outline" size="sm">
+            <Card.Body>
+              <Flex
+                flexWrap="wrap"
+                justifyContent={'space-around'}
+                alignItems={'flex-start'}
+                direction={'row'}
+                w="100%"
+                gap={2}
+              >
+                <Box minW={`${skillWidth}px`}>
+                  <PlaylistCsrDisplay
+                    label="Current CSR"
+                    playlistCsr={playlist.csr.Current}
+                  />
+                </Box>
+                <Box minW={`${skillWidth}px`}>
+                  <PlaylistCsrDisplay
+                    label="Season Peak CSR"
+                    playlistCsr={playlist.csr.SeasonMax}
+                  />
+                </Box>
                 <Box minW={`${skillWidth}px`}>
                   <Stat.Root>
                     <Stat.Label>
                       <HStack>
-                        <Box>ESR Average</Box>
-                        <HoverCard.Root>
+                        <Box>All Time Peak CSR</Box>
+                        <HoverCard.Root positioning={{ placement: 'top' }}>
                           <HoverCard.Trigger>
                             <CircleHelp />
                           </HoverCard.Trigger>
@@ -427,16 +379,13 @@ export function PlaylistTabContent({
                               <HoverCard.Content>
                                 <HoverCard.Arrow />
                                 <Text className="paragraph">
-                                  Expected Skill Rank, or ESR, is a measure of
-                                  your skill rank based on the kills and deaths
-                                  that Halo Infinite expects you to accumulate
-                                  in a match.
-                                </Text>
-                                <Text className="paragraph">
-                                  You have a specific ESR value for each game
-                                  type. This number shown is an average of your
-                                  most recent ESRs from each game type, and is
-                                  labeled in the charts below as ESR-A.
+                                  <Link
+                                    target="_blank"
+                                    href="https://www.halowaypoint.com/news/halo-infinite-playlist-challenge-update"
+                                  >
+                                    Season 1 CSR excluded due to rank inflation.
+                                    <ExternalLink />
+                                  </Link>
                                 </Text>
                               </HoverCard.Content>
                             </HoverCard.Positioner>
@@ -445,441 +394,507 @@ export function PlaylistTabContent({
                       </HStack>
                     </Stat.Label>
                     <HStack>
-                      {esrTierSubtier && (
-                        <Image
-                          objectFit="contain"
-                          maxW={'25px'}
-                          src={divisionImageSrc(esrTierSubtier)}
-                          alt={`${esrTierSubtier.Tier} ${
-                            esrTierSubtier.SubTier + 1
-                          }`}
-                        />
-                      )}
-                      <Flex flexDir={'column'} title={esr.toFixed(3)}>
+                      <Image
+                        objectFit="contain"
+                        maxW={'25px'}
+                        src={divisionImageSrc(playlist.csr.AllTimeMax)}
+                        alt={`${playlist.csr.AllTimeMax.Tier} ${
+                          playlist.csr.AllTimeMax.SubTier + 1
+                        }`}
+                      />
+
+                      <Flex flexDir={'column'}>
                         <Spacer />
                         <Stat.ValueText>
-                          {Math.floor(esr).toFixed(0)}
+                          {playlist.csr.AllTimeMax.Value.toFixed(0)}
                         </Stat.ValueText>
                         <Spacer />
                       </Flex>
                     </HStack>
-                    {esrTierSubtier && (
-                      <Stat.HelpText>
-                        {esrTierSubtier.Tier}
-                        {esrTierSubtier.Tier === 'Onyx'
-                          ? ''
-                          : ` ${esrTierSubtier.SubTier + 1}`}
-                      </Stat.HelpText>
-                    )}
+                    <Stat.HelpText>
+                      {playlist.csr.AllTimeMax.Tier}
+                      {playlist.csr.AllTimeMax.Tier === 'Onyx'
+                        ? ''
+                        : ` ${playlist.csr.AllTimeMax.SubTier + 1}`}
+                    </Stat.HelpText>
                   </Stat.Root>
                 </Box>
-              ) : null}
-            </Flex>
-          </Card.Body>
-        </Card.Root>
-        <Flex>
-          <Spacer />
-          <Box>
-            <Select.Root
-              width="180px"
-              size={'sm'}
-              value={[showLastXGames?.toString() ?? '100']}
-              onValueChange={(e) => {
-                if (e.value[0] === 'all') {
-                  setShowLastXGames('all');
-                } else {
-                  setShowLastXGames(parseInt(e.value[0]));
-                }
-              }}
-              collection={zooms}
-            >
-              <Select.HiddenSelect />
-              <Select.Control>
-                <Select.Trigger>
-                  <Select.ValueText>
-                    <Icon as={FaSearchPlus} mr={2} mb="2px" />
-                    {zooms.items.find((i) => i.value === showLastXGames)?.label}
-                  </Select.ValueText>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Trigger>
-              </Select.Control>
-              <Portal>
-                <Select.Positioner>
-                  <Select.Content>
-                    {zooms.items.map((v) => (
-                      <Select.Item item={v} key={v.value}>
-                        {v.label}
-                        <Select.ItemIndicator />
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Positioner>
-              </Portal>
-            </Select.Root>
-          </Box>
-          <Box ml={2}>
-            <IconButton
-              aria-label="Refresh"
-              title="Refresh"
-              loading={matchesLoading}
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  const { iterator } = getPlayerMatches(
-                    leaderboard,
-                    [wrapXuid(user.xuid)],
-                    {
-                      limit: maxMatches,
-                      countCutoff: Math.max(maxMatches, 1000),
-                      fastFilter: (m) =>
-                        m.MatchInfo.Playlist?.AssetId ===
-                        playlist.playlistAsset.AssetId,
-                      signal: navigationStartSignal,
-                      loadUserData: false,
-                    },
-                    haloCaches,
-                  );
-                  let first = true;
-                  for await (const match of iterator) {
-                    if (
-                      !playlistMatches.some((m) => m.MatchId === match.MatchId)
-                    ) {
-                      if (first) {
-                        first = false;
-                        newLatestMatch(match);
-                      }
-                      setMatches((matches) =>
-                        [
-                          ...matches.filter((m) => m.MatchId !== match.MatchId),
-                          match,
-                        ].slice(-maxMatches),
-                      );
-                    } else {
-                      return;
-                    }
+                {esr ? (
+                  <Box minW={`${skillWidth}px`}>
+                    <Stat.Root>
+                      <Stat.Label>
+                        <HStack>
+                          <Box>ESR Average</Box>
+                          <HoverCard.Root>
+                            <HoverCard.Trigger>
+                              <CircleHelp />
+                            </HoverCard.Trigger>
+                            <Portal>
+                              <HoverCard.Positioner>
+                                <HoverCard.Content>
+                                  <HoverCard.Arrow />
+                                  <Text className="paragraph">
+                                    Expected Skill Rank, or ESR, is a measure of
+                                    your skill rank based on the kills and
+                                    deaths that Halo Infinite expects you to
+                                    accumulate in a match.
+                                  </Text>
+                                  <Text className="paragraph">
+                                    You have a specific ESR value for each game
+                                    type. This number shown is an average of
+                                    your most recent ESRs from each game type,
+                                    and is labeled in the charts below as ESR-A.
+                                  </Text>
+                                </HoverCard.Content>
+                              </HoverCard.Positioner>
+                            </Portal>
+                          </HoverCard.Root>
+                        </HStack>
+                      </Stat.Label>
+                      <HStack>
+                        {esrTierSubtier && (
+                          <Image
+                            objectFit="contain"
+                            maxW={'25px'}
+                            src={divisionImageSrc(esrTierSubtier)}
+                            alt={`${esrTierSubtier.Tier} ${
+                              esrTierSubtier.SubTier + 1
+                            }`}
+                          />
+                        )}
+                        <Flex flexDir={'column'} title={esr.toFixed(3)}>
+                          <Spacer />
+                          <Stat.ValueText>
+                            {Math.floor(esr).toFixed(0)}
+                          </Stat.ValueText>
+                          <Spacer />
+                        </Flex>
+                      </HStack>
+                      {esrTierSubtier && (
+                        <Stat.HelpText>
+                          {esrTierSubtier.Tier}
+                          {esrTierSubtier.Tier === 'Onyx'
+                            ? ''
+                            : ` ${esrTierSubtier.SubTier + 1}`}
+                        </Stat.HelpText>
+                      )}
+                    </Stat.Root>
+                  </Box>
+                ) : null}
+              </Flex>
+            </Card.Body>
+          </Card.Root>
+          <Flex>
+            <Spacer />
+            <Box>
+              <Select.Root
+                width="180px"
+                size={'sm'}
+                value={[showLastXGames?.toString() ?? '100']}
+                onValueChange={(e) => {
+                  if (e.value[0] === 'all') {
+                    setShowLastXGames('all');
+                  } else {
+                    setShowLastXGames(parseInt(e.value[0]));
                   }
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              size="sm"
-            >
-              <Icon as={FaRedo} />
-            </IconButton>
-          </Box>
-        </Flex>
-        <SimpleGrid minChildWidth={chartGridMinChildWidth} gap={2}>
-          <Card.Root flex={1}>
+                }}
+                collection={zooms}
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText>
+                      <Icon as={FaSearchPlus} mr={2} mb="2px" />
+                      {
+                        zooms.items.find((i) => i.value === showLastXGames)
+                          ?.label
+                      }
+                    </Select.ValueText>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Trigger>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {zooms.items.map((v) => (
+                        <Select.Item item={v} key={v.value}>
+                          {v.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            </Box>
+            <Box ml={2}>
+              <IconButton
+                aria-label="Refresh"
+                title="Refresh"
+                loading={matchesLoading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const { iterator } = getPlayerMatches(
+                      leaderboard,
+                      [wrapXuid(user.xuid)],
+                      {
+                        limit: maxMatches,
+                        countCutoff: Math.max(maxMatches, 1000),
+                        fastFilter: (m) =>
+                          m.MatchInfo.Playlist?.AssetId ===
+                          playlist.playlistAsset.AssetId,
+                        signal: navigationStartSignal,
+                        loadUserData: false,
+                      },
+                      haloCaches,
+                    );
+                    let first = true;
+                    for await (const match of iterator) {
+                      if (
+                        !playlistMatches.some(
+                          (m) => m.MatchId === match.MatchId,
+                        )
+                      ) {
+                        if (first) {
+                          first = false;
+                          newLatestMatch(match);
+                        }
+                        setMatches((matches) =>
+                          [
+                            ...matches.filter(
+                              (m) => m.MatchId !== match.MatchId,
+                            ),
+                            match,
+                          ].slice(-maxMatches),
+                        );
+                      } else {
+                        return;
+                      }
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                size="sm"
+              >
+                <Icon as={FaRedo} />
+              </IconButton>
+            </Box>
+          </Flex>
+          <SimpleGrid minChildWidth={chartGridMinChildWidth} gap={2}>
+            <Card.Root flex={1}>
+              <Card.Header>
+                <Flex>
+                  <Box flexGrow={1}>
+                    <Heading size="md">Skill History</Heading>
+                  </Box>
+                  <Box>
+                    <Switch.Root
+                      display="flex"
+                      alignItems="center"
+                      justifyContent={'flex-end'}
+                      checked={showCsrDeltas}
+                      onCheckedChange={(e) => setShowCsrDeltas(e.checked)}
+                    >
+                      <Switch.HiddenInput />
+                      <Switch.Label mb={0}>
+                        <Text fontWeight={'normal'} fontSize={'16px'}>
+                          Show CSR Deltas
+                        </Text>
+                      </Switch.Label>
+                      <Switch.Control />
+                    </Switch.Root>
+                  </Box>
+                </Flex>
+              </Card.Header>
+              <Card.Body>
+                {matchesLoading && matchSkills.length === 0 ? (
+                  <Loading centerProps={{ height: '400px' }} />
+                ) : (
+                  <PlaylistSkillRankChart
+                    target={user}
+                    skills={matchSkills}
+                    showLastXGames={
+                      showLastXGames === 'all' ? null : showLastXGames
+                    }
+                    showCsrDeltas={showCsrDeltas}
+                    isLoading={matchesLoading}
+                  />
+                )}
+              </Card.Body>
+            </Card.Root>
+            <Card.Root flex={1}>
+              <Card.Header>
+                <Heading size="md">Expected Skill Rank by Mode</Heading>
+              </Card.Header>
+              <Card.Body>
+                {matchesLoading && matchSkills.length === 0 ? (
+                  <Loading centerProps={{ height: '400px' }} />
+                ) : (
+                  <PlaylistSkillRankByModeChart
+                    skills={matchSkills}
+                    showLastXGames={
+                      showLastXGames === 'all' ? null : showLastXGames
+                    }
+                  />
+                )}
+              </Card.Body>
+            </Card.Root>
+          </SimpleGrid>
+          <Card.Root>
             <Card.Header>
-              <Flex>
-                <Box flexGrow={1}>
-                  <Heading size="md">Skill History</Heading>
-                </Box>
-                <Box>
-                  <Switch.Root
-                    display="flex"
-                    alignItems="center"
-                    justifyContent={'flex-end'}
-                    checked={showCsrDeltas}
-                    onCheckedChange={(e) => setShowCsrDeltas(e.checked)}
+              <Heading size="md">Roles</Heading>
+            </Card.Header>
+            <Card.Body>
+              {matchesLoading && slicedMatchAggregate.length === 0 ? (
+                <Loading centerProps={{ height: '300px' }} />
+              ) : (
+                <>
+                  {matchAggregateByGameVariant.size > 1 ? (
+                    <Box>
+                      <Center>Overall</Center>
+                      <RoleGraph
+                        radiusMax={radiusMax}
+                        height={200}
+                        stats={[
+                          {
+                            gamertag: user.gamertag,
+                            kills: slicedMatchAggregate.average((a) =>
+                              a.kills.team === 0
+                                ? 0
+                                : a.kills.player / a.kills.team,
+                            ),
+                            assists: slicedMatchAggregate.average((a) =>
+                              a.assists.team === 0
+                                ? 0
+                                : a.assists.player / a.assists.team,
+                            ),
+                            damage: slicedMatchAggregate.find(
+                              (ma) =>
+                                ma.objective?.player != null &&
+                                typeof ma.objective.team === 'number',
+                            )
+                              ? undefined
+                              : slicedMatchAggregate
+                                  .filter(
+                                    (
+                                      a,
+                                    ): a is typeof a & {
+                                      damage: { player: number; team: number };
+                                    } =>
+                                      a.damage?.player != null &&
+                                      typeof a.damage.team === 'number',
+                                  )
+                                  .average((a) =>
+                                    a.damage.team === 0
+                                      ? 0
+                                      : a.damage.player / a.damage.team,
+                                  ),
+                            objective: slicedMatchAggregate.find(
+                              (ma) =>
+                                ma.objective?.player != null &&
+                                typeof ma.objective.team === 'number',
+                            )
+                              ? slicedMatchAggregate
+                                  .filter(
+                                    (
+                                      a,
+                                    ): a is typeof a & {
+                                      objective: {
+                                        player: number;
+                                        team: number;
+                                      };
+                                    } =>
+                                      a.objective?.player != null &&
+                                      typeof a.objective.team === 'number',
+                                  )
+                                  .average((a) =>
+                                    a.objective.team === 0
+                                      ? 0
+                                      : a.objective.player / a.objective.team,
+                                  )
+                              : undefined,
+                          },
+                        ]}
+                        colorOverrides={[colors[0]]}
+                      />
+                    </Box>
+                  ) : null}
+                  <Flex justifyContent="center" wrap={'wrap'}>
+                    {Array.from(matchAggregateByGameVariant.entries())
+                      .sortBy(([gv]) => gv)
+                      .map(([gameVariant, matchAggregates], i) => {
+                        const objectiveAggregates = matchAggregates.filter(
+                          (
+                            a,
+                          ): a is typeof a & {
+                            objective: { player: number; team: number };
+                          } =>
+                            a.objective?.player != null &&
+                            typeof a.objective.team === 'number',
+                        );
+                        return (
+                          <VStack key={gameVariant}>
+                            <Box>{gameVariant}</Box>
+                            <RoleGraph
+                              radiusMax={radiusMax}
+                              stats={[
+                                {
+                                  gamertag: user.gamertag,
+                                  kills: matchAggregates.average((a) =>
+                                    a.kills.team === 0
+                                      ? 0
+                                      : a.kills.player / a.kills.team,
+                                  ),
+                                  assists: matchAggregates.average((a) =>
+                                    a.assists.team === 0
+                                      ? 0
+                                      : a.assists.player / a.assists.team,
+                                  ),
+                                  damage:
+                                    objectiveAggregates.length === 0
+                                      ? matchAggregates
+                                          .filter(
+                                            (
+                                              a,
+                                            ): a is typeof a & {
+                                              damage: {
+                                                player: number;
+                                                team: number;
+                                              };
+                                            } =>
+                                              a.damage?.player != null &&
+                                              typeof a.damage.team === 'number',
+                                          )
+                                          .average((a) =>
+                                            a.damage.team === 0
+                                              ? 0
+                                              : a.damage.player / a.damage.team,
+                                          )
+                                      : undefined,
+                                  objective:
+                                    objectiveAggregates.length > 0
+                                      ? objectiveAggregates.average((a) =>
+                                          a.objective.team === 0
+                                            ? 0
+                                            : a.objective.player /
+                                              a.objective.team,
+                                        )
+                                      : undefined,
+                                },
+                              ]}
+                              colorOverrides={[colors[i + 1]]}
+                            />
+                          </VStack>
+                        );
+                      })}
+                  </Flex>
+                </>
+              )}
+            </Card.Body>
+          </Card.Root>
+          <Card.Root>
+            <Card.Header>
+              <Flex
+                wrap={{ base: 'wrap', md: 'nowrap' }}
+                align={{ base: 'stretch', md: 'center' }}
+                gap={2}
+              >
+                <VerticalCenter flex={{ base: '1 1 100%', md: '1 1 auto' }}>
+                  <Heading size="md">Game Types</Heading>
+                </VerticalCenter>
+                <Box flex={{ base: '1 1 100%', md: '1 1 auto' }}>
+                  <RadioCard.Root
+                    value={gameTypeCellType}
+                    onValueChange={(e) =>
+                      setGameTypeCellType(e.value as 'win' | 'psrk' | 'psrd')
+                    }
+                    justifyContent={{ base: 'flex-start', md: 'center' }}
                   >
-                    <Switch.HiddenInput />
-                    <Switch.Label mb={0}>
-                      <Text fontWeight={'normal'} fontSize={'16px'}>
-                        Show CSR Deltas
-                      </Text>
-                    </Switch.Label>
-                    <Switch.Control />
-                  </Switch.Root>
+                    <HStack align="stretch">
+                      <RadioCard.Item key={'psrk'} value={'psrk'}>
+                        <RadioCard.ItemHiddenInput />
+                        <RadioCard.ItemControl>
+                          <RadioCard.ItemText>PSR-K</RadioCard.ItemText>
+                          <RadioCard.ItemIndicator />
+                        </RadioCard.ItemControl>
+                      </RadioCard.Item>
+                      <RadioCard.Item key={'psrd'} value={'psrd'}>
+                        <RadioCard.ItemHiddenInput />
+                        <RadioCard.ItemControl>
+                          <RadioCard.ItemText>PSR-D</RadioCard.ItemText>
+                          <RadioCard.ItemIndicator />
+                        </RadioCard.ItemControl>
+                      </RadioCard.Item>
+                      <RadioCard.Item key={'win'} value={'win'}>
+                        <RadioCard.ItemHiddenInput />
+                        <RadioCard.ItemControl>
+                          <RadioCard.ItemText>Win Rate</RadioCard.ItemText>
+                          <RadioCard.ItemIndicator />
+                        </RadioCard.ItemControl>
+                      </RadioCard.Item>
+                    </HStack>
+                  </RadioCard.Root>
                 </Box>
               </Flex>
             </Card.Header>
             <Card.Body>
-              {matchesLoading && matchSkills.length === 0 ? (
-                <Loading centerProps={{ height: '400px' }} />
-              ) : (
-                <PlaylistSkillRankChart
-                  target={user}
-                  skills={matchSkills}
-                  showLastXGames={
-                    showLastXGames === 'all' ? null : showLastXGames
-                  }
-                  showCsrDeltas={showCsrDeltas}
-                  isLoading={matchesLoading}
-                />
-              )}
+              <Center>
+                {matchesLoading && slicedMatchAggregate.length === 0 ? (
+                  <Loading centerProps={{ height: '300px' }} />
+                ) : (
+                  <Box overflowX="auto" w="100%">
+                    {gameTypeCellType === 'win' ? (
+                      <GameTypeTable
+                        matches={slicedMatchAggregate}
+                        playlistName={playlist.playlistAsset.PublicName}
+                        CellType={WinRateCell}
+                        performanceSkillType={'Deaths'}
+                      />
+                    ) : gameTypeCellType === 'psrk' ? (
+                      <GameTypeTable
+                        matches={slicedMatchAggregate}
+                        playlistName={playlist.playlistAsset.PublicName}
+                        CellType={PerformanceSkillCell}
+                        performanceSkillType={'Kills'}
+                      />
+                    ) : (
+                      <GameTypeTable
+                        matches={slicedMatchAggregate}
+                        playlistName={playlist.playlistAsset.PublicName}
+                        CellType={PerformanceSkillCell}
+                        performanceSkillType={'Deaths'}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Center>
             </Card.Body>
           </Card.Root>
-          <Card.Root flex={1}>
+          <Card.Root>
             <Card.Header>
-              <Heading size="md">Expected Skill Rank by Mode</Heading>
+              <Heading size="md">Teammates</Heading>
             </Card.Header>
             <Card.Body>
-              {matchesLoading && matchSkills.length === 0 ? (
-                <Loading centerProps={{ height: '400px' }} />
-              ) : (
-                <PlaylistSkillRankByModeChart
-                  skills={matchSkills}
-                  showLastXGames={
-                    showLastXGames === 'all' ? null : showLastXGames
-                  }
-                />
-              )}
-            </Card.Body>
-          </Card.Root>
-        </SimpleGrid>
-        <Card.Root>
-          <Card.Header>
-            <Heading size="md">Roles</Heading>
-          </Card.Header>
-          <Card.Body>
-            {matchesLoading && slicedMatchAggregate.length === 0 ? (
-              <Loading centerProps={{ height: '300px' }} />
-            ) : (
-              <>
-                {matchAggregateByGameVariant.size > 1 ? (
-                  <Box>
-                    <Center>Overall</Center>
-                    <RoleGraph
-                      radiusMax={radiusMax}
-                      height={200}
-                      stats={[
-                        {
-                          gamertag: user.gamertag,
-                          kills: slicedMatchAggregate.average((a) =>
-                            a.kills.team === 0
-                              ? 0
-                              : a.kills.player / a.kills.team,
-                          ),
-                          assists: slicedMatchAggregate.average((a) =>
-                            a.assists.team === 0
-                              ? 0
-                              : a.assists.player / a.assists.team,
-                          ),
-                          damage: slicedMatchAggregate.find(
-                            (ma) =>
-                              ma.objective?.player != null &&
-                              typeof ma.objective.team === 'number',
-                          )
-                            ? undefined
-                            : slicedMatchAggregate
-                                .filter(
-                                  (
-                                    a,
-                                  ): a is typeof a & {
-                                    damage: { player: number; team: number };
-                                  } =>
-                                    a.damage?.player != null &&
-                                    typeof a.damage.team === 'number',
-                                )
-                                .average((a) =>
-                                  a.damage.team === 0
-                                    ? 0
-                                    : a.damage.player / a.damage.team,
-                                ),
-                          objective: slicedMatchAggregate.find(
-                            (ma) =>
-                              ma.objective?.player != null &&
-                              typeof ma.objective.team === 'number',
-                          )
-                            ? slicedMatchAggregate
-                                .filter(
-                                  (
-                                    a,
-                                  ): a is typeof a & {
-                                    objective: {
-                                      player: number;
-                                      team: number;
-                                    };
-                                  } =>
-                                    a.objective?.player != null &&
-                                    typeof a.objective.team === 'number',
-                                )
-                                .average((a) =>
-                                  a.objective.team === 0
-                                    ? 0
-                                    : a.objective.player / a.objective.team,
-                                )
-                            : undefined,
-                        },
-                      ]}
-                      colorOverrides={[colors[0]]}
+              <Center>
+                {matchesLoading && slicedPlaylistMatches.length === 0 ? (
+                  <Loading centerProps={{ height: '300px' }} />
+                ) : (
+                  <Box overflowX="auto" w="100%">
+                    <TeammatesTable
+                      matches={slicedPlaylistMatches}
+                      userXuid={user.xuid}
                     />
                   </Box>
-                ) : null}
-                <Flex justifyContent="center" wrap={'wrap'}>
-                  {Array.from(matchAggregateByGameVariant.entries())
-                    .sortBy(([gv]) => gv)
-                    .map(([gameVariant, matchAggregates], i) => {
-                      const objectiveAggregates = matchAggregates.filter(
-                        (
-                          a,
-                        ): a is typeof a & {
-                          objective: { player: number; team: number };
-                        } =>
-                          a.objective?.player != null &&
-                          typeof a.objective.team === 'number',
-                      );
-                      return (
-                        <VStack key={gameVariant}>
-                          <Box>{gameVariant}</Box>
-                          <RoleGraph
-                            radiusMax={radiusMax}
-                            stats={[
-                              {
-                                gamertag: user.gamertag,
-                                kills: matchAggregates.average((a) =>
-                                  a.kills.team === 0
-                                    ? 0
-                                    : a.kills.player / a.kills.team,
-                                ),
-                                assists: matchAggregates.average((a) =>
-                                  a.assists.team === 0
-                                    ? 0
-                                    : a.assists.player / a.assists.team,
-                                ),
-                                damage:
-                                  objectiveAggregates.length === 0
-                                    ? matchAggregates
-                                        .filter(
-                                          (
-                                            a,
-                                          ): a is typeof a & {
-                                            damage: {
-                                              player: number;
-                                              team: number;
-                                            };
-                                          } =>
-                                            a.damage?.player != null &&
-                                            typeof a.damage.team === 'number',
-                                        )
-                                        .average((a) =>
-                                          a.damage.team === 0
-                                            ? 0
-                                            : a.damage.player / a.damage.team,
-                                        )
-                                    : undefined,
-                                objective:
-                                  objectiveAggregates.length > 0
-                                    ? objectiveAggregates.average((a) =>
-                                        a.objective.team === 0
-                                          ? 0
-                                          : a.objective.player /
-                                            a.objective.team,
-                                      )
-                                    : undefined,
-                              },
-                            ]}
-                            colorOverrides={[colors[i + 1]]}
-                          />
-                        </VStack>
-                      );
-                    })}
-                </Flex>
-              </>
-            )}
-          </Card.Body>
-        </Card.Root>
-        <Card.Root>
-          <Card.Header>
-            <Flex
-              wrap={{ base: 'wrap', md: 'nowrap' }}
-              align={{ base: 'stretch', md: 'center' }}
-              gap={2}
-            >
-              <VerticalCenter flex={{ base: '1 1 100%', md: '1 1 auto' }}>
-                <Heading size="md">Game Types</Heading>
-              </VerticalCenter>
-              <Box flex={{ base: '1 1 100%', md: '1 1 auto' }}>
-                <RadioCard.Root
-                  value={gameTypeCellType}
-                  onValueChange={(e) =>
-                    setGameTypeCellType(e.value as 'win' | 'psrk' | 'psrd')
-                  }
-                  justifyContent={{ base: 'flex-start', md: 'center' }}
-                >
-                  <HStack align="stretch">
-                    <RadioCard.Item key={'psrk'} value={'psrk'}>
-                      <RadioCard.ItemHiddenInput />
-                      <RadioCard.ItemControl>
-                        <RadioCard.ItemText>PSR-K</RadioCard.ItemText>
-                        <RadioCard.ItemIndicator />
-                      </RadioCard.ItemControl>
-                    </RadioCard.Item>
-                    <RadioCard.Item key={'psrd'} value={'psrd'}>
-                      <RadioCard.ItemHiddenInput />
-                      <RadioCard.ItemControl>
-                        <RadioCard.ItemText>PSR-D</RadioCard.ItemText>
-                        <RadioCard.ItemIndicator />
-                      </RadioCard.ItemControl>
-                    </RadioCard.Item>
-                    <RadioCard.Item key={'win'} value={'win'}>
-                      <RadioCard.ItemHiddenInput />
-                      <RadioCard.ItemControl>
-                        <RadioCard.ItemText>Win Rate</RadioCard.ItemText>
-                        <RadioCard.ItemIndicator />
-                      </RadioCard.ItemControl>
-                    </RadioCard.Item>
-                  </HStack>
-                </RadioCard.Root>
-              </Box>
-            </Flex>
-          </Card.Header>
-          <Card.Body>
-            <Center>
-              {matchesLoading && slicedMatchAggregate.length === 0 ? (
-                <Loading centerProps={{ height: '300px' }} />
-              ) : (
-                <Box overflowX="auto" w="100%">
-                  {gameTypeCellType === 'win' ? (
-                    <GameTypeTable
-                      matches={slicedMatchAggregate}
-                      playlistName={playlist.playlistAsset.PublicName}
-                      CellType={WinRateCell}
-                      performanceSkillType={'Deaths'}
-                    />
-                  ) : gameTypeCellType === 'psrk' ? (
-                    <GameTypeTable
-                      matches={slicedMatchAggregate}
-                      playlistName={playlist.playlistAsset.PublicName}
-                      CellType={PerformanceSkillCell}
-                      performanceSkillType={'Kills'}
-                    />
-                  ) : (
-                    <GameTypeTable
-                      matches={slicedMatchAggregate}
-                      playlistName={playlist.playlistAsset.PublicName}
-                      CellType={PerformanceSkillCell}
-                      performanceSkillType={'Deaths'}
-                    />
-                  )}
-                </Box>
-              )}
-            </Center>
-          </Card.Body>
-        </Card.Root>
-        <Card.Root>
-          <Card.Header>
-            <Heading size="md">Teammates</Heading>
-          </Card.Header>
-          <Card.Body>
-            <Center>
-              {matchesLoading && slicedPlaylistMatches.length === 0 ? (
-                <Loading centerProps={{ height: '300px' }} />
-              ) : (
-                <Box overflowX="auto" w="100%">
-                  <TeammatesTable
-                    matches={slicedPlaylistMatches}
-                    userXuid={user.xuid}
-                  />
-                </Box>
-              )}
-            </Center>
-          </Card.Body>
-        </Card.Root>
-      </VStack>
-    </Tabs.Content>
+                )}
+              </Center>
+            </Card.Body>
+          </Card.Root>
+        </VStack>
+      </Tabs.Content>
+    </>
   );
 }

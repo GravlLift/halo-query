@@ -102,9 +102,9 @@ function usePlaylists(
               navigationStartSignal,
             );
             if (playlistInfo.HasCsr) {
-              const serviceCalendar = await waypointXboxRequestPolicy.execute(
+              const csrCalendar = await waypointXboxRequestPolicy.execute(
                 (ctx) =>
-                  haloInfiniteClient.getSeasonCalendar({
+                  haloInfiniteClient.getCsrSeasonCalendar({
                     signal: ctx.signal,
                   }),
                 navigationStartSignal,
@@ -132,7 +132,7 @@ function usePlaylists(
                     },
                     navigationStartSignal,
                   ),
-                  ...serviceCalendar.Seasons.filter(
+                  ...csrCalendar.Seasons.filter(
                     (s) =>
                       s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
                   ).map(({ CsrSeasonFilePath }) => {
@@ -153,16 +153,6 @@ function usePlaylists(
                       navigationStartSignal,
                     );
                   }),
-                  ...['CsrSeason2-2', 'CsrSeason13-1'].map((seasonId) =>
-                    seasonCache.get(
-                      {
-                        playlistId,
-                        seasonId,
-                        xuid: userInfo.xuid,
-                      },
-                      navigationStartSignal,
-                    ),
-                  ),
                 ]).then(nextRedirectRejectionHandler);
 
               const validSeasonCsrs = seasonCsrs.filter((s) => s != null);
@@ -207,7 +197,15 @@ function usePlaylists(
         setLoading(false);
       }
     })();
-  }, [serviceRecord, userInfo, navigationStartSignal]);
+  }, [
+    serviceRecord,
+    userInfo,
+    navigationStartSignal,
+    playlistCache,
+    playlistVersionCache,
+    haloInfiniteClient,
+    seasonCache,
+  ]);
   return {
     playlists: playlists.sortBy((p) => {
       const order = ['Ranked Arena', 'Ranked Doubles'].indexOf(
@@ -313,7 +311,7 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
         );
       });
     }
-  }, [user?.xuid]);
+  }, [haloInfiniteClient, user?.xuid]);
 
   return (
     <>
@@ -418,15 +416,16 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
           >
             <Box maxW="1000px" w="100%">
               <Tabs.List overflow="auto hidden" maxW="1000px" border="0">
-                {playlists.map((p) => (
-                  <Tabs.Trigger
-                    key={p.playlistId}
-                    value={p.playlistId}
-                    minW="120px"
-                  >
-                    {p.playlistAsset.PublicName}
-                  </Tabs.Trigger>
-                ))}
+                {user &&
+                  playlists.map((p) => (
+                    <Tabs.Trigger
+                      key={p.playlistId}
+                      value={p.playlistId}
+                      minW="120px"
+                    >
+                      {p.playlistAsset.PublicName}
+                    </Tabs.Trigger>
+                  ))}
               </Tabs.List>
             </Box>
           </Flex>
