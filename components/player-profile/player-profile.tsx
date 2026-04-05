@@ -153,13 +153,15 @@ function usePlaylists(
                       navigationStartSignal,
                     );
                   }),
-                  seasonCache.get(
-                    {
-                      playlistId,
-                      seasonId: 'CsrSeason13-1',
-                      xuid: userInfo.xuid,
-                    },
-                    navigationStartSignal,
+                  ...['CsrSeason2-2', 'CsrSeason13-1'].map((seasonId) =>
+                    seasonCache.get(
+                      {
+                        playlistId,
+                        seasonId,
+                        xuid: userInfo.xuid,
+                      },
+                      navigationStartSignal,
+                    ),
                   ),
                 ]).then(nextRedirectRejectionHandler);
 
