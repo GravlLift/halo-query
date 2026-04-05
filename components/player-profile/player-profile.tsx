@@ -153,6 +153,14 @@ function usePlaylists(
                       navigationStartSignal,
                     );
                   }),
+                  seasonCache.get(
+                    {
+                      playlistId,
+                      seasonId: 'CsrSeason13-1',
+                      xuid: userInfo.xuid,
+                    },
+                    navigationStartSignal,
+                  ),
                 ]).then(nextRedirectRejectionHandler);
 
               const validSeasonCsrs = seasonCsrs.filter((s) => s != null);
