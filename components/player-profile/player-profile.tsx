@@ -134,7 +134,7 @@ function usePlaylists(
                   ),
                   ...csrCalendar.Seasons.filter(
                     (s) =>
-                      s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1-2.json',
+                      s.CsrSeasonFilePath !== 'Csr/Seasons/CsrSeason1.json',
                   ).map(({ CsrSeasonFilePath }) => {
                     const seasonId = /\/([^/]+).json$/.exec(
                       CsrSeasonFilePath,
