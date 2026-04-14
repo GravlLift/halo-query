@@ -246,11 +246,11 @@ function usePlaylists(
   ]);
   return {
     playlists: playlists.sortBy((p) => {
-      const order = ['Ranked Arena', 'Ranked Doubles'].indexOf(
+      const order = ['Ranked Arena', 'Ranked Slayer', 'Ranked Doubles'].indexOf(
         p.playlistAsset.PublicName,
       );
       if (order === -1) {
-        return Number.MAX_SAFE_INTEGER;
+        return p.playlistAsset.PublicName;
       }
       return order;
     }),
