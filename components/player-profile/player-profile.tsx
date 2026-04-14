@@ -109,61 +109,30 @@ function usePlaylists(
                   }),
                 navigationStartSignal,
               );
-              const [lifetimeCsr, playlistAsset, ...seasonCsrs] =
-                await Promise.allSettled([
-                  waypointXboxRequestPolicy
-                    .execute(
-                      (ctx) =>
-                        haloInfiniteClient.getPlaylistCsr(
-                          playlistId,
-                          [userInfo.xuid],
-                          undefined,
-                          {
-                            signal: ctx.signal,
-                          },
-                        ),
-                      navigationStartSignal,
-                    )
-                    .then((r) => r[0].Result),
-                  playlistVersionCache.get(
-                    {
-                      AssetId: playlistId,
-                      VersionId: playlistInfo.UgcPlaylistVersion,
-                    },
-                    navigationStartSignal,
-                  ),
-                  ...csrCalendar.Seasons.filter(
-                    (s) =>
-                      // Ignore season 1
-                      !/Csr\/Seasons\/CsrSeason1(-\d+)?\.json/.test(
-                        s.CsrSeasonFilePath,
-                      ),
-                  ).map(({ CsrSeasonFilePath }) => {
-                    const seasonId = /\/([^/]+).json$/.exec(
-                      CsrSeasonFilePath,
-                    )?.[1];
-                    if (!seasonId) {
-                      throw new Error(
-                        `Failed to parse season id from ${CsrSeasonFilePath}`,
-                      );
-                    }
-                    return seasonCache.get(
-                      {
+              const [lifetimeCsr, playlistAsset] = await Promise.allSettled([
+                waypointXboxRequestPolicy
+                  .execute(
+                    (ctx) =>
+                      haloInfiniteClient.getPlaylistCsr(
                         playlistId,
-                        seasonId,
-                        xuid: userInfo.xuid,
-                      },
-                      navigationStartSignal,
-                    );
-                  }),
-                ]).then(nextRedirectRejectionHandler);
-
-              const validSeasonCsrs = seasonCsrs.filter((s) => s != null);
-              if (validSeasonCsrs.length > 0) {
-                lifetimeCsr.AllTimeMax = validSeasonCsrs
-                  .map((s) => s.SeasonMax)
-                  .maxBy((seasonMax) => seasonMax.Value);
-              }
+                        [userInfo.xuid],
+                        undefined,
+                        {
+                          signal: ctx.signal,
+                        },
+                      ),
+                    navigationStartSignal,
+                  )
+                  .then((r) => r[0].Result),
+                playlistVersionCache.get(
+                  {
+                    AssetId: playlistId,
+                    VersionId: playlistInfo.UgcPlaylistVersion,
+                  },
+                  navigationStartSignal,
+                ),
+                ,
+              ]).then(nextRedirectRejectionHandler);
 
               setPlaylists((current) => {
                 const existingIndex = current.findIndex(
@@ -174,22 +143,88 @@ function usePlaylists(
                     ...current,
                     {
                       playlistId,
-                      csr: lifetimeCsr,
                       playlistInfo,
                       playlistAsset: playlistAsset as PlaylistAsset,
+                      csr: {
+                        ...lifetimeCsr,
+                        AllTimeMax: {
+                          ...lifetimeCsr.SeasonMax,
+                        },
+                      },
                     },
                   ];
                 } else {
                   const clone = [...current];
                   clone[existingIndex] = {
+                    ...clone[existingIndex],
                     playlistId,
-                    csr: lifetimeCsr,
                     playlistInfo,
                     playlistAsset: playlistAsset as PlaylistAsset,
                   };
                   return clone;
                 }
               });
+
+              Promise.all(
+                csrCalendar.Seasons.filter(
+                  (s) =>
+                    // Ignore season 1
+                    !/Csr\/Seasons\/CsrSeason1(-\d+)?\.json/.test(
+                      s.CsrSeasonFilePath,
+                    ),
+                ).map(async ({ CsrSeasonFilePath }) => {
+                  const seasonId = /\/([^/]+).json$/.exec(
+                    CsrSeasonFilePath,
+                  )?.[1];
+                  if (!seasonId) {
+                    throw new Error(
+                      `Failed to parse season id from ${CsrSeasonFilePath}`,
+                    );
+                  }
+                  const seasonCsr = await seasonCache.get(
+                    {
+                      playlistId,
+                      seasonId,
+                      xuid: userInfo.xuid,
+                    },
+                    navigationStartSignal,
+                  );
+
+                  if (seasonCsr) {
+                    setPlaylists((current) => {
+                      const existingIndex = current.findIndex(
+                        (p) => p.playlistId === playlistId,
+                      );
+                      if (existingIndex == -1) {
+                        return current;
+                      }
+
+                      if (
+                        current[existingIndex].csr == null ||
+                        seasonCsr.SeasonMax.Value >
+                          current[existingIndex].csr.AllTimeMax.Value
+                      ) {
+                        {
+                          const clone = [...current];
+
+                          clone[existingIndex] = {
+                            ...clone[existingIndex],
+                            csr: clone[existingIndex].csr
+                              ? {
+                                  ...clone[existingIndex].csr,
+                                  AllTimeMax: seasonCsr.SeasonMax,
+                                }
+                              : seasonCsr,
+                          };
+                          return clone;
+                        }
+                      } else {
+                        return current;
+                      }
+                    });
+                  }
+                }),
+              );
             }
           }),
         );
@@ -227,51 +262,54 @@ function usePlaylists(
         );
         if (existingIndex == -1) {
           return current;
-        } else {
-          const clone = [...current];
-          const allTimeMax = Math.max(
-            newCsr.Value,
-            clone[existingIndex].csr.AllTimeMax.Value,
-          );
-          const allTimeMaxTierInfo = getTierSubTierForSkill(allTimeMax);
-          const seasonMax = Math.max(
-            newCsr.Value,
-            clone[existingIndex].csr.SeasonMax.Value,
-          );
-          const seasonMaxTierInfo = getTierSubTierForSkill(seasonMax);
-          const newCsrTierInfo =
-            newCsr.Value === -1
-              ? {
-                  Tier: 'Unranked',
-                  SubTier:
-                    newCsr.InitialMeasurementMatches -
-                    newCsr.MeasurementMatchesRemaining,
-                }
-              : getTierSubTierForSkill(newCsr.Value);
-          clone[existingIndex] = {
-            ...clone[existingIndex],
-            csr: {
-              AllTimeMax: {
-                ...clone[existingIndex].csr.AllTimeMax,
-                Value: allTimeMax,
-                Tier: allTimeMaxTierInfo.Tier,
-                SubTier: allTimeMaxTierInfo.SubTier,
-              },
-              SeasonMax: {
-                ...clone[existingIndex].csr.SeasonMax,
-                Value: seasonMax,
-                Tier: seasonMaxTierInfo.Tier,
-                SubTier: seasonMaxTierInfo.SubTier,
-              },
-              Current: {
-                ...newCsr,
-                Tier: newCsrTierInfo.Tier,
-                SubTier: newCsrTierInfo.SubTier,
-              },
-            },
-          };
-          return clone;
         }
+
+        const clone = [...current];
+        if (clone[existingIndex].csr == null) {
+          return current;
+        }
+        const allTimeMax = Math.max(
+          newCsr.Value,
+          clone[existingIndex].csr.AllTimeMax.Value,
+        );
+        const allTimeMaxTierInfo = getTierSubTierForSkill(allTimeMax);
+        const seasonMax = Math.max(
+          newCsr.Value,
+          clone[existingIndex].csr.SeasonMax.Value,
+        );
+        const seasonMaxTierInfo = getTierSubTierForSkill(seasonMax);
+        const newCsrTierInfo =
+          newCsr.Value === -1
+            ? {
+                Tier: 'Unranked',
+                SubTier:
+                  newCsr.InitialMeasurementMatches -
+                  newCsr.MeasurementMatchesRemaining,
+              }
+            : getTierSubTierForSkill(newCsr.Value);
+        clone[existingIndex] = {
+          ...clone[existingIndex],
+          csr: {
+            AllTimeMax: {
+              ...clone[existingIndex].csr.AllTimeMax,
+              Value: allTimeMax,
+              Tier: allTimeMaxTierInfo.Tier,
+              SubTier: allTimeMaxTierInfo.SubTier,
+            },
+            SeasonMax: {
+              ...clone[existingIndex].csr.SeasonMax,
+              Value: seasonMax,
+              Tier: seasonMaxTierInfo.Tier,
+              SubTier: seasonMaxTierInfo.SubTier,
+            },
+            Current: {
+              ...newCsr,
+              Tier: newCsrTierInfo.Tier,
+              SubTier: newCsrTierInfo.SubTier,
+            },
+          },
+        };
+        return clone;
       });
     },
   };
