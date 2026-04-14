@@ -1,7 +1,7 @@
-import { rankedPlaylistAssetId } from '../../lib/ranked-playlist-ids';
+import { rankedArenaPlaylistAssetId } from '../../lib/ranked-playlist-ids';
 
 export const defaults = {
-  playlistAssetId: rankedPlaylistAssetId,
+  playlistAssetId: rankedArenaPlaylistAssetId,
   skillProp: 'esr',
   page: '1',
 };

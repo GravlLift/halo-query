@@ -6,7 +6,7 @@ import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useCurrentUserGamertag } from '../../lib/hooks/current-user';
 import { usePlaylistAssetIds } from '../../lib/leaderboard/hooks';
-import { rankedPlaylistAssetId } from '../../lib/ranked-playlist-ids';
+import { rankedArenaPlaylistAssetId } from '../../lib/ranked-playlist-ids';
 import { Loading } from '../loading';
 import Testing from '../testing';
 import Peers from './peers';
@@ -30,7 +30,7 @@ export default function Leaderboard({
     { AssetId: string; PublicName: string }[]
   >([
     {
-      AssetId: rankedPlaylistAssetId,
+      AssetId: rankedArenaPlaylistAssetId,
       PublicName: 'Ranked Arena',
     },
     {
@@ -64,7 +64,7 @@ export default function Leaderboard({
 
     const playlistsToFetch = playlistAssetIds?.filter(
       (id): id is string =>
-        typeof id === 'string' && !playlists.some((p) => p.AssetId == id)
+        typeof id === 'string' && !playlists.some((p) => p.AssetId == id),
     );
 
     if (playlistsToFetch?.length) {
@@ -80,9 +80,9 @@ export default function Leaderboard({
                     playlistAsset,
                   ]);
                 }
-              })
-          )
-        )
+              }),
+          ),
+        ),
       );
     }
   }, [playlistAssetIds, playlists, currentUser, playlistAssetId]);

@@ -38,6 +38,11 @@ import { Loading } from '../loading';
 import { useNavigationController } from '../navigation-context';
 import { VerticalCenter } from '../vertical-center';
 import { PlaylistTabContent } from './playlist-tab-content';
+import {
+  rankedArenaPlaylistAssetId,
+  rankedDoublesPlaylistAssetId,
+  rankedSlayerPlaylistAssetId,
+} from '../../lib/ranked-playlist-ids';
 
 function usePlaylists(
   serviceRecord: ServiceRecord | undefined,
@@ -246,9 +251,11 @@ function usePlaylists(
   ]);
   return {
     playlists: playlists.sortBy((p) => {
-      const order = ['Ranked Arena', 'Ranked Slayer', 'Ranked Doubles'].indexOf(
-        p.playlistAsset.PublicName,
-      );
+      const order = [
+        rankedArenaPlaylistAssetId,
+        rankedSlayerPlaylistAssetId,
+        rankedDoublesPlaylistAssetId,
+      ].indexOf(p.playlistId);
       if (order === -1) {
         return p.playlistAsset.PublicName;
       }
