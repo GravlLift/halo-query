@@ -6,7 +6,11 @@ import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useCurrentUserGamertag } from '../../lib/hooks/current-user';
 import { usePlaylistAssetIds } from '../../lib/leaderboard/hooks';
-import { rankedArenaPlaylistAssetId } from '../../lib/ranked-playlist-ids';
+import {
+  rankedArenaPlaylistAssetId,
+  rankedDoublesPlaylistAssetId,
+  rankedSlayerPlaylistAssetId,
+} from '../../lib/ranked-playlist-ids';
 import { Loading } from '../loading';
 import Testing from '../testing';
 import Peers from './peers';
@@ -34,11 +38,11 @@ export default function Leaderboard({
       PublicName: 'Ranked Arena',
     },
     {
-      AssetId: 'dcb2e24e-05fb-4390-8076-32a0cdb4326e',
+      AssetId: rankedSlayerPlaylistAssetId,
       PublicName: 'Ranked Slayer',
     },
     {
-      AssetId: 'fa5aa2a3-2428-4912-a023-e1eeea7b877c',
+      AssetId: rankedDoublesPlaylistAssetId,
       PublicName: 'Ranked Doubles',
     },
   ]);
