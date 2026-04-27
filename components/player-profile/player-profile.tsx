@@ -250,16 +250,35 @@ function usePlaylists(
     seasonCache,
   ]);
   return {
-    playlists: playlists.sortBy((p) => {
+    playlists: [...playlists].sort((a, b) => {
       const order = [
         rankedArenaPlaylistAssetId,
         rankedSlayerPlaylistAssetId,
         rankedDoublesPlaylistAssetId,
-      ].indexOf(p.playlistId);
-      if (order === -1) {
-        return p.playlistAsset.PublicName;
+      ];
+      const aOrder = order.indexOf(a.playlistId);
+      const bOrder = order.indexOf(b.playlistId);
+      const aIsKnown = aOrder !== -1;
+      const bIsKnown = bOrder !== -1;
+
+      // Always pin known playlists in explicit order before all other playlists.
+      if (aIsKnown && bIsKnown) {
+        return aOrder - bOrder;
       }
-      return order;
+      if (aIsKnown) {
+        return -1;
+      }
+      if (bIsKnown) {
+        return 1;
+      }
+
+      const byName = (a.playlistAsset.PublicName ?? '').localeCompare(
+        b.playlistAsset.PublicName ?? '',
+      );
+      if (byName !== 0) {
+        return byName;
+      }
+      return a.playlistId.localeCompare(b.playlistId);
     }),
     loading,
     updateCsr: (playlistId: string, newCsr: PlaylistCsr) => {
