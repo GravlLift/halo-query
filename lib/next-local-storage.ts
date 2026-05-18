@@ -1,6 +1,6 @@
 export function getLocalStorageValueOrDefault(
   key: string,
-  defaultValue: string
+  defaultValue: string,
 ): string {
   let value: string;
   if (typeof localStorage !== 'undefined' && localStorage[key]) {
@@ -9,7 +9,6 @@ export function getLocalStorageValueOrDefault(
     } catch (e) {
       value = defaultValue;
     }
-    delete localStorage[key];
   } else {
     value = defaultValue;
   }

@@ -63,16 +63,24 @@ import PlaylistSkillRankChart, {
 } from './skill-rank-chart/playlist-skill-rank-chart';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { TeammatesTable } from './teammates-table';
-import { Duration } from 'luxon';
+import { DateTime, Duration } from 'luxon';
 import { GameTypeTable } from './game-type-table';
 import { PerformanceSkillCell } from './game-type-table/performance-skill-cell';
 import { WinRateCell } from './game-type-table/win-rate-cell';
 import { VerticalCenter } from '../vertical-center';
 
+const startDateString: string | undefined =
+  typeof localStorage !== 'undefined'
+    ? localStorage['SKILL_CHART_START_DATE']
+    : undefined;
+typeof localStorage !== 'undefined' &&
+  delete localStorage['SKILL_CHART_START_DATE'];
+
 const maxMatches: number = +getLocalStorageValueOrDefault(
   'SKILL_CHART_MAX',
   '200',
 );
+typeof localStorage !== 'undefined' && delete localStorage['SKILL_CHART_MAX'];
 
 function useMatches(
   user: { xuid: string; gamertag: string },
@@ -86,28 +94,30 @@ function useMatches(
   useEffect(() => {
     setMatches([]);
   }, [user.xuid, playlistAssetId]);
-  const { iterator: matchGenerator } = useMemo(
-    () =>
-      getPlayerMatches(
-        leaderboard,
-        [wrapXuid(user.xuid)],
-        {
-          limit: maxMatches,
-          countCutoff: Math.max(maxMatches, 1000),
-          fastFilter: (m) => m.MatchInfo.Playlist?.AssetId === playlistAssetId,
-          signal: navigationStartSignal,
-          loadUserData: false,
-        },
-        haloCaches,
-      ),
-    [
+  const { iterator: matchGenerator } = useMemo(() => {
+    const startDate = startDateString
+      ? DateTime.fromISO(startDateString)
+      : undefined;
+    return getPlayerMatches(
       leaderboard,
-      user.xuid,
-      navigationStartSignal,
+      [wrapXuid(user.xuid)],
+      {
+        limit: maxMatches,
+        countCutoff: Math.max(maxMatches, 1000),
+        fastFilter: (m) => m.MatchInfo.Playlist?.AssetId === playlistAssetId,
+        signal: navigationStartSignal,
+        loadUserData: false,
+        dateRange: startDate?.isValid ? { start: startDate } : undefined,
+      },
       haloCaches,
-      playlistAssetId,
-    ],
-  );
+    );
+  }, [
+    leaderboard,
+    user.xuid,
+    navigationStartSignal,
+    haloCaches,
+    playlistAssetId,
+  ]);
 
   useEffect(() => {
     async function fetchFn() {
