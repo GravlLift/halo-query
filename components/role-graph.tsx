@@ -81,7 +81,7 @@ export default function RoleGraph(props: {
               beginAtZero: true,
               ticks: {
                 count: 4,
-                display: true,
+                display: false,
                 backdropColor: 'rgba(0, 0, 0, 0)',
                 color: fontColor,
                 format: {
