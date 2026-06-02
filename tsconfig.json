@@ -27,7 +27,7 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "../../libs/**/*.d.ts"
-  ],
+, "../../libs/halo-helpers/src/leaderboard/entry.ts"  ],
   "exclude": [
     "node_modules",
     "jest.config.ts",

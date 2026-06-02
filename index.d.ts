@@ -4,3 +4,10 @@ declare module '*.svg' {
   export const ReactComponent: any;
   export default content;
 }
+
+declare module '*.graphql' {
+  import { TypeSource } from '@graphql-tools/utils';
+
+  const content: TypeSource;
+  export default content;
+}

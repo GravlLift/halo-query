@@ -1,18 +1,18 @@
 import {
   fetchFullyLoadedMatch as _fetchFullyLoadedMatch,
   HaloCaches,
-  HiveMindLeaderboardProvider,
+  KnowledgeMapLeaderboardProvider,
   PlayerMatchHistoryStatsSkill,
 } from '@gravllift/halo-helpers';
 import { MatchInfo } from 'halo-infinite-api';
 
 export function fetchFullyLoadedMatch(
-  leaderboard: HiveMindLeaderboardProvider | undefined,
+  leaderboard: KnowledgeMapLeaderboardProvider | undefined,
   match: { MatchId: string; MatchInfo: MatchInfo },
   users: { xuid: string }[],
   signal: AbortSignal,
   loadUserData: boolean,
-  haloCaches: HaloCaches
+  haloCaches: HaloCaches,
 ): Promise<PlayerMatchHistoryStatsSkill> {
   return _fetchFullyLoadedMatch(
     leaderboard,
@@ -20,6 +20,6 @@ export function fetchFullyLoadedMatch(
     users,
     signal,
     haloCaches,
-    loadUserData
+    loadUserData,
   );
 }

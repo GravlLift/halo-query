@@ -1,18 +1,9 @@
-import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import { ensureJoin, KnowledgeMapLeaderboardEntry, KnowledgeMapLeaderboardProvider, leave, peerStatus$, requestEntries, selfId, sendLeaderboardEntriesToAllPeers, type ILeaderboardProvider,  } from '@gravllift/halo-helpers';
 import { SeverityLevel } from '@microsoft/applicationinsights-web';
 import Dexie from 'dexie';
 import { Context, ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Observable, Subject } from 'rxjs';
 import { appInsights } from '../../lib/application-insights/client';
-import { LeaderboardEntry } from '../../lib/leaderboard';
-import {
-  ensureJoin,
-  selfId,
-  leave,
-  peerStatus$,
-  requestEntries,
-  sendLeaderboardEntriesToAllPeers,
-} from '@gravllift/halo-helpers/src/hive-mind';
 import { HiveMindContext } from './hive-mind-context';
 import { LeaderboardContext } from './leaderboard-context';
 import { useLeaderboardProvider } from './worker-leaderboard';
@@ -23,14 +14,14 @@ export default function LeaderboardProvider({
   children: ReactNode;
 }) {
   const leaderboard = useLeaderboardProvider();
-  const newEntries$ = useMemo(() => new Subject<LeaderboardEntry[]>(), []);
+  const newEntries$ = useMemo(() => new Subject<KnowledgeMapLeaderboardEntry[]>(), []);
   const leaderboardProvider = useMemo<
-    ILeaderboardProvider & { newEntries$: Observable<LeaderboardEntry[]> }
+    KnowledgeMapLeaderboardProvider & { newEntries$: Observable<KnowledgeMapLeaderboardEntry[]> }
   >(() => {
     // Preserve the proxy by using it as the prototype and overriding specific members.
     const base = leaderboard;
-    const provider = Object.create(base) as ILeaderboardProvider & {
-      newEntries$: Observable<LeaderboardEntry[]>;
+    const provider = Object.create(base) as KnowledgeMapLeaderboardProvider & {
+      newEntries$: Observable<KnowledgeMapLeaderboardEntry[]>;
     };
 
     provider.getPlaylistEntriesCount = async (playlistAssetId) => {

@@ -1,4 +1,7 @@
-import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import type {
+  ILeaderboardProvider,
+  KnowledgeMapLeaderboardProvider,
+} from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { useEffect, useMemo, useRef } from 'react';
 import { handleAll, retry } from 'cockatiel';
@@ -8,26 +11,34 @@ const retryEverythingPolicy = retry(handleAll, { maxAttempts: 3 });
 const callMap = new Map<
   number,
   ResolvablePromise<
-    Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
+    Awaited<
+      ReturnType<
+        KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+      >
+    >
   >
 >();
 let workerRestarts = 0;
-export function useLeaderboardProvider(): ILeaderboardProvider {
+export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
   const workerRef = useRef<Worker | null>(null);
 
-  const workerLeaderboard = useMemo((): ILeaderboardProvider => {
+  const workerLeaderboard = useMemo((): KnowledgeMapLeaderboardProvider => {
     function callLeaderboardProviderFn<
-      TFunction extends keyof ILeaderboardProvider
+      TFunction extends keyof KnowledgeMapLeaderboardProvider,
     >(
       fn: TFunction,
-      args: Parameters<ILeaderboardProvider[TFunction]>
-    ): ReturnType<ILeaderboardProvider[TFunction]> {
+      args: Parameters<KnowledgeMapLeaderboardProvider[TFunction]>,
+    ): ReturnType<KnowledgeMapLeaderboardProvider[TFunction]> {
       const callId = Math.random();
       const abort = () => {
         workerRef.current?.postMessage({ callId, cancel: true });
       };
       const promise = new ResolvablePromise<
-        Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
+        Awaited<
+          ReturnType<
+            KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+          >
+        >
       >();
       callMap.set(callId, promise);
       switch (fn) {
@@ -36,7 +47,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
           promise.finally(() => args[3]?.removeEventListener('abort', abort));
           // Signal cannot be transmitted, remove it from arg list
           args = args.slice(0, 3) as Parameters<
-            ILeaderboardProvider[TFunction]
+            KnowledgeMapLeaderboardProvider[TFunction]
           >;
           break;
       }
@@ -45,17 +56,17 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         fn,
         args,
       });
-      return promise as ReturnType<ILeaderboardProvider[TFunction]>;
+      return promise as ReturnType<KnowledgeMapLeaderboardProvider[TFunction]>;
     }
 
-    return new Proxy({} as ILeaderboardProvider, {
+    return new Proxy({} as KnowledgeMapLeaderboardProvider, {
       get(_target, prop) {
         return (...args: unknown[]) =>
           retryEverythingPolicy.execute(async () =>
             callLeaderboardProviderFn(
-              prop as keyof ILeaderboardProvider,
-              args as any
-            )
+              prop as keyof KnowledgeMapLeaderboardProvider,
+              args as any,
+            ),
           );
       },
     });
@@ -68,7 +79,9 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         | {
             callId: number;
             result: Awaited<
-              ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>
+              ReturnType<
+                KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+              >
             >;
           }
         | {
@@ -76,7 +89,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
             error: unknown;
             forceReload: boolean;
           }
-      >
+      >,
     ): void => {
       const promise = callMap.get(event.data.callId);
       if (!promise) {
@@ -94,7 +107,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
             workerRef.current.removeEventListener('message', messageHandler);
 
             workerRef.current = new Worker(
-              new URL('./worker.ts', import.meta.url)
+              new URL('./worker.ts', import.meta.url),
             );
             workerRestarts++;
           } else {

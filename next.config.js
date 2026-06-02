@@ -41,6 +41,11 @@ const nextConfig = {
     'applicationinsights',
   ],
   webpack: (config, { isServer }) => {
+    config.module.rules.push({
+      test: /\.(graphql|gql)$/i,
+      type: 'asset/source',
+    });
+
     if (!isServer) {
       config.externals = {
         ...config.externals,

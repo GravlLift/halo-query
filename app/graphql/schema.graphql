@@ -1,0 +1,12 @@
+type LeaderboardEntry {
+  rank: Int!
+  xuid: String!
+  gamertag: String!
+  matchId: String!
+  matchDate: String!
+  value: Float!
+}
+
+type Query {
+  leaderboard(playlistId: String!, page: Int = 1): [LeaderboardEntry!]
+}

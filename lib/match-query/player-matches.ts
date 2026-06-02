@@ -1,5 +1,5 @@
 import {
-  HiveMindLeaderboardProvider,
+  KnowledgeMapLeaderboardProvider,
   ILeaderboardProvider,
   getPlayerEsrA as _getPlayerEsrA,
   getPlayerMatches as _getPlayerMatches,
@@ -14,7 +14,7 @@ export function getPlayerMatches(
   leaderboard: ILeaderboardProvider | undefined,
   gamertags: string[],
   options: Parameters<typeof _getPlayerMatches>[2],
-  haloCaches: HaloCaches
+  haloCaches: HaloCaches,
 ) {
   const logger$ = new Subject<string>();
   const iterator = _getPlayerMatches(
@@ -22,7 +22,7 @@ export function getPlayerMatches(
     gamertags,
     options,
     haloCaches,
-    logger$
+    logger$,
   );
 
   return { iterator, logger$: logger$.asObservable() };
@@ -32,7 +32,7 @@ export async function getMatch(
   leaderboard: ILeaderboardProvider | undefined,
   matchId: string,
   haloCaches: HaloCaches,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ) {
   const match = await haloCaches.matchStatsCache.get(matchId);
   return await fetchFullyLoadedMatch(
@@ -41,16 +41,16 @@ export async function getMatch(
     [],
     signal ?? new AbortController().signal,
     haloCaches,
-    true
+    true,
   );
 }
 export function getPlayerEsrA(
-  leaderboard: HiveMindLeaderboardProvider | undefined,
+  leaderboard: KnowledgeMapLeaderboardProvider | undefined,
   playlistVersionLink: Omit<AssetVersionLink, 'AssetKind'>,
   xuid: string,
   asOf: DateTime,
   signal: AbortSignal,
-  haloCaches: HaloCaches
+  haloCaches: HaloCaches,
 ) {
   return _getPlayerEsrA(
     leaderboard,
@@ -58,6 +58,6 @@ export function getPlayerEsrA(
     xuid,
     asOf,
     signal,
-    haloCaches
+    haloCaches,
   );
 }

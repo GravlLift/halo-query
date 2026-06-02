@@ -1,11 +1,8 @@
 'use client';
-import {
-  LeaderboardEntry,
-  entryIsValid,
-  LeaderboardEntryKeys,
-} from '@gravllift/halo-helpers';
+import { entryIsValid, LeaderboardEntryKeys } from '@gravllift/halo-helpers';
 import Dexie, { Table, Transaction, TransactionMode } from 'dexie';
 import { appInsights } from '../../application-insights/client';
+import { KnowledgeMapLeaderboardEntry } from '@gravllift/halo-helpers/src/leaderboard/entry';
 
 let _database: Dexie | null = null;
 let _databaseOpenPromise: Promise<Dexie> | null = null;
@@ -26,7 +23,7 @@ async function getOrCreateDatabase() {
           .toCollection()
           .modify((entry) => {
             delete entry.fetchedTime;
-          })
+          }),
       );
     _database.version(3).stores({
       csr: `[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.MatchDate}+${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Gamertag}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}]`,
@@ -37,25 +34,25 @@ async function getOrCreateDatabase() {
     _database
       .version(5)
       .stores({
-        leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[${LeaderboardEntryKeys.DiscoverySource}+${LeaderboardEntryKeys.DiscoveryVersion}],${LeaderboardEntryKeys.DiscoverySource}`,
+        leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[discoverySource+discoveryVersion],discoverySource`,
       })
       .upgrade((trans) =>
         trans
           .table('leaderboard')
           .toCollection()
           .modify(async (entry) => {
-            if (entry[LeaderboardEntryKeys.DiscoverySource] === undefined) {
-              entry[LeaderboardEntryKeys.DiscoverySource] = '';
-              entry[LeaderboardEntryKeys.DiscoveryVersion] = 0;
+            if (entry['discoverySource'] === undefined) {
+              entry['discoverySource'] = '';
+              entry['discoveryVersion'] = 0;
             }
-          })
+          }),
       );
     _database.version(6).stores({
       settings: 'key',
     });
     _database.version(7).stores({
       csr: null,
-      leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[${LeaderboardEntryKeys.DiscoverySource}+${LeaderboardEntryKeys.DiscoveryVersion}],${LeaderboardEntryKeys.DiscoverySource},${LeaderboardEntryKeys.Xuid}`,
+      leaderboard: `&[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Xuid}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Csr}],[${LeaderboardEntryKeys.PlaylistAssetId}+${LeaderboardEntryKeys.Esr}],[discoverySource+discoveryVersion],discoverySource,${LeaderboardEntryKeys.Xuid}`,
     });
   }
 
@@ -78,21 +75,29 @@ export function closeDatabase() {
   }
 }
 
-export type LeaderboardTable = Dexie.Table<LeaderboardEntry, [string, string]>;
+export type LeaderboardTable = Dexie.Table<
+  KnowledgeMapLeaderboardEntry,
+  [string, string]
+>;
 let leaderboardTable: Promise<LeaderboardTable> | undefined;
 export let databaseInitialized = false;
 export function getLeaderboardTable() {
   if (!leaderboardTable) {
     leaderboardTable = getOrCreateDatabase().then(async (db) => {
-      const table = db.table<LeaderboardEntry, [string, string]>('leaderboard');
+      const table = db.table<KnowledgeMapLeaderboardEntry, [string, string]>(
+        'leaderboard',
+      );
       table
         .toCollection()
         .modify(
-          (entry: LeaderboardEntry, ref: { value?: LeaderboardEntry }) => {
+          (
+            entry: KnowledgeMapLeaderboardEntry,
+            ref: { value?: KnowledgeMapLeaderboardEntry },
+          ) => {
             if (!entryIsValid(entry)) {
               delete ref.value;
             }
-          }
+          },
         )
         .catch((err) => {
           if (err instanceof Error) {
@@ -113,11 +118,11 @@ export const transaction = <U, T, TKey, TInsertType>(
   table: Table<T, TKey, TInsertType>,
   scope: (
     trans: Transaction,
-    table: Table<T, TKey, TInsertType>
-  ) => PromiseLike<U> | U
+    table: Table<T, TKey, TInsertType>,
+  ) => PromiseLike<U> | U,
 ) =>
   getOrCreateDatabase().then((db) =>
-    db.transaction(mode, table, (trans) => scope(trans, table))
+    db.transaction(mode, table, (trans) => scope(trans, table)),
   );
 
 export type Setting = { key: string; value: string };
@@ -126,7 +131,7 @@ let settingsTable: Promise<SettingsTable> | undefined;
 export function getSettingsTable() {
   if (!settingsTable) {
     settingsTable = getOrCreateDatabase().then((db) =>
-      db.table<Setting, string>('settings')
+      db.table<Setting, string>('settings'),
     );
   }
   return settingsTable;

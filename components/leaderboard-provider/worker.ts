@@ -1,12 +1,12 @@
 import Dexie from 'dexie';
 import leaderboard from '../../lib/leaderboard';
 import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
-import { closeDatabase } from '../../lib/leaderboard/csr-storage/indexed-db-repository';
+import { closeDatabase } from '../../lib/leaderboard/indexed-db/indexed-db-repository';
 
 const signalMap = new Map<number, AbortController>();
 
 async function leaderboardFn<
-  const TFunction extends keyof ILeaderboardProvider
+  const TFunction extends keyof ILeaderboardProvider,
 >(
   event: MessageEvent<
     | {
@@ -21,7 +21,7 @@ async function leaderboardFn<
     | {
         terminate: true;
       }
-  >
+  >,
 ) {
   if ('terminate' in event.data) {
     try {
