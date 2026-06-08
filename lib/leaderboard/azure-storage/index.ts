@@ -53,11 +53,11 @@ function toLeaderboardEntry(entity: RawEntity): LeaderboardEntry | null {
   const xuid = readString(entity, LeaderboardEntryKeys.Xuid);
   const playlistAssetId = readString(
     entity,
-    LeaderboardEntryKeys.PlaylistAssetId,
+    LeaderboardEntryKeys.PlaylistAssetId
   );
   const gameVariantAssetId = readString(
     entity,
-    LeaderboardEntryKeys.GameVariantAssetId,
+    LeaderboardEntryKeys.GameVariantAssetId
   );
   const gamertag = readString(entity, LeaderboardEntryKeys.Gamertag);
   const matchId = readString(entity, LeaderboardEntryKeys.MatchId);
@@ -108,7 +108,7 @@ function toTableEntity(entry: LeaderboardEntry): TableEntity<RawEntity> {
 async function getClient() {
   if (!TABLE_CONNECTION_STRING) {
     throw new Error(
-      'Azure tables connection string is missing. Set HALO_QUERY_AZURE_TABLES_CONNECTION_STRING or AZURE_TABLES_CONNECTION_STRING.',
+      'Azure tables connection string is missing. Set HALO_QUERY_AZURE_TABLES_CONNECTION_STRING or AZURE_TABLES_CONNECTION_STRING.'
     );
   }
 
@@ -116,7 +116,7 @@ async function getClient() {
     clientPromise = (async () => {
       const client = TableClient.fromConnectionString(
         TABLE_CONNECTION_STRING,
-        TABLE_NAME,
+        TABLE_NAME
       );
       await client.createTable();
       return client;
@@ -126,19 +126,30 @@ async function getClient() {
   return clientPromise;
 }
 
-async function getAllLeaderboardEntries(filter?: string, signal?: AbortSignal) {
+async function getAllLeaderboardEntries(
+  playlistAssetId?: string,
+  filter?: string,
+  signal?: AbortSignal
+) {
   const client = await getClient();
   const entries: LeaderboardEntry[] = [];
 
-  const finalFilter = filter
-    ? `PartitionKey eq '${escapeFilterValue(LEADERBOARD_PARTITION_KEY)}' and ${filter}`
-    : `PartitionKey eq '${escapeFilterValue(LEADERBOARD_PARTITION_KEY)}'`;
+  const partitionFilter = playlistAssetId
+    ? `PartitionKey eq '${escapeFilterValue(playlistAssetId)}'`
+    : undefined;
+  const finalFilter = partitionFilter
+    ? filter
+      ? `${partitionFilter} and ${filter}`
+      : partitionFilter
+    : filter;
 
   const entities = client.listEntities<TableEntityResult<RawEntity>>({
     abortSignal: signal,
-    queryOptions: {
-      filter: finalFilter,
-    },
+    queryOptions: finalFilter
+      ? {
+          filter: finalFilter,
+        }
+      : undefined,
   });
 
   for await (const entity of entities.byPage()) {
@@ -156,9 +167,7 @@ async function getAllLeaderboardEntries(filter?: string, signal?: AbortSignal) {
 async function getExistingEntry(playlistAssetId: string, xuid: string) {
   const client = await getClient();
   const existing = await client
-    .getEntity<
-      TableEntityResult<RawEntity>
-    >(LEADERBOARD_PARTITION_KEY, getEntryRowKey(playlistAssetId, xuid))
+    .getEntity<TableEntityResult<RawEntity>>(playlistAssetId, wrapXuid(xuid))
     .catch(() => undefined);
 
   if (!existing) {
@@ -202,7 +211,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     for (const entry of validEntries) {
       const existingEntry = await getExistingEntry(
         entry.playlistAssetId,
-        entry.xuid,
+        entry.xuid
       );
 
       if (!existingEntry) {
@@ -244,7 +253,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getAllEntries: async () => {
     return await retryPolicy.execute(
-      async () => await getAllLeaderboardEntries(),
+      async () => await getAllLeaderboardEntries()
     );
   },
   getRandomEntry: async () => {
@@ -259,10 +268,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   getGamertagIndex: async (xuid, playlistAssetId, skillProp, signal) => {
     const entries = await retryPolicy.execute(
       async () =>
-        await getAllLeaderboardEntries(
-          `${LeaderboardEntryKeys.PlaylistAssetId} eq '${escapeFilterValue(playlistAssetId)}'`,
-          signal,
-        ),
+        await getAllLeaderboardEntries(playlistAssetId, undefined, signal)
     );
 
     signal?.throwIfAborted();
@@ -272,10 +278,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getSkillBuckets: async (playlistAssetId, skillProp) => {
     const entries = await retryPolicy.execute(
-      async () =>
-        await getAllLeaderboardEntries(
-          `${LeaderboardEntryKeys.PlaylistAssetId} eq '${escapeFilterValue(playlistAssetId)}'`,
-        ),
+      async () => await getAllLeaderboardEntries(playlistAssetId)
     );
     const buckets = new Map<number, number>(defaultBuckets);
 
@@ -305,10 +308,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getRankedEntries: async (playlistAssetId, options, skillProp) => {
     const entries = await retryPolicy.execute(
-      async () =>
-        await getAllLeaderboardEntries(
-          `${LeaderboardEntryKeys.PlaylistAssetId} eq '${escapeFilterValue(playlistAssetId)}'`,
-        ),
+      async () => await getAllLeaderboardEntries(playlistAssetId)
     );
 
     const sorted = [...entries].sort((a, b) => b[skillProp] - a[skillProp]);
@@ -337,10 +337,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getPlaylistEntriesCount: async (playlistAssetId) => {
     const entries = await retryPolicy.execute(
-      async () =>
-        await getAllLeaderboardEntries(
-          `${LeaderboardEntryKeys.PlaylistAssetId} eq '${escapeFilterValue(playlistAssetId)}'`,
-        ),
+      async () => await getAllLeaderboardEntries(playlistAssetId)
     );
     return entries.length;
   },
