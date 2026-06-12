@@ -1,6 +1,6 @@
 import {
+  HaloCaches,
   KnowledgeMapLeaderboardProvider,
-  ILeaderboardProvider,
   getPlayerEsrA as _getPlayerEsrA,
   getPlayerMatches as _getPlayerMatches,
   fetchFullyLoadedMatch,
@@ -8,10 +8,9 @@ import {
 import { AssetVersionLink } from 'halo-infinite-api';
 import { DateTime } from 'luxon';
 import { Subject } from 'rxjs';
-import { HaloCaches } from '@gravllift/halo-helpers';
 
 export function getPlayerMatches(
-  leaderboard: ILeaderboardProvider | undefined,
+  leaderboard: KnowledgeMapLeaderboardProvider | undefined,
   gamertags: string[],
   options: Parameters<typeof _getPlayerMatches>[2],
   haloCaches: HaloCaches
