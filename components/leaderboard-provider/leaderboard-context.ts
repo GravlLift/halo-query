@@ -1,10 +1,14 @@
-import { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import {
+  KnowledgeMapLeaderboardProvider,
+  LeaderboardEntry,
+} from '@gravllift/halo-helpers';
 import { createContext, useContext } from 'react';
 import type { Observable } from 'rxjs';
-import type { LeaderboardEntry } from '../../lib/leaderboard';
 
 export const LeaderboardContext = createContext<
-  | (ILeaderboardProvider & { newEntries$: Observable<LeaderboardEntry[]> })
+  | (KnowledgeMapLeaderboardProvider & {
+      newEntries$: Observable<LeaderboardEntry[]>;
+    })
   | undefined
 >(undefined);
 

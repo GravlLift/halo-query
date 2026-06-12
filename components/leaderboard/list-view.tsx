@@ -91,9 +91,8 @@ export default function ListView({
           try {
             let gt: string, xuid: string;
             try {
-              ({ gamertag: gt, xuid } = await haloCaches.usersCache.get(
-                gamertag
-              ));
+              ({ gamertag: gt, xuid } =
+                await haloCaches.usersCache.get(gamertag));
             } catch (e) {
               toaster.create({
                 title: `Gamertag  ${gamertag} could not be found`,
