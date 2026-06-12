@@ -21,9 +21,7 @@ const retryPolicy = retry(handleAll, {
 });
 
 const TABLE_NAME = process.env.HALO_QUERY_AZURE_TABLE_NAME ?? 'leaderboard';
-const TABLE_CONNECTION_STRING =
-  process.env.HALO_QUERY_AZURE_TABLES_CONNECTION_STRING ??
-  process.env.AZURE_TABLES_CONNECTION_STRING;
+const TABLE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 
 let clientPromise: Promise<TableClient> | undefined;
 
@@ -108,7 +106,7 @@ function toTableEntity(entry: LeaderboardEntry): TableEntity<RawEntity> {
 async function getClient() {
   if (!TABLE_CONNECTION_STRING) {
     throw new Error(
-      'Azure tables connection string is missing. Set HALO_QUERY_AZURE_TABLES_CONNECTION_STRING or AZURE_TABLES_CONNECTION_STRING.'
+      'Azure tables connection string is missing. Set AZURE_STORAGE_CONNECTION_STRING.'
     );
   }
 
