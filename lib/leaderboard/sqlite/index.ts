@@ -20,8 +20,7 @@ async function initializeDatabase() {
     try {
       const conn = connect({
         url: 'libsql://halo-query-gravllift.aws-us-east-1.turso.io',
-        authToken:
-          'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODEyODc0MjIsImlkIjoiMDE5ZWJjZGEtODEwMS03ZGYyLTkxMTUtYTdmNDQ0MmIwNjI4IiwicmlkIjoiMDg5ZWI3ZDctZmNmMy00ZGYyLWE0ZjAtOGFmZWQ2YjJmM2Y5In0.9IkfW8qz2MHpQt9rkin_hPDrmcPJV3vbb4e_rpLT1YaDrf9SW2pENnbFglRilK7g66-lZBcJXsTaX3SnYBEtDQ',
+        authToken: process.env.TURSO_AUTH_TOKEN,
       });
 
       // Create table
