@@ -8,7 +8,7 @@ import { MatchSkill } from 'halo-infinite-api';
 import { after, NextRequest } from 'next/server';
 import { proxyFetch } from '../../../../../proxyRoute';
 import { DateTime } from 'luxon';
-import { provider } from '../../../../../../../lib/leaderboard/azure-storage';
+import { provider } from '../../../../../../../lib/leaderboard/sqlite';
 
 export async function GET(
   request: NextRequest,
