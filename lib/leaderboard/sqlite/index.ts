@@ -1,10 +1,7 @@
 import {
-  compareXuids,
   entryIsValid,
   ILeaderboardProvider,
   LeaderboardEntry,
-  LeaderboardEntryKeys,
-  wrapXuid,
 } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { connect, Connection } from '@tursodatabase/serverless';
@@ -27,55 +24,6 @@ async function initializeDatabase() {
         url,
         authToken: process.env.TURSO_AUTH_TOKEN,
       });
-
-      // Create table
-      await conn.exec(`
-        CREATE TABLE IF NOT EXISTS leaderboard (
-          xuid TEXT NOT NULL,
-          playlistAssetId TEXT NOT NULL,
-          gameVariantAssetId TEXT NOT NULL,
-          gamertag TEXT NOT NULL,
-          matchId TEXT NOT NULL,
-          matchDate INTEGER NOT NULL,
-          csr INTEGER NOT NULL,
-          esr INTEGER NOT NULL,
-          PRIMARY KEY (xuid, playlistAssetId)
-        )
-      `);
-
-      // Create index for efficient querying by playlistAssetId and csr
-      await conn.exec(`
-        CREATE INDEX IF NOT EXISTS idx_leaderboard_playlist_csr ON leaderboard (
-          playlistAssetId, 
-          csr DESC
-        )
-      `);
-
-      // Create index for efficient querying by playlistAssetId and esr
-      await conn.exec(`
-        CREATE INDEX IF NOT EXISTS idx_leaderboard_playlist_esr ON leaderboard (
-          playlistAssetId, 
-          esr DESC
-        )
-      `);
-
-      // Create index to get gamertag's index for csr
-      await conn.exec(`
-        CREATE INDEX IF NOT EXISTS idx_leaderboard_playlist_csr_xuid ON leaderboard (
-          playlistAssetId, 
-          csr DESC,
-          xuid
-        )
-      `);
-
-      // Create index to get gamertag's index for esr
-      await conn.exec(`
-        CREATE INDEX IF NOT EXISTS idx_leaderboard_playlist_esr_xuid ON leaderboard (
-          playlistAssetId, 
-          esr DESC,
-          xuid
-        )
-      `);
 
       initializedPromise.resolve(conn);
     } catch (error) {
