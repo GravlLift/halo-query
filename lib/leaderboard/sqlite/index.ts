@@ -18,8 +18,13 @@ async function initializeDatabase() {
   initializedPromise = new ResolvablePromise();
   (async () => {
     try {
+      const url = process.env.TURSO_URL;
+      if (!url) {
+        throw new Error('TURSO_URL environment variable is not set');
+      }
+
       const conn = connect({
-        url: 'libsql://halo-query-gravllift.aws-us-east-1.turso.io',
+        url,
         authToken: process.env.TURSO_AUTH_TOKEN,
       });
 
