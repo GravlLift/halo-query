@@ -51,8 +51,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     // Insert entries only if they are more recent than existing entries (or if no existing entry)
     const insertPromises = validEntries.map((entry) =>
       conn.run(
-        `
-        INSERT INTO leaderboard (
+        `INSERT INTO leaderboard (
           xuid, playlistAssetId, gameVariantAssetId, gamertag, matchId, matchDate, csr, esr
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(xuid, playlistAssetId) DO UPDATE SET
@@ -79,20 +78,6 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     await Promise.all(insertPromises);
     return validEntries;
   },
-  getAllEntries: function (): Promise<LeaderboardEntry[]> {
-    throw new Error('Function not implemented.');
-  },
-  getRandomEntry: function (): Promise<LeaderboardEntry | undefined> {
-    throw new Error('Function not implemented.');
-  },
-  getGamertagIndex: function (
-    xuid: string,
-    playlistAssetId: string,
-    skillProp: 'csr' | 'esr',
-    signal?: AbortSignal
-  ): Promise<number> {
-    throw new Error('Function not implemented.');
-  },
   getSkillBuckets: async function (
     playlistAssetId: string,
     skillProp: 'csr' | 'esr'
@@ -110,30 +95,45 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     );
 
     // Fill buckets from min (or 0) to max (or 1500) with 0 counts if they don't exist
-    const bucketMap = new Map<number, number>();
-    const minBucket = Math.max(0, buckets.length ? buckets[0].bucket : 0);
-    const maxBucket = Math.min(
-      1500,
-      buckets.length ? buckets[buckets.length - 1].bucket : 0
+    const bucketMap = new Map<number, number>(
+      buckets.map(({ bucket, count }) => [bucket, count])
     );
-    for (
-      let bucket = Math.max(0, minBucket);
-      bucket <= maxBucket;
-      bucket += 50
-    ) {
-      bucketMap.set(bucket, 0);
-    }
-    buckets.forEach(({ bucket, count }) => {
-      bucketMap.set(bucket, count);
-    });
     return bucketMap;
   },
-  getRankedEntries: function (
+  getRankedEntries: async function (
     playlistAssetId: string,
     options: { offset: number; limit: number },
     skillProp: 'csr' | 'esr'
   ): Promise<(LeaderboardEntry & { rank: number })[]> {
-    throw new Error('Function not implemented.');
+    const conn = await initializeDatabase();
+
+    const results = await conn.all(
+      `SELECT
+          xuid, playlistAssetId, gameVariantAssetId, gamertag, matchId, matchDate, csr, esr,
+          RANK() OVER (ORDER BY ${skillProp} DESC) AS rank
+      FROM leaderboard
+      WHERE playlistAssetId = ?
+      ORDER BY ${skillProp} DESC
+      LIMIT ? OFFSET ?;`,
+      [playlistAssetId, options.limit, options.offset]
+    );
+    return results;
+  },
+  getGamertagIndex: async function (
+    xuid: string,
+    playlistAssetId: string,
+    skillProp: 'csr' | 'esr',
+    _signal?: AbortSignal
+  ): Promise<number> {
+    const conn = await initializeDatabase();
+    const result = await conn.get(
+      `SELECT COUNT(*) - 1 AS "index" FROM leaderboard
+       WHERE playlistAssetId = ? AND ${skillProp} > (
+         SELECT ${skillProp} FROM leaderboard WHERE xuid = ? AND playlistAssetId = ?
+       )`,
+      [playlistAssetId, xuid, playlistAssetId]
+    );
+    return result?.index || -1;
   },
   getPlaylistEntriesCount: async function (
     playlistAssetId: string
@@ -145,12 +145,11 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     );
     return result?.count || 0;
   },
-  getPlaylistAssetIds: function (): Promise<string[]> {
-    throw new Error('Function not implemented.');
-  },
-  getEntries: function (
-    xuid: string[]
-  ): Promise<{ xuid: string; gamertag: string }[]> {
-    throw new Error('Function not implemented.');
+  getPlaylistAssetIds: async function (): Promise<string[]> {
+    const conn = await initializeDatabase();
+    const results = await conn.all(
+      `SELECT DISTINCT playlistAssetId FROM leaderboard`
+    );
+    return results.map((r) => r.playlistAssetId);
   },
 };

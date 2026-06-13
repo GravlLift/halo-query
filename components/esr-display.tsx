@@ -1,10 +1,9 @@
 import { AssetVersionLink } from 'halo-infinite-api';
-import { useEffect, useState } from 'react';
-import { getPlayerEsrA } from '../lib/match-query/player-matches';
 import { DateTime } from 'luxon';
-import { useNavigationController } from './navigation-context';
-import { useLeaderboard } from './leaderboard-provider/leaderboard-context';
+import { useEffect, useState } from 'react';
 import { useHaloCaches } from '../lib/contexts/halo-caches-context';
+import { getPlayerEsrA } from '../lib/match-query/player-matches';
+import { useNavigationController } from './navigation-context';
 
 export function EsrDisplay(props: {
   playlist: Omit<AssetVersionLink, 'AssetKind'>;
@@ -12,12 +11,10 @@ export function EsrDisplay(props: {
   asOf: DateTime;
 }) {
   const haloCaches = useHaloCaches();
-  const leaderboard = useLeaderboard();
   const { signal: navigationStartSignal } = useNavigationController();
   const [esrA, setEsrA] = useState<number | null>();
   useEffect(() => {
     getPlayerEsrA(
-      leaderboard,
       props.playlist,
       props.xuid,
       props.asOf,
@@ -25,7 +22,6 @@ export function EsrDisplay(props: {
       haloCaches
     ).then((val) => setEsrA(val));
   }, [
-    leaderboard,
     props.playlist,
     props.xuid,
     props.asOf,

@@ -2,43 +2,55 @@ import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import type { IResolvers } from '@graphql-tools/utils';
 import type { NextRequest } from 'next/server';
+import { provider } from '../../lib/leaderboard/sqlite';
 import typeDefs from './schema.graphql';
-
-const entries = [
-  {
-    playlistId: 'playlist123',
-    rank: 1,
-    xuid: '1234567890',
-    gamertag: 'PlayerOne',
-    matchId: 'match123',
-    matchDate: '2024-01-01T00:00:00Z',
-    value: 2500.5,
-  },
-  {
-    playlistId: 'playlist123',
-    rank: 2,
-    xuid: '0987654321',
-    gamertag: 'PlayerTwo',
-    matchId: 'match456',
-    matchDate: '2024-01-02T00:00:00Z',
-    value: 2400.0,
-  },
-];
 
 const resolvers: IResolvers = {
   Query: {
-    leaderboard: async (
+    leaderboardPlaylists: () => provider.getPlaylistAssetIds(),
+    leaderboardPlaylistEntries: (
       _parent,
-      { playlistId, page }: { playlistId: string; page: number },
+      {
+        playlistId,
+        page,
+        skillProp,
+      }: { playlistId: string; page: number; skillProp: 'csr' | 'esr' }
+    ) =>
+      provider.getRankedEntries(
+        playlistId,
+        { offset: (page - 1) * 100, limit: 100 },
+        skillProp
+      ),
+    leaderboardPlaylistSkillBuckets: async (
+      _parent,
+      {
+        playlistId,
+        skillProp,
+      }: { playlistId: string; skillProp: 'csr' | 'esr' }
     ) => {
-      // You can implement pagination logic here if needed
-      return entries.filter((entry) => entry.playlistId === playlistId);
+      const map = await provider.getSkillBuckets(playlistId, skillProp);
+      return Array.from(map.entries()).map(([skill, count]) => ({
+        skill,
+        count,
+      }));
     },
+    leaderboardPlaylistCount: (
+      _parent,
+      { playlistId }: { playlistId: string }
+    ) => provider.getPlaylistEntriesCount(playlistId),
+    leaderboardGamertagIndex: (
+      _parent,
+      {
+        playlistId,
+        xuid,
+        skillProp,
+      }: { playlistId: string; xuid: string; skillProp: 'csr' | 'esr' }
+    ) => provider.getGamertagIndex(xuid, playlistId, skillProp),
   },
 };
 
 const handler = startServerAndCreateNextHandler<NextRequest>(
-  new ApolloServer({ typeDefs, resolvers }),
+  new ApolloServer({ typeDefs, resolvers })
 );
 
 export async function GET(request: NextRequest) {

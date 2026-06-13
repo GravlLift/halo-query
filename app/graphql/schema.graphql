@@ -1,12 +1,38 @@
+enum SkillProp {
+  csr
+  esr
+}
+
 type LeaderboardEntry {
   rank: Int!
   xuid: String!
   gamertag: String!
   matchId: String!
   matchDate: String!
-  value: Float!
+  csr: Float!
+  esr: Float!
+}
+
+type LeaderboardBucket {
+  skill: Int!
+  count: Int!
 }
 
 type Query {
-  leaderboard(playlistId: String!, page: Int = 1): [LeaderboardEntry!]
+  leaderboardPlaylists: [String!]!
+  leaderboardPlaylistSkillBuckets(
+    playlistId: String!
+    skillProp: SkillProp!
+  ): [LeaderboardBucket!]!
+  leaderboardPlaylistCount(playlistId: String!): Int!
+  leaderboardPlaylistEntries(
+    playlistId: String!
+    skillProp: SkillProp!
+    page: Int = 1
+  ): [LeaderboardEntry!]!
+  leaderboardGamertagIndex(
+    playlistId: String!
+    xuid: String!
+    skillProp: SkillProp!
+  ): Int!
 }

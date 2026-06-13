@@ -15,6 +15,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {
+    "@apollo/client": "^4.2.3",
     "@apollo/server": "^5.5.1",
     "@as-integrations/next": "^4.1.0",
     "@azure/monitor-opentelemetry": "^1.14.0",
@@ -47,7 +48,7 @@
     "expiry-set": "^1.0.0",
     "file-system-access": "^1.0.4",
     "framer-motion": "^10.16.4",
-    "graphql": "^16.14.0",
+    "graphql": "^16.14.2",
     "graphql-type-json": "^0.3.2",
     "halo-infinite-api": "^14.3.1",
     "immutable": "^5.1.4",
@@ -63,6 +64,7 @@
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^4.12.0",
+    "rxjs": "^7.8.2",
     "trystero": "^0.23.0",
     "usehooks-ts": "^3.1.1"
   },

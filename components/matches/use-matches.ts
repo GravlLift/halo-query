@@ -14,7 +14,6 @@ import { appInsights } from '../../lib/application-insights/client';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { getPlayerMatches } from '../../lib/match-query/player-matches';
 import { ColumnName, columns } from '../columns/base-columns';
-import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import { useNavigationController } from '../navigation-context';
 import { toaster } from '../ui/toaster';
 
@@ -169,7 +168,6 @@ export function useMatchesQuery(contextGamerTags: string[]) {
       navigationStartSignal.removeEventListener('abort', onAbort);
     };
   }, [navigationStartSignal, abortController]);
-  const leaderboard = useLeaderboard();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [matches, setMatches] = useState<PlayerMatchHistoryStatsSkill[]>([]);
@@ -189,7 +187,6 @@ export function useMatchesQuery(contextGamerTags: string[]) {
       setMatches([]);
       setQueryPageSize(pageSize);
       const { iterator, logger$ } = getPlayerMatches(
-        leaderboard,
         contextGamerTags,
         {
           limit: pageSize,
@@ -297,7 +294,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
         //appInsights.stopTrackEvent('MatchesQuery', properties);
       }
     },
-    [leaderboard, contextGamerTags]
+    [contextGamerTags]
   );
   return {
     matches,

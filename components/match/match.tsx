@@ -34,7 +34,6 @@ import { aggregatePlayersStats } from '../../lib/stats/aggregate-team-player-sta
 import { getObjectivePoints } from '../../lib/stats/objective-points';
 import { playerStatsCategory } from '../columns/base-columns';
 import GameVariantCategoryDisplay from '../game-variant-category-display/game-variant-category-display';
-import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import { Loading } from '../loading';
 import { useNavigationController } from '../navigation-context';
 import RoleGraph from '../role-graph';
@@ -53,7 +52,6 @@ export interface MatchProps {
 }
 
 export default function Match({ matchId, filters }: MatchProps) {
-  const leaderboard = useLeaderboard();
   const haloCaches = useHaloCaches();
   const [match, setMatch] = useState<ProgressiveMatch>();
   const { signal: navigationSignal } = useNavigationController();
@@ -74,7 +72,6 @@ export default function Match({ matchId, filters }: MatchProps) {
 
         matchSubscription = fetchMatchProgressive(result, {
           signal: combinedSignal,
-          leaderboard,
           haloCaches,
           loadUserData: true,
         }).subscribe({ next: setMatch, error: console.error });
@@ -89,7 +86,7 @@ export default function Match({ matchId, filters }: MatchProps) {
       abortController.abort('Component unmounted');
       matchSubscription?.unsubscribe();
     };
-  }, [matchId, leaderboard]);
+  }, [matchId]);
 
   useEffect(() => {
     document.title = match

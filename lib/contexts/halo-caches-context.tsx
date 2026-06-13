@@ -1,11 +1,10 @@
-import { HaloCaches, compareXuids } from '@gravllift/halo-helpers';
-import { createContext, useContext } from 'react';
-import { useLeaderboard } from '../../components/leaderboard-provider/leaderboard-context';
-import { useApiClients } from './api-client-contexts';
-import { waypointXboxRequestPolicy } from '../request-policy';
-import { TaskCancelledError, timeout, TimeoutStrategy } from 'cockatiel';
+import { compareXuids, HaloCaches } from '@gravllift/halo-helpers';
+import { timeout, TimeoutStrategy } from 'cockatiel';
 import { RelyingParty, XboxAuthenticationClient } from 'halo-infinite-api';
+import { createContext, useContext } from 'react';
+import { waypointXboxRequestPolicy } from '../request-policy';
 import { tokenPersister } from '../token-persisters/client';
+import { useApiClients } from './api-client-contexts';
 
 const HaloCachesContext = createContext<HaloCaches | null>(null);
 
@@ -28,7 +27,6 @@ export function HaloCachesProvider({
   children: React.ReactNode;
 }) {
   const { haloInfiniteClient, xboxClient } = useApiClients();
-  const leaderboard = useLeaderboard();
   return (
     <HaloCachesContext.Provider
       value={
@@ -40,7 +38,7 @@ export function HaloCachesProvider({
                 xui: [
                   {
                     xid: string;
-                  }
+                  },
                 ];
               };
             }>(XboxAuthenticationClient.xstsTicketName(RelyingParty.Xbox));
@@ -48,31 +46,6 @@ export function HaloCachesProvider({
               xstsTicket != null &&
               compareXuids(xuid, xstsTicket.DisplayClaims.xui[0].xid)
             );
-          },
-          additionalXuidFetcher: {
-            async fetchManyFn(keys) {
-              try {
-                return await policy.execute(async () => {
-                  if (
-                    !leaderboard ||
-                    (await leaderboard.initialized()) === false
-                  ) {
-                    return [];
-                  }
-                  return await leaderboard.getEntries(keys);
-                });
-              } catch (e) {
-                if (e instanceof TaskCancelledError) {
-                  return [];
-                }
-                throw e;
-              }
-            },
-            resultSelector(items, key) {
-              return (
-                items.find((entry) => compareXuids(entry.xuid, key)) ?? null
-              );
-            },
           },
         })
       }

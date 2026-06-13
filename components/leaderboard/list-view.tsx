@@ -29,7 +29,6 @@ import TableLoading from '../table-loading';
 import { VerticalCenter } from '../vertical-center';
 import { toaster } from '../ui/toaster';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { crawlMatches } from '@gravllift/halo-helpers';
 const pageSize = 100;
 
 export default function ListView({
@@ -107,23 +106,12 @@ export default function ListView({
               signal
             );
             if (gamertagIndex === -1) {
-              // Gamertag exists but is not in the leaderboard,
-              // so we need to crawl it
-              await crawlMatches(xuid, 1, { leaderboard, signal, haloCaches });
-              gamertagIndex = await leaderboard.getGamertagIndex(
-                xuid,
-                playlistAssetId,
-                skillProp,
-                signal
-              );
-              if (gamertagIndex === -1) {
-                // Gamertag still not found, this gamertag is not on the leaderboard
-                const search = new URLSearchParams(window.location.search);
-                search.set('page', `1`);
-                search.delete('gamertag');
-                router.push(`/leaderboard?${search.toString()}`);
-                return;
-              }
+              // Gamertag not found, this gamertag is not on the leaderboard
+              const search = new URLSearchParams(window.location.search);
+              search.set('page', `1`);
+              search.delete('gamertag');
+              router.push(`/leaderboard?${search.toString()}`);
+              return;
             }
             setHighlight(gt);
             const newPage = Math.floor(gamertagIndex / pageSize);

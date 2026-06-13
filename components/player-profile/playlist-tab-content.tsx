@@ -26,9 +26,11 @@ import {
 import {
   MatchPlayers,
   PlayerMatchHistoryStatsSkill,
+  compareXuids,
   divisionImageSrc,
   getTierSubTierForSkill,
   skillRankCombined,
+  wrapXuid,
 } from '@gravllift/halo-helpers';
 import {
   MatchSkill,
@@ -38,22 +40,26 @@ import {
   Stats,
 } from 'halo-infinite-api';
 import { CircleHelp, ExternalLink } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { DateTime, Duration } from 'luxon';
+import { useEffect, useMemo, useState } from 'react';
 import { FaRedo, FaSearchPlus } from 'react-icons/fa';
-import { compareXuids, wrapXuid } from '@gravllift/halo-helpers';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { useColors } from '../../lib/hooks/colors';
 import { useLocalStorage } from '../../lib/hooks/local-storage';
 import { getPlayerMatches } from '../../lib/match-query/player-matches';
 import { getLocalStorageValueOrDefault } from '../../lib/next-local-storage';
 import { getObjectivePoints } from '../../lib/stats/objective-points';
-import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import { Loading } from '../loading';
 import {
   abortErrorCatch,
   useNavigationController,
 } from '../navigation-context';
 import RoleGraph from '../role-graph';
+import { VerticalCenter } from '../vertical-center';
 import type { CsrRewardChartProps } from './csr-reward-chart';
+import { GameTypeTable } from './game-type-table';
+import { PerformanceSkillCell } from './game-type-table/performance-skill-cell';
+import { WinRateCell } from './game-type-table/win-rate-cell';
 import { PlaylistCsrDisplay } from './playlist-csr-display';
 import PlaylistSkillRankByModeChart, {
   PlaylistSkillRankByModeChartProps,
@@ -61,13 +67,7 @@ import PlaylistSkillRankByModeChart, {
 import PlaylistSkillRankChart, {
   PlaylistSkillRankChartProps,
 } from './skill-rank-chart/playlist-skill-rank-chart';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import { TeammatesTable } from './teammates-table';
-import { DateTime, Duration } from 'luxon';
-import { GameTypeTable } from './game-type-table';
-import { PerformanceSkillCell } from './game-type-table/performance-skill-cell';
-import { WinRateCell } from './game-type-table/win-rate-cell';
-import { VerticalCenter } from '../vertical-center';
 
 const startDateString: string | undefined =
   typeof localStorage !== 'undefined'
@@ -78,17 +78,16 @@ typeof localStorage !== 'undefined' &&
 
 const maxMatches: number = +getLocalStorageValueOrDefault(
   'SKILL_CHART_MAX',
-  '200',
+  '200'
 );
 typeof localStorage !== 'undefined' && delete localStorage['SKILL_CHART_MAX'];
 
 function useMatches(
   user: { xuid: string; gamertag: string },
   playlistAssetId: string,
-  navigationStartSignal: AbortSignal,
+  navigationStartSignal: AbortSignal
 ) {
   const haloCaches = useHaloCaches();
-  const leaderboard = useLeaderboard();
   const [matches, setMatches] = useState<PlayerMatchHistoryStatsSkill[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -99,7 +98,6 @@ function useMatches(
       ? DateTime.fromISO(startDateString)
       : undefined;
     return getPlayerMatches(
-      leaderboard,
       [wrapXuid(user.xuid)],
       {
         limit: maxMatches,
@@ -109,15 +107,9 @@ function useMatches(
         loadUserData: false,
         dateRange: startDate?.isValid ? { start: startDate } : undefined,
       },
-      haloCaches,
+      haloCaches
     );
-  }, [
-    leaderboard,
-    user.xuid,
-    navigationStartSignal,
-    haloCaches,
-    playlistAssetId,
-  ]);
+  }, [user.xuid, navigationStartSignal, haloCaches, playlistAssetId]);
 
   useEffect(() => {
     async function fetchFn() {
@@ -128,7 +120,7 @@ function useMatches(
             [
               match,
               ...matches.filter((m) => m.MatchId !== match.MatchId),
-            ].slice(0, maxMatches),
+            ].slice(0, maxMatches)
           );
         }
       } catch (e) {
@@ -157,12 +149,11 @@ export function PlaylistTabContent({
   };
   newLatestMatch: (match: PlayerMatchHistoryStatsSkill) => void;
 }) {
-  const leaderboard = useLeaderboard();
   const haloCaches = useHaloCaches();
   const { signal: navigationStartSignal } = useNavigationController();
   const [showLastXGames, setShowLastXGames] = useLocalStorage<number | 'all'>(
     'lastXGamesProfile',
-    100,
+    100
   );
   const {
     matches: playlistMatches,
@@ -185,7 +176,7 @@ export function PlaylistTabContent({
   const matchSkills = playlistMatches
     .map((m) => {
       const player = m.MatchStats.Players.find((p) =>
-        compareXuids(p.PlayerId, user.xuid),
+        compareXuids(p.PlayerId, user.xuid)
       );
       if (!player) {
         throw new Error('Player not found in match stats');
@@ -198,7 +189,7 @@ export function PlaylistTabContent({
         duration: Duration.fromISO(
           player.ParticipationInfo.TimePlayed ||
             m.MatchInfo.PlayableDuration ||
-            m.MatchInfo.Duration,
+            m.MatchInfo.Duration
         ),
         gameVariantName:
           'PublicName' in m.MatchInfo.UgcGameVariant
@@ -210,13 +201,13 @@ export function PlaylistTabContent({
             : m.MatchInfo.MapVariant.AssetId,
         skill: player?.Skill as MatchSkill,
         teamSkills: m.MatchStats.Players.filter(
-          (p) => p.LastTeamId === player?.LastTeamId,
+          (p) => p.LastTeamId === player?.LastTeamId
         ).map((p) => p.Skill),
         enemySkills: m.MatchStats.Players.filter(
-          (p) => p.LastTeamId !== player?.LastTeamId,
+          (p) => p.LastTeamId !== player?.LastTeamId
         ).map((p) => p.Skill),
         allFinished: m.MatchStats.Players.every(
-          (p) => p.ParticipationInfo.PresentAtCompletion,
+          (p) => p.ParticipationInfo.PresentAtCompletion
         ),
       } satisfies (PlaylistSkillRankChartProps &
         PlaylistSkillRankByModeChartProps &
@@ -224,12 +215,12 @@ export function PlaylistTabContent({
     })
     .filter(
       (
-        s,
+        s
       ): s is (PlaylistSkillRankChartProps &
         PlaylistSkillRankByModeChartProps &
         CsrRewardChartProps)['skills'][number] =>
         s.skill != null &&
-        'Bronze' in s.skill.Counterfactuals.TierCounterfactuals,
+        'Bronze' in s.skill.Counterfactuals.TierCounterfactuals
     );
 
   const esr: number | undefined = Array.from(
@@ -237,7 +228,7 @@ export function PlaylistTabContent({
       .map((v) => [v, skillRankCombined(v.skill, 'Expected')] as const)
       .filter(([, m]) => m != null)
       .sortBy(([m]) => m.matchStart)
-      .groupBy(([s]) => s.gameVariantName),
+      .groupBy(([s]) => s.gameVariantName)
   )
     .map(([, v]) => v[v.length - 1][1])
     .average();
@@ -248,24 +239,24 @@ export function PlaylistTabContent({
     .sortByDesc((m) => m.MatchInfo.EndTime)
     .map((m) => {
       const player = m.MatchStats.Players.find((p) =>
-        compareXuids(user.xuid, p.PlayerId),
+        compareXuids(user.xuid, p.PlayerId)
       );
       const playerTeamStats = player?.PlayerTeamStats.find(
-        (pts) => pts.TeamId === player.LastTeamId,
+        (pts) => pts.TeamId === player.LastTeamId
       )?.Stats;
 
       const teamPlayers: MatchPlayers = m.MatchStats.Players.filter(
-        (p) => p.LastTeamId === player?.LastTeamId,
+        (p) => p.LastTeamId === player?.LastTeamId
       );
 
       const teamStats = teamPlayers.map(
         (p) =>
           p.PlayerTeamStats.find((pts) => pts.TeamId === player?.LastTeamId)
-            ?.Stats,
+            ?.Stats
       );
       const teamObjectiveStats = teamStats
         .map((ts) =>
-          getObjectivePoints(m.MatchInfo.GameVariantCategory, ts as Stats),
+          getObjectivePoints(m.MatchInfo.GameVariantCategory, ts as Stats)
         )
         .filter((v): v is number => typeof v === 'number' && !isNaN(v));
 
@@ -274,7 +265,7 @@ export function PlaylistTabContent({
         playerDuration: Duration.fromISO(
           player?.ParticipationInfo.TimePlayed ||
             m.MatchInfo.PlayableDuration ||
-            m.MatchInfo.Duration,
+            m.MatchInfo.Duration
         ),
         playerSkill: player?.Skill,
         mapName:
@@ -301,7 +292,7 @@ export function PlaylistTabContent({
           ? {
               player: getObjectivePoints(
                 m.MatchInfo.GameVariantCategory,
-                playerTeamStats,
+                playerTeamStats
               ),
               team: teamObjectiveStats.length
                 ? teamObjectiveStats.sum()
@@ -314,9 +305,9 @@ export function PlaylistTabContent({
     () =>
       matchAggregate.slice(
         0,
-        showLastXGames === 'all' ? undefined : showLastXGames,
+        showLastXGames === 'all' ? undefined : showLastXGames
       ),
-    [matchAggregate, showLastXGames],
+    [matchAggregate, showLastXGames]
   );
 
   const slicedPlaylistMatches = useMemo(
@@ -324,7 +315,7 @@ export function PlaylistTabContent({
       playlistMatches
         .sortByDesc((m) => m.MatchInfo.EndTime)
         .slice(0, showLastXGames === 'all' ? undefined : showLastXGames),
-    [playlistMatches, showLastXGames],
+    [playlistMatches, showLastXGames]
   );
 
   const colors = useColors();
@@ -337,11 +328,11 @@ export function PlaylistTabContent({
     ? Math.min(
         1,
         1 / playlist.playlistAsset.CustomData.MaxTeamSize +
-          0.5 / playlist.playlistAsset.CustomData.MaxTeamSize,
+          0.5 / playlist.playlistAsset.CustomData.MaxTeamSize
       )
     : undefined;
   const matchAggregateByGameVariant = slicedMatchAggregate.groupBy(
-    (m) => m.gameVariantName,
+    (m) => m.gameVariantName
   );
 
   const [showCsrDeltas, setShowCsrDeltas] = useState<boolean>(false);
@@ -548,7 +539,6 @@ export function PlaylistTabContent({
                   setLoading(true);
                   try {
                     const { iterator } = getPlayerMatches(
-                      leaderboard,
                       [wrapXuid(user.xuid)],
                       {
                         limit: maxMatches,
@@ -559,13 +549,13 @@ export function PlaylistTabContent({
                         signal: navigationStartSignal,
                         loadUserData: false,
                       },
-                      haloCaches,
+                      haloCaches
                     );
                     let first = true;
                     for await (const match of iterator) {
                       if (
                         !playlistMatches.some(
-                          (m) => m.MatchId === match.MatchId,
+                          (m) => m.MatchId === match.MatchId
                         )
                       ) {
                         if (first) {
@@ -575,10 +565,10 @@ export function PlaylistTabContent({
                         setMatches((matches) =>
                           [
                             ...matches.filter(
-                              (m) => m.MatchId !== match.MatchId,
+                              (m) => m.MatchId !== match.MatchId
                             ),
                             match,
-                          ].slice(-maxMatches),
+                          ].slice(-maxMatches)
                         );
                       } else {
                         return;
@@ -675,43 +665,43 @@ export function PlaylistTabContent({
                             kills: slicedMatchAggregate.average((a) =>
                               a.kills.team === 0
                                 ? 0
-                                : a.kills.player / a.kills.team,
+                                : a.kills.player / a.kills.team
                             ),
                             assists: slicedMatchAggregate.average((a) =>
                               a.assists.team === 0
                                 ? 0
-                                : a.assists.player / a.assists.team,
+                                : a.assists.player / a.assists.team
                             ),
                             damage: slicedMatchAggregate.find(
                               (ma) =>
                                 ma.objective?.player != null &&
-                                typeof ma.objective.team === 'number',
+                                typeof ma.objective.team === 'number'
                             )
                               ? undefined
                               : slicedMatchAggregate
                                   .filter(
                                     (
-                                      a,
+                                      a
                                     ): a is typeof a & {
                                       damage: { player: number; team: number };
                                     } =>
                                       a.damage?.player != null &&
-                                      typeof a.damage.team === 'number',
+                                      typeof a.damage.team === 'number'
                                   )
                                   .average((a) =>
                                     a.damage.team === 0
                                       ? 0
-                                      : a.damage.player / a.damage.team,
+                                      : a.damage.player / a.damage.team
                                   ),
                             objective: slicedMatchAggregate.find(
                               (ma) =>
                                 ma.objective?.player != null &&
-                                typeof ma.objective.team === 'number',
+                                typeof ma.objective.team === 'number'
                             )
                               ? slicedMatchAggregate
                                   .filter(
                                     (
-                                      a,
+                                      a
                                     ): a is typeof a & {
                                       objective: {
                                         player: number;
@@ -719,12 +709,12 @@ export function PlaylistTabContent({
                                       };
                                     } =>
                                       a.objective?.player != null &&
-                                      typeof a.objective.team === 'number',
+                                      typeof a.objective.team === 'number'
                                   )
                                   .average((a) =>
                                     a.objective.team === 0
                                       ? 0
-                                      : a.objective.player / a.objective.team,
+                                      : a.objective.player / a.objective.team
                                   )
                               : undefined,
                           },
@@ -739,12 +729,12 @@ export function PlaylistTabContent({
                       .map(([gameVariant, matchAggregates], i) => {
                         const objectiveAggregates = matchAggregates.filter(
                           (
-                            a,
+                            a
                           ): a is typeof a & {
                             objective: { player: number; team: number };
                           } =>
                             a.objective?.player != null &&
-                            typeof a.objective.team === 'number',
+                            typeof a.objective.team === 'number'
                         );
                         return (
                           <VStack key={gameVariant}>
@@ -757,19 +747,19 @@ export function PlaylistTabContent({
                                   kills: matchAggregates.average((a) =>
                                     a.kills.team === 0
                                       ? 0
-                                      : a.kills.player / a.kills.team,
+                                      : a.kills.player / a.kills.team
                                   ),
                                   assists: matchAggregates.average((a) =>
                                     a.assists.team === 0
                                       ? 0
-                                      : a.assists.player / a.assists.team,
+                                      : a.assists.player / a.assists.team
                                   ),
                                   damage:
                                     objectiveAggregates.length === 0
                                       ? matchAggregates
                                           .filter(
                                             (
-                                              a,
+                                              a
                                             ): a is typeof a & {
                                               damage: {
                                                 player: number;
@@ -777,12 +767,12 @@ export function PlaylistTabContent({
                                               };
                                             } =>
                                               a.damage?.player != null &&
-                                              typeof a.damage.team === 'number',
+                                              typeof a.damage.team === 'number'
                                           )
                                           .average((a) =>
                                             a.damage.team === 0
                                               ? 0
-                                              : a.damage.player / a.damage.team,
+                                              : a.damage.player / a.damage.team
                                           )
                                       : undefined,
                                   objective:
@@ -791,7 +781,7 @@ export function PlaylistTabContent({
                                           a.objective.team === 0
                                             ? 0
                                             : a.objective.player /
-                                              a.objective.team,
+                                              a.objective.team
                                         )
                                       : undefined,
                                 },

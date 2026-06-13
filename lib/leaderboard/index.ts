@@ -1,3 +1,3 @@
-import { provider } from './indexed-db';
+import { provider } from './sqlite';
 
 export default provider;
