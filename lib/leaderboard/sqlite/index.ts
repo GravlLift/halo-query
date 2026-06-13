@@ -2,6 +2,7 @@ import {
   entryIsValid,
   ILeaderboardProvider,
   LeaderboardEntry,
+  SkillProp,
 } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { connect, Connection } from '@tursodatabase/serverless';
@@ -80,7 +81,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getSkillBuckets: async function (
     playlistAssetId: string,
-    skillProp: 'csr' | 'esr'
+    skillProp: SkillProp
   ): Promise<Map<number, number>> {
     const conn = await initializeDatabase();
     const buckets: { bucket: number; count: number }[] = await conn.all(
@@ -103,7 +104,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   getRankedEntries: async function (
     playlistAssetId: string,
     options: { offset: number; limit: number },
-    skillProp: 'csr' | 'esr'
+    skillProp: SkillProp
   ): Promise<(LeaderboardEntry & { rank: number })[]> {
     const conn = await initializeDatabase();
 
@@ -120,18 +121,17 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
     return results;
   },
   getGamertagIndex: async function (
-    xuid: string,
+    gamertag: string,
     playlistAssetId: string,
-    skillProp: 'csr' | 'esr',
-    _signal?: AbortSignal
+    skillProp: SkillProp
   ): Promise<number> {
     const conn = await initializeDatabase();
     const result = await conn.get(
-      `SELECT COUNT(*) - 1 AS "index" FROM leaderboard
-       WHERE playlistAssetId = ? AND ${skillProp} > (
-         SELECT ${skillProp} FROM leaderboard WHERE xuid = ? AND playlistAssetId = ?
-       )`,
-      [playlistAssetId, xuid, playlistAssetId]
+      `SELECT COUNT(*) + 1 AS "index" FROM leaderboard
+        WHERE playlistAssetId = ? AND ${skillProp} > (
+          SELECT ${skillProp} FROM leaderboard WHERE gamertag = ? AND playlistAssetId = ?
+        );`,
+      [playlistAssetId, gamertag, playlistAssetId]
     );
     return result?.index || -1;
   },

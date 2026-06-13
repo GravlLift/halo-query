@@ -2,18 +2,22 @@ import {
   compareXuids,
   determineDiscoveryInfo,
   entryIsValid,
-  ILeaderboardProvider,
   LeaderboardEntryKeys,
+  SkillProp,
   wrapXuid,
 } from '@gravllift/halo-helpers';
+import { KnowledgeMapLeaderboardEntry } from '@gravllift/halo-helpers/src/leaderboard/entry';
+import { KnowledgeMapLeaderboardProvider } from '@gravllift/halo-helpers/src/leaderboard/knowledge-map-leaderboard';
 import { handleType, retry } from 'cockatiel';
 import Dexie from 'dexie';
 import { appInsights } from '../../application-insights/client';
 import { defaultBuckets } from '../default-buckets';
-import { getLeaderboardTable, transaction } from './indexed-db-repository';
-import { databaseInitialized, getDiscovererId } from './indexed-db-repository';
-import { KnowledgeMapLeaderboardEntry } from '@gravllift/halo-helpers/src/leaderboard/entry';
-import { KnowledgeMapLeaderboardProvider } from '@gravllift/halo-helpers/src/leaderboard/knowledge-map-leaderboard';
+import {
+  databaseInitialized,
+  getDiscovererId,
+  getLeaderboardTable,
+  transaction,
+} from './indexed-db-repository';
 
 const policy = retry(
   handleType(Dexie.DexieError)
@@ -21,19 +25,19 @@ const policy = retry(
     .orType(Dexie.ModifyError),
   {
     maxAttempts: 3,
-  },
+  }
 );
 
 /** Adds entries to storage if they do not exist or are more recent than the current record */
 async function addLeaderboardEntries(
   entries: KnowledgeMapLeaderboardEntry[],
-  fallbackDiscovererId: string,
+  fallbackDiscovererId: string
 ) {
   // Most recent match per user/playlist combo
   const validEntries = Array.from(
     entries
       .filter((entry) => entryIsValid(entry))
-      .groupBy((s) => `${s.playlistAssetId}.${s.xuid}`),
+      .groupBy((s) => `${s.playlistAssetId}.${s.xuid}`)
   ).map(([, matches]) => matches.maxBy((m) => m.matchDate));
   if (!validEntries.length) return [];
 
@@ -46,13 +50,13 @@ async function addLeaderboardEntries(
           validEntries.map((entry) => [
             entry.playlistAssetId,
             wrapXuid(entry.xuid),
-          ]),
+          ])
         ),
         table
           .where(['discoverySource', 'discoveryVersion'])
           .between(
             [fallbackDiscovererId, Dexie.minKey],
-            [fallbackDiscovererId, Dexie.maxKey],
+            [fallbackDiscovererId, Dexie.maxKey]
           )
           .lastKey()
           .then((lastKey) => (lastKey ? (lastKey as [string, number])[1] : 0)),
@@ -111,7 +115,7 @@ async function addLeaderboardEntries(
       if (entriesAdded.length) {
         await table.bulkPut(entriesAdded);
       }
-    }),
+    })
   );
   return entriesAdded;
 }
@@ -120,15 +124,15 @@ async function getRandomEntry() {
   const csrTable = await getLeaderboardTable();
   const totalEntries = await csrTable.count();
   return await policy.execute(() =>
-    csrTable.offset(Math.floor(Math.random() * totalEntries)).first(),
+    csrTable.offset(Math.floor(Math.random() * totalEntries)).first()
   );
 }
 
 async function getGamertagIndex(
   xuid: string,
   playlistAssetId: string,
-  skillProp: 'csr' | 'esr',
-  signal?: AbortSignal,
+  skillProp: SkillProp,
+  signal?: AbortSignal
 ) {
   let index = 0;
   let done = false;
@@ -138,7 +142,7 @@ async function getGamertagIndex(
         .where([LeaderboardEntryKeys.PlaylistAssetId, skillProp])
         .between(
           [playlistAssetId, Dexie.minKey],
-          [playlistAssetId, Dexie.maxKey],
+          [playlistAssetId, Dexie.maxKey]
         )
         .reverse()
         .until(() => done || innerSignal.aborted)
@@ -149,7 +153,7 @@ async function getGamertagIndex(
           }
           index++;
         }),
-    signal,
+    signal
   );
   signal?.throwIfAborted();
   if (!done) {
@@ -162,10 +166,7 @@ function getAllEntries() {
   return policy.execute(async () => (await getLeaderboardTable()).toArray());
 }
 
-async function getSkillBuckets(
-  playlistAssetId: string,
-  skillProp: 'csr' | 'esr',
-) {
+async function getSkillBuckets(playlistAssetId: string, skillProp: SkillProp) {
   const buckets = new Map<number, number>(defaultBuckets);
   await policy.execute(async () =>
     (await getLeaderboardTable())
@@ -193,7 +194,7 @@ async function getSkillBuckets(
         }
 
         buckets.set(bucket, bucketCount + 1);
-      }),
+      })
   );
   return buckets;
 }
@@ -204,7 +205,7 @@ function getRankedEntries(
     offset: number;
     limit: number;
   },
-  skillProp: 'csr' | 'esr',
+  skillProp: SkillProp
 ) {
   return policy.execute(async () =>
     transaction('r', await getLeaderboardTable(), async (_, table) => {
@@ -212,7 +213,7 @@ function getRankedEntries(
         .where([LeaderboardEntryKeys.PlaylistAssetId, skillProp])
         .between(
           [playlistAssetId, Dexie.minKey],
-          [playlistAssetId, Dexie.maxKey],
+          [playlistAssetId, Dexie.maxKey]
         )
         .reverse()
         .offset(options.offset)
@@ -229,7 +230,7 @@ function getRankedEntries(
         .between(
           [playlistAssetId, maxSkill],
           [playlistAssetId, Dexie.maxKey],
-          false,
+          false
         )
         .count();
 
@@ -246,7 +247,7 @@ function getRankedEntries(
         };
       });
       return value;
-    }),
+    })
   );
 }
 
@@ -265,7 +266,7 @@ function getPlaylistEntriesCount(playlistAssetId: string) {
           },
         });
         return count;
-      }),
+      })
   );
 }
 
@@ -274,7 +275,7 @@ function getPlaylistAssetIds() {
     (await getLeaderboardTable())
       .orderBy(LeaderboardEntryKeys.PlaylistAssetId)
       .uniqueKeys()
-      .then((keys) => keys as string[]),
+      .then((keys) => keys as string[])
   );
 }
 
@@ -316,7 +317,7 @@ async function getCurrentKnowledge() {
         });
 
       return knowledgeMap;
-    }),
+    })
   );
 }
 
@@ -362,7 +363,7 @@ async function getDeltaEntries(knowledges: Record<string, number | undefined>) {
       }
 
       return entries;
-    }),
+    })
   );
 }
 

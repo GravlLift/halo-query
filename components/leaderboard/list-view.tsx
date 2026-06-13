@@ -29,6 +29,8 @@ import TableLoading from '../table-loading';
 import { VerticalCenter } from '../vertical-center';
 import { toaster } from '../ui/toaster';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
+import { SkillProp } from '@gravllift/halo-helpers';
+
 const pageSize = 100;
 
 export default function ListView({
@@ -40,7 +42,7 @@ export default function ListView({
   page: string | undefined;
   gamertag: string | undefined;
   playlistAssetId: string;
-  skillProp: 'csr' | 'esr';
+  skillProp: SkillProp;
 }) {
   const leaderboard = useLeaderboard();
   const haloCaches = useHaloCaches();

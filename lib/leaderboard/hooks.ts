@@ -1,3 +1,4 @@
+import type { LeaderboardEntry, SkillProp } from '@gravllift/halo-helpers';
 import { useEffect, useMemo, useState } from 'react';
 import {
   EMPTY,
@@ -14,7 +15,6 @@ import {
 import { useLeaderboard } from '../../components/leaderboard-provider/leaderboard-context';
 import { useObservable } from '../hooks/use-observable';
 import { defaultBuckets } from './default-buckets';
-import type { LeaderboardEntry } from '@gravllift/halo-helpers';
 
 function bufferMap<T, O extends ObservableInput<unknown>>(
   project: (value: T, index: number) => O
@@ -119,7 +119,7 @@ function bufferMap<T, O extends ObservableInput<unknown>>(
 
 export function useSkillBuckets(
   playlistAssetId: string,
-  skillProp: 'csr' | 'esr'
+  skillProp: SkillProp
 ): { buckets: Map<number, number>; loading: boolean } {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -163,7 +163,7 @@ export function useRankedEntries(
     offset: number;
     limit: number;
   },
-  skillProp: 'csr' | 'esr'
+  skillProp: SkillProp
 ): {
   loading: boolean;
   value: (LeaderboardEntry & { rank: number })[] | undefined;

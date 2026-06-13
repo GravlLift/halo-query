@@ -18,21 +18,14 @@ type LeaderboardBucket {
   count: Int!
 }
 
+type Leaderboard {
+  count: Int!
+  skillBuckets: [LeaderboardBucket!]!
+  entries(page: Int = 1): [LeaderboardEntry!]!
+  gamertagIndex(gamertag: String!): Int!
+}
+
 type Query {
-  leaderboardPlaylists: [String!]!
-  leaderboardPlaylistSkillBuckets(
-    playlistId: String!
-    skillProp: SkillProp!
-  ): [LeaderboardBucket!]!
-  leaderboardPlaylistCount(playlistId: String!): Int!
-  leaderboardPlaylistEntries(
-    playlistId: String!
-    skillProp: SkillProp!
-    page: Int = 1
-  ): [LeaderboardEntry!]!
-  leaderboardGamertagIndex(
-    playlistId: String!
-    xuid: String!
-    skillProp: SkillProp!
-  ): Int!
+  playlistIds: [String!]!
+  leaderboard(playlistId: String!, skillProp: SkillProp!): Leaderboard
 }
