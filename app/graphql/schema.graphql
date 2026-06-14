@@ -25,7 +25,21 @@ type Leaderboard {
   gamertagIndex(gamertag: String!): Int!
 }
 
+type Gamerpic {
+  small: String!
+  medium: String!
+  large: String!
+  xlarge: String!
+}
+
+type Player {
+  xuid: String!
+  gamertag: String!
+  gamerpic: Gamerpic!
+}
+
 type Query {
   playlistIds: [String!]!
   leaderboard(playlistId: String!, skillProp: SkillProp!): Leaderboard
+  player(xuidOrGamertag: String!): Player
 }
