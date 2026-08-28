@@ -47,6 +47,7 @@ export function HaloCachesProvider({
               compareXuids(xuid, xstsTicket.DisplayClaims.xui[0].xid)
             );
           },
+          // TODO: Add graphql additionalXuidFetcher
         })
       }
     >

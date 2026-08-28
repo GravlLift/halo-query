@@ -65,7 +65,7 @@ export default function BulkEsrPage() {
         if (headerRow) {
           const headers = headerRow.split(',');
           gamertagColumnIndex = headers.findIndex(
-            (header) => header.trim().toLowerCase() === 'gamertag',
+            (header) => header.trim().toLowerCase() === 'gamertag'
           );
         }
 
@@ -78,7 +78,7 @@ export default function BulkEsrPage() {
           const cells = line.split(',');
           handleAddGamertag(
             cells[gamertagColumnIndex === -1 ? 0 : gamertagColumnIndex],
-            undefined,
+            undefined
           );
         }
       }
@@ -88,7 +88,7 @@ export default function BulkEsrPage() {
 
   const handleAddGamertag = async (
     newGamertag: string,
-    existingGamertag: string | undefined,
+    existingGamertag: string | undefined
   ) => {
     let trimmedGamertag = newGamertag.trim();
     if (!trimmedGamertag) {
@@ -98,7 +98,7 @@ export default function BulkEsrPage() {
     let existingUser = userSkillInfo.find(
       (user) =>
         user.gamertag.toLowerCase() === existingGamertag?.toLowerCase() ||
-        user.gamertag.toLowerCase() === trimmedGamertag.toLowerCase(),
+        user.gamertag.toLowerCase() === trimmedGamertag.toLowerCase()
     );
 
     if (!existingUser) {
@@ -123,7 +123,7 @@ export default function BulkEsrPage() {
         const index = prev.findIndex(
           (user) =>
             user.gamertag.toLowerCase() === existingGamertag?.toLowerCase() ||
-            user.gamertag.toLowerCase() === trimmedGamertag.toLowerCase(),
+            user.gamertag.toLowerCase() === trimmedGamertag.toLowerCase()
         );
         if (index !== -1) {
           const updated = [...prev];
@@ -154,18 +154,17 @@ export default function BulkEsrPage() {
                 AssetId: rankedArenaPlaylistAssetId,
                 VersionId: playlist.UgcPlaylistVersion,
               },
-              abortController.signal,
-            ),
+              abortController.signal
+            )
           ),
       ]);
       existingUser.gamertag = gamertag;
       existingUser.esrA = await getPlayerEsrA(
-        leaderboard,
         playlistVersionAsset,
         xuid,
         asOfDate ?? DateTime.now(),
         abortController.signal,
-        haloCaches,
+        haloCaches
       );
     } catch (err) {
       if (err instanceof Error) {
@@ -180,7 +179,7 @@ export default function BulkEsrPage() {
       const index = prev.findIndex(
         (user) =>
           user.gamertag.toLowerCase() === trimmedGamertag.toLowerCase() ||
-          user.gamertag.toLowerCase() === existingGamertag?.toLowerCase(),
+          user.gamertag.toLowerCase() === existingGamertag?.toLowerCase()
       );
       if (index !== -1) {
         const updated = [...prev];
@@ -295,7 +294,7 @@ export default function BulkEsrPage() {
           </Box>
           {userSkillInfo.length === 0 ||
           userSkillInfo.some(
-            (u) => u.error != null || u.esrA == null,
+            (u) => u.error != null || u.esrA == null
           ) ? null : (
             <Box>
               <Button
@@ -316,7 +315,7 @@ export default function BulkEsrPage() {
 
                   const blob = new Blob(
                     [tableHeaderRowsCsv.concat(tableBodyRowsCsv).join('\n')],
-                    { type: 'text/csv' },
+                    { type: 'text/csv' }
                   );
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -411,7 +410,7 @@ export default function BulkEsrPage() {
                               const existingUser = prev.find(
                                 (u) =>
                                   u.gamertag.toLowerCase() ===
-                                  user.gamertag.toLowerCase(),
+                                  user.gamertag.toLowerCase()
                               );
                               if (existingUser) {
                                 existingUser.esrA = undefined;
@@ -433,7 +432,7 @@ export default function BulkEsrPage() {
                             ?.abort();
                           abortControllerMap.current.delete(user.gamertag);
                           setUserSkillInfo((prev) =>
-                            prev.filter((u) => u.gamertag !== user.gamertag),
+                            prev.filter((u) => u.gamertag !== user.gamertag)
                           );
                         }}
                       >
