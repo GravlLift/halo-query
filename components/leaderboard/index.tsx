@@ -1,5 +1,6 @@
 'use client';
 import { Box, Flex, Heading, Tabs } from '@chakra-ui/react';
+import { SkillProp } from '@gravllift/halo-helpers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
@@ -12,8 +13,6 @@ import {
   rankedSlayerPlaylistAssetId,
 } from '../../lib/ranked-playlist-ids';
 import { Loading } from '../loading';
-import Testing from '../testing';
-import Peers from './peers';
 import PlaylistLeaderboard from './playlist-leaderboard';
 
 export default function Leaderboard({
@@ -25,7 +24,7 @@ export default function Leaderboard({
   page: string | undefined;
   gamertag: string | undefined;
   playlistAssetId: string | undefined;
-  skillProp: 'esr' | 'csr' | undefined;
+  skillProp: SkillProp | undefined;
 }) {
   const { playlistCache, playlistVersionCache } = useHaloCaches();
   const router = useRouter();
@@ -68,7 +67,7 @@ export default function Leaderboard({
 
     const playlistsToFetch = playlistAssetIds?.filter(
       (id): id is string =>
-        typeof id === 'string' && !playlists.some((p) => p.AssetId == id),
+        typeof id === 'string' && !playlists.some((p) => p.AssetId == id)
     );
 
     if (playlistsToFetch?.length) {
@@ -84,9 +83,9 @@ export default function Leaderboard({
                     playlistAsset,
                   ]);
                 }
-              }),
-          ),
-        ),
+              })
+          )
+        )
       );
     }
   }, [playlistAssetIds, playlists, currentUser, playlistAssetId]);
@@ -99,11 +98,6 @@ export default function Leaderboard({
               <Heading size="lg">Leaderboard</Heading>
             </Box>
           </Box>
-          <Testing>
-            <Box flexGrow={1} textAlign="right">
-              <Peers />
-            </Box>
-          </Testing>
         </Flex>
         {playlistAssetId == null ||
         playlists.some((p) => p.AssetId === playlistAssetId) ? (

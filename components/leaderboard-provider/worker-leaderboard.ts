@@ -1,7 +1,4 @@
-import type {
-  ILeaderboardProvider,
-  KnowledgeMapLeaderboardProvider,
-} from '@gravllift/halo-helpers';
+import type { ReadWriteLeaderboardProvider } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { useEffect, useMemo, useRef } from 'react';
 import { handleAll, retry } from 'cockatiel';
@@ -13,22 +10,22 @@ const callMap = new Map<
   ResolvablePromise<
     Awaited<
       ReturnType<
-        KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+        ReadWriteLeaderboardProvider[keyof ReadWriteLeaderboardProvider]
       >
     >
   >
 >();
 let workerRestarts = 0;
-export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
+export function useLeaderboardProvider(): ReadWriteLeaderboardProvider {
   const workerRef = useRef<Worker | null>(null);
 
-  const workerLeaderboard = useMemo((): KnowledgeMapLeaderboardProvider => {
+  const workerLeaderboard = useMemo((): ReadWriteLeaderboardProvider => {
     function callLeaderboardProviderFn<
-      TFunction extends keyof KnowledgeMapLeaderboardProvider,
+      TFunction extends keyof ReadWriteLeaderboardProvider,
     >(
       fn: TFunction,
-      args: Parameters<KnowledgeMapLeaderboardProvider[TFunction]>,
-    ): ReturnType<KnowledgeMapLeaderboardProvider[TFunction]> {
+      args: Parameters<ReadWriteLeaderboardProvider[TFunction]>
+    ): ReturnType<ReadWriteLeaderboardProvider[TFunction]> {
       const callId = Math.random();
       const abort = () => {
         workerRef.current?.postMessage({ callId, cancel: true });
@@ -36,7 +33,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
       const promise = new ResolvablePromise<
         Awaited<
           ReturnType<
-            KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+            ReadWriteLeaderboardProvider[keyof ReadWriteLeaderboardProvider]
           >
         >
       >();
@@ -47,7 +44,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
           promise.finally(() => args[3]?.removeEventListener('abort', abort));
           // Signal cannot be transmitted, remove it from arg list
           args = args.slice(0, 3) as Parameters<
-            KnowledgeMapLeaderboardProvider[TFunction]
+            ReadWriteLeaderboardProvider[TFunction]
           >;
           break;
       }
@@ -56,17 +53,17 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
         fn,
         args,
       });
-      return promise as ReturnType<KnowledgeMapLeaderboardProvider[TFunction]>;
+      return promise as ReturnType<ReadWriteLeaderboardProvider[TFunction]>;
     }
 
-    return new Proxy({} as KnowledgeMapLeaderboardProvider, {
+    return new Proxy({} as ReadWriteLeaderboardProvider, {
       get(_target, prop) {
         return (...args: unknown[]) =>
           retryEverythingPolicy.execute(async () =>
             callLeaderboardProviderFn(
-              prop as keyof KnowledgeMapLeaderboardProvider,
-              args as any,
-            ),
+              prop as keyof ReadWriteLeaderboardProvider,
+              args as any
+            )
           );
       },
     });
@@ -80,7 +77,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
             callId: number;
             result: Awaited<
               ReturnType<
-                KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+                ReadWriteLeaderboardProvider[keyof ReadWriteLeaderboardProvider]
               >
             >;
           }
@@ -89,7 +86,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
             error: unknown;
             forceReload: boolean;
           }
-      >,
+      >
     ): void => {
       const promise = callMap.get(event.data.callId);
       if (!promise) {
@@ -107,7 +104,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
             workerRef.current.removeEventListener('message', messageHandler);
 
             workerRef.current = new Worker(
-              new URL('./worker.ts', import.meta.url),
+              new URL('./worker.ts', import.meta.url)
             );
             workerRestarts++;
           } else {

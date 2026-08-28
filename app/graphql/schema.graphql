@@ -3,12 +3,14 @@ enum SkillProp {
   esr
 }
 
+scalar Long
+
 type LeaderboardEntry {
   rank: Int!
   xuid: String!
   gamertag: String!
   matchId: String!
-  matchDate: String!
+  matchDate: Long!
   csr: Float!
   esr: Float!
 }

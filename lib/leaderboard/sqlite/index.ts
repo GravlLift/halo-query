@@ -1,7 +1,7 @@
 import {
   entryIsValid,
-  ILeaderboardProvider,
   LeaderboardEntry,
+  ReadWriteLeaderboardProvider,
   SkillProp,
 } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
@@ -34,7 +34,7 @@ async function initializeDatabase() {
   return initializedPromise;
 }
 
-export const provider: ILeaderboardProvider<LeaderboardEntry> = {
+export const provider: ReadWriteLeaderboardProvider<LeaderboardEntry> = {
   initialized: async function (): Promise<boolean> {
     return initializedPromise?.isCompleted || false;
   },
@@ -103,7 +103,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
   },
   getRankedEntries: async function (
     playlistAssetId: string,
-    options: { offset: number; limit: number },
+    options: { page: number },
     skillProp: SkillProp
   ): Promise<(LeaderboardEntry & { rank: number })[]> {
     const conn = await initializeDatabase();
@@ -116,7 +116,7 @@ export const provider: ILeaderboardProvider<LeaderboardEntry> = {
       WHERE playlistAssetId = ?
       ORDER BY ${skillProp} DESC
       LIMIT ? OFFSET ?;`,
-      [playlistAssetId, options.limit, options.offset]
+      [playlistAssetId, 100, (options.page - 1) * 100]
     );
     return results;
   },

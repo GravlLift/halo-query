@@ -202,8 +202,7 @@ async function getSkillBuckets(playlistAssetId: string, skillProp: SkillProp) {
 function getRankedEntries(
   playlistAssetId: string,
   options: {
-    offset: number;
-    limit: number;
+    page: number;
   },
   skillProp: SkillProp
 ) {
@@ -216,8 +215,8 @@ function getRankedEntries(
           [playlistAssetId, Dexie.maxKey]
         )
         .reverse()
-        .offset(options.offset)
-        .limit(options.limit)
+        .offset((options.page - 1) * 100)
+        .limit(100)
         .toArray();
 
       if (result.length === 0) {
@@ -239,7 +238,7 @@ function getRankedEntries(
       const value = result.map((entry, i) => {
         if (lastSkill !== entry[skillProp]) {
           lastSkill = entry[skillProp];
-          rank = options.offset + i + 1;
+          rank = (options.page - 1) * 100 + i + 1;
         }
         return {
           ...entry,

@@ -1,12 +1,7 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import type { IResolvers } from '@graphql-tools/utils';
-import {
-  isXuid,
-  SkillProp,
-  HaloCaches,
-  getByXuid,
-} from '@gravllift/halo-helpers';
+import { getByXuid, HaloCaches, SkillProp } from '@gravllift/halo-helpers';
 import {
   HaloInfiniteClient,
   StaticXstsTicketTokenSpartanTokenProvider,
@@ -15,6 +10,7 @@ import {
 import type { NextRequest } from 'next/server';
 import { provider } from '../../lib/leaderboard/sqlite';
 import typeDefs from './schema.graphql';
+import { GraphQLScalarType } from 'graphql';
 
 let playlistIdsPromise: Promise<string[]> | null = null;
 function getPlaylistIds() {
@@ -62,6 +58,35 @@ function getHaloCaches(request: NextRequest) {
 }
 
 const resolvers: IResolvers<any, NextRequest> = {
+  Long: new GraphQLScalarType({
+    name: 'Long',
+    description: '64-bit signed integer',
+    serialize(value) {
+      return Number(value);
+    },
+    parseValue(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      if (typeof value === 'bigint') {
+        return value;
+      }
+      if (
+        typeof value === 'number' ||
+        typeof value === 'string' ||
+        typeof value === 'boolean'
+      ) {
+        return BigInt(value);
+      }
+      throw new Error(`Cannot convert value to BigInt: ${value}`);
+    },
+    parseLiteral(ast) {
+      if (ast.kind === 'IntValue') {
+        return BigInt(ast.value);
+      }
+      return null;
+    },
+  }),
   Query: {
     playlistIds: () => getPlaylistIds(),
     leaderboard: async (
@@ -99,12 +124,7 @@ const resolvers: IResolvers<any, NextRequest> = {
     entries: (
       { playlistId, skillProp }: { playlistId: string; skillProp: SkillProp },
       { page }: { page: number }
-    ) =>
-      provider.getRankedEntries(
-        playlistId,
-        { offset: (page - 1) * 100, limit: 100 },
-        skillProp
-      ),
+    ) => provider.getRankedEntries(playlistId, { page }, skillProp),
     skillBuckets: async ({
       playlistId,
       skillProp,
