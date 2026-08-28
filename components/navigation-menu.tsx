@@ -30,7 +30,7 @@ import {
   FaReddit,
   FaTable,
 } from 'react-icons/fa';
-import { FaRankingStar } from 'react-icons/fa6';
+import { FaRankingStar, FaTableList } from 'react-icons/fa6';
 import { IconType } from 'react-icons/lib';
 import { useNavigationController } from './navigation-context';
 import CircleIcon from './circle-icon';
@@ -143,6 +143,12 @@ export function NavigationMenu() {
                     href="/faqs"
                     label="FAQs"
                     icon={FaQuestion}
+                  />
+                  <NavigationItem
+                    isSelected={pathname === '/bulk-esr'}
+                    href="/bulk-esr"
+                    label="Bulk ESR Lookup"
+                    icon={FaTableList}
                   />
                 </VStack>
               </Drawer.Body>
