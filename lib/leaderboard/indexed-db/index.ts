@@ -128,7 +128,7 @@ async function getRandomEntry() {
   );
 }
 
-async function getGamertagIndex(
+async function getXuidIndex(
   xuid: string,
   playlistAssetId: string,
   skillProp: SkillProp,
@@ -372,7 +372,7 @@ export const provider: KnowledgeMapLeaderboardProvider = {
     await addLeaderboardEntries(...args, await getDiscovererId()),
   getAllEntries,
   getRandomEntry,
-  getGamertagIndex,
+  getXuidIndex,
   getSkillBuckets,
   getRankedEntries,
   getPlaylistEntriesCount,

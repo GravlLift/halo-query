@@ -3,6 +3,7 @@ import {
   LeaderboardEntry,
   ReadWriteLeaderboardProvider,
   SkillProp,
+  wrapXuid,
 } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { connect, Connection } from '@tursodatabase/serverless';
@@ -76,8 +77,14 @@ export const provider: ReadWriteLeaderboardProvider<LeaderboardEntry> = {
         ]
       )
     );
-    await Promise.all(insertPromises);
-    return validEntries;
+    const results = await Promise.all(insertPromises);
+    const insertedEntries = validEntries.filter(
+      (_, index) => results[index]?.changes > 0
+    );
+    if (insertedEntries.length) {
+      console.log(`Inserted ${insertedEntries.length} new leaderboard entries`);
+    }
+    return insertedEntries;
   },
   getSkillBuckets: async function (
     playlistAssetId: string,
@@ -89,7 +96,7 @@ export const provider: ReadWriteLeaderboardProvider<LeaderboardEntry> = {
           FLOOR(${skillProp} / 50) * 50 AS bucket,
           COUNT(*) AS count
       FROM leaderboard
-      WHERE playlistAssetId = ?
+      WHERE playlistAssetId = ? AND matchDate >= unixepoch('now', '-7 days') * 1000
       GROUP BY bucket
       ORDER BY bucket;`,
       [playlistAssetId]
@@ -113,25 +120,25 @@ export const provider: ReadWriteLeaderboardProvider<LeaderboardEntry> = {
           xuid, playlistAssetId, gameVariantAssetId, gamertag, matchId, matchDate, csr, esr,
           RANK() OVER (ORDER BY ${skillProp} DESC) AS rank
       FROM leaderboard
-      WHERE playlistAssetId = ?
+      WHERE playlistAssetId = ? AND matchDate >= unixepoch('now', '-7 days') * 1000
       ORDER BY ${skillProp} DESC
       LIMIT ? OFFSET ?;`,
       [playlistAssetId, 100, (options.page - 1) * 100]
     );
     return results;
   },
-  getGamertagIndex: async function (
-    gamertag: string,
+  getXuidIndex: async function (
+    xuid: string,
     playlistAssetId: string,
     skillProp: SkillProp
   ): Promise<number> {
     const conn = await initializeDatabase();
     const result = await conn.get(
       `SELECT COUNT(*) + 1 AS "index" FROM leaderboard
-        WHERE playlistAssetId = ? AND ${skillProp} > (
-          SELECT ${skillProp} FROM leaderboard WHERE gamertag = ? AND playlistAssetId = ?
-        );`,
-      [playlistAssetId, gamertag, playlistAssetId]
+        WHERE playlistAssetId = ? AND matchDate >= unixepoch('now', '-7 days') * 1000 AND ${skillProp} > (
+          SELECT ${skillProp} FROM leaderboard WHERE xuid = ? AND playlistAssetId = ? AND matchDate >= unixepoch('now', '-7 days') * 1000
+        )`,
+      [playlistAssetId, wrapXuid(xuid), playlistAssetId]
     );
     return result?.index || -1;
   },
@@ -140,7 +147,7 @@ export const provider: ReadWriteLeaderboardProvider<LeaderboardEntry> = {
   ): Promise<number> {
     const conn = await initializeDatabase();
     const result = await conn.get(
-      `SELECT COUNT(*) as count FROM leaderboard WHERE playlistAssetId = ?`,
+      `SELECT COUNT(*) as count FROM leaderboard WHERE playlistAssetId = ? AND matchDate >= unixepoch('now', '-7 days') * 1000`,
       [playlistAssetId]
     );
     return result?.count || 0;

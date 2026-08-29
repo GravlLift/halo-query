@@ -93,13 +93,13 @@ export default function ListView({
               });
               return;
             }
-            let gamertagIndex = await leaderboard.getGamertagIndex(
+            let xuidIndex = await leaderboard.getXuidIndex(
               xuid,
               playlistAssetId,
               skillProp,
               signal
             );
-            if (gamertagIndex === -1) {
+            if (xuidIndex === -1) {
               // Gamertag not found, this gamertag is not on the leaderboard
               const search = new URLSearchParams(window.location.search);
               search.set('page', `1`);
@@ -108,7 +108,7 @@ export default function ListView({
               return;
             }
             setHighlight(gt);
-            const newPage = Math.floor(gamertagIndex / pageSize);
+            const newPage = Math.floor(xuidIndex / pageSize);
             setPage(newPage + 1);
           } catch (e) {
             if (isAbortError(e)) {

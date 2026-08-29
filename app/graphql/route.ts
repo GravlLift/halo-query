@@ -138,10 +138,10 @@ const resolvers: IResolvers<any, NextRequest> = {
         count,
       }));
     },
-    gamertagIndex: (
+    xuidIndex: (
       { playlistId, skillProp }: { playlistId: string; skillProp: SkillProp },
-      { gamertag }: { gamertag: string }
-    ) => provider.getGamertagIndex(gamertag, playlistId, skillProp),
+      { xuid }: { xuid: string }
+    ) => provider.getXuidIndex(xuid, playlistId, skillProp),
   },
 };
 

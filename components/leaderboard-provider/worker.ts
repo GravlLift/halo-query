@@ -41,7 +41,7 @@ async function leaderboardFn<
     return;
   } else {
     try {
-      if (event.data.fn === 'getGamertagIndex') {
+      if (event.data.fn === 'getXuidIndex') {
         const controller = new AbortController();
         event.data.args[3] = controller.signal;
         signalMap.set(event.data.callId, controller);

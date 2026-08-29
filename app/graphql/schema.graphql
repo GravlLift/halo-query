@@ -24,7 +24,7 @@ type Leaderboard {
   count: Int!
   skillBuckets: [LeaderboardBucket!]!
   entries(page: Int = 1): [LeaderboardEntry!]!
-  gamertagIndex(gamertag: String!): Int!
+  xuidIndex(xuid: String!): Int!
 }
 
 type Gamerpic {

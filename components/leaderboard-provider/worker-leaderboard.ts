@@ -39,7 +39,7 @@ export function useLeaderboardProvider(): ReadWriteLeaderboardProvider {
       >();
       callMap.set(callId, promise);
       switch (fn) {
-        case 'getGamertagIndex':
+        case 'getXuidIndex':
           args[3]?.addEventListener('abort', abort);
           promise.finally(() => args[3]?.removeEventListener('abort', abort));
           // Signal cannot be transmitted, remove it from arg list

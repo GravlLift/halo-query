@@ -9,6 +9,7 @@ import {
 import {
   ObservableLeaderboardProvider,
   SkillProp,
+  wrapXuid,
 } from '@gravllift/halo-helpers';
 import { NEVER } from 'rxjs';
 
@@ -82,6 +83,22 @@ const GET_RANKED_ENTRIES: TypedDocumentNode<{
   }
 `;
 
+const GET_GAMERTAG_INDEX: TypedDocumentNode<{
+  leaderboard: {
+    xuidIndex: number;
+  };
+}> = gql`
+  query GetXuidIndex(
+    $playlistId: String!
+    $skillProp: SkillProp!
+    $xuid: String!
+  ) {
+    leaderboard(playlistId: $playlistId, skillProp: $skillProp) {
+      xuidIndex(xuid: $xuid)
+    }
+  }
+`;
+
 export function useLeaderboardProvider(): ObservableLeaderboardProvider {
   const client = new ApolloClient({
     link: new HttpLink({ uri: '/graphql' }),
@@ -150,13 +167,26 @@ export function useLeaderboardProvider(): ObservableLeaderboardProvider {
       return skillMap;
     },
     initialized: async () => true,
-    getGamertagIndex: async (
+    getXuidIndex: async (
       xuid: string,
-      playlistAssetId: string,
+      playlistId: string,
       skillProp: SkillProp,
       signal?: AbortSignal
     ) => {
-      throw new Error('Not implemented');
+      const result = await client.query({
+        query: GET_GAMERTAG_INDEX,
+        variables: {
+          playlistId,
+          skillProp,
+          xuid: wrapXuid(xuid),
+        },
+        context: {
+          fetchOptions: {
+            signal,
+          },
+        },
+      });
+      return result.data?.leaderboard?.xuidIndex ?? -1;
     },
     newEntries$: NEVER,
   };
