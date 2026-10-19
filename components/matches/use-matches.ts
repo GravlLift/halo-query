@@ -18,7 +18,7 @@ import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import { useNavigationController } from '../navigation-context';
 import { toaster } from '../ui/toaster';
 
-function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
+export function filterUsesGamertags(jsonLogicTree: JsonLogicTree): boolean {
   // Traverse the object looking for gamertag references
   if (typeof jsonLogicTree === 'object') {
     for (const [key, val] of Object.entries(jsonLogicTree)) {
@@ -50,7 +50,7 @@ function visibleColumnsUsesGamertags(
   return false;
 }
 
-function getQueryStartDate(
+export function getQueryStartDate(
   logic: JsonLogicTree | undefined
 ): DateTime | undefined {
   if (!logic) {
@@ -96,7 +96,7 @@ function getQueryStartDate(
     }
   }
 }
-function getQueryEndDate(
+export function getQueryEndDate(
   jsonLogicTree: JsonLogicTree | undefined
 ): DateTime | undefined {
   if (!jsonLogicTree) {
@@ -141,6 +141,49 @@ function getQueryEndDate(
       }
     }
   }
+}
+
+export function createMatchFilter(
+  jsonLogicTree: JsonLogicTree,
+  xuid: string
+): (m: PlayerMatchHistoryStatsSkill) => boolean {
+  return (m) => {
+    try {
+      const player = m.MatchStats.Players.find((p) =>
+        compareXuids(p.xuid ?? '', xuid)
+      );
+      if (!player) {
+        return true;
+      }
+
+      const team = m.MatchStats.Teams.find(
+        (t) => t.TeamId === player.LastTeamId
+      );
+
+      const computedMatch = Object.fromEntries(
+        Object.entries(columns).map(([key, column]) => {
+          try {
+            return [
+              key,
+              ('queryValue' in column && column.queryValue
+                ? column.queryValue
+                : column.rawValue)({
+                match: m,
+                player,
+                team,
+              }),
+            ];
+          } catch (e) {
+            return [key, null];
+          }
+        })
+      );
+      return apply(jsonLogicTree, computedMatch);
+    } catch (e) {
+      console.warn(e);
+      return false;
+    }
+  };
 }
 
 export function useMatchesQuery(contextGamerTags: string[]) {
@@ -205,46 +248,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
           limit: pageSize,
           skip: (page - 1) * pageSize,
           filter: jsonLogicTree
-            ? (m) => {
-                try {
-                  if (!jsonLogicTree) {
-                    return true;
-                  }
-                  const player = m.MatchStats.Players.find((p) =>
-                    compareXuids(p.xuid ?? '', user.xuid)
-                  );
-                  if (!player) {
-                    return true;
-                  }
-
-                  const team = m.MatchStats.Teams.find(
-                    (t) => t.TeamId === player.LastTeamId
-                  );
-
-                  const computedMatch = Object.fromEntries(
-                    Object.entries(columns).map(([key, column]) => {
-                      try {
-                        return [
-                          key,
-                          ('queryValue' in column && column.queryValue
-                            ? column.queryValue
-                            : column.rawValue)({
-                            match: m,
-                            player,
-                            team,
-                          }),
-                        ];
-                      } catch (e) {
-                        return [key, null];
-                      }
-                    })
-                  );
-                  return apply(jsonLogicTree, computedMatch);
-                } catch (e) {
-                  console.warn(e);
-                  return false;
-                }
-              }
+            ? createMatchFilter(jsonLogicTree, user.xuid)
             : undefined,
           signal: _abortController.signal,
           loadUserData:

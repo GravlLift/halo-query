@@ -4,6 +4,13 @@ import { DateTime } from 'luxon';
 import { nextRedirectRejectionHandler } from './promise-helpers';
 import { JsonLogicTree } from '@react-awesome-query-builder/ui';
 import { HaloCaches } from '@gravllift/halo-helpers';
+import {
+  createMatchFilter,
+  filterUsesGamertags,
+  getQueryEndDate,
+  getQueryStartDate,
+} from '../../components/matches/use-matches';
+import { getPlayerMatches } from './player-matches';
 
 export async function getMatchPage(
   xuid: string,
@@ -135,17 +142,82 @@ async function binarySearch(
   }
 }
 
+async function getFilteredNextAndPreviousMatch(
+  user: { xuid: string; gamertag: string },
+  
+  matchId: string,
+  signal: AbortSignal,
+  filters: JsonLogicTree,
+  haloCaches: HaloCaches
+): Promise<{
+  previous: Pick<PlayerMatchHistory, 'MatchId'> | null;
+  next: Pick<PlayerMatchHistory, 'MatchId'> | null;
+} | null> {
+  const abortController = new AbortController();
+  const combinedSignal = abortSignalAny([signal, abortController.signal]);
+  const { iterator } = getPlayerMatches(
+    undefined,
+    [user.gamertag],
+    {
+      limit: Number.MAX_SAFE_INTEGER,
+      filter: createMatchFilter(filters, user.xuid),
+      signal: combinedSignal,
+      loadUserData: filterUsesGamertags(filters),
+      dateRange: {
+        start: getQueryStartDate(filters),
+        end: getQueryEndDate(filters),
+      },
+    },
+    haloCaches
+  );
+
+  // Matches are yielded newest first, so the match yielded just before the
+  // current one is the "next" match.
+  let next: Pick<PlayerMatchHistory, 'MatchId'> | null = null;
+  let found = false;
+  try {
+    for await (const match of iterator) {
+      if (found) {
+        return { next, previous: match };
+      }
+      if (match.MatchId === matchId) {
+        found = true;
+      } else {
+        next = match;
+      }
+    }
+  } finally {
+    abortController.abort('Neighbor search complete');
+  }
+  return found ? { next, previous: null } : null;
+}
+
 export async function getNextAndPreviousMatch(
-  xuid: string,
+  user: { xuid: string; gamertag: string },
   matchId: string,
   pageSize: number,
   signal: AbortSignal,
   filters: JsonLogicTree | undefined,
   haloCaches: HaloCaches
 ): Promise<{
-  previous: PlayerMatchHistory | null;
-  next: PlayerMatchHistory | null;
+  previous: Pick<PlayerMatchHistory, 'MatchId'> | null;
+  next: Pick<PlayerMatchHistory, 'MatchId'> | null;
 }> {
+  const { xuid } = user;
+  if (filters) {
+    const filtered = await getFilteredNextAndPreviousMatch(
+      user,
+      matchId,
+      signal,
+      filters,
+      haloCaches
+    );
+    if (filtered) {
+      return filtered;
+    }
+    // Current match isn't in the query results, fall back to full history
+  }
+
   const matchPageNumber = await getMatchPage(
     xuid,
     matchId,
