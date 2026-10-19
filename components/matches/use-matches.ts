@@ -8,7 +8,7 @@ import { isAbortError } from '@gravllift/utilities';
 import type { JsonLogicTree } from '@react-awesome-query-builder/ui';
 import { apply, get_operator, get_values } from 'json-logic-js';
 import { DateTime } from 'luxon';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 import { appInsights } from '../../lib/application-insights/client';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
@@ -147,6 +147,7 @@ export function useMatchesQuery(contextGamerTags: string[]) {
   const haloCaches = useHaloCaches();
   const { signal: navigationStartSignal } = useNavigationController();
   const [abortController, setAbortController] = useState<AbortController>();
+  const currentControllerRef = useRef<AbortController>();
   useEffect(() => {
     function onAbort(this: AbortSignal) {
       if (typeof this.reason !== 'object') {
@@ -184,7 +185,16 @@ export function useMatchesQuery(contextGamerTags: string[]) {
       visibleColumns: (typeof columns)[ColumnName][]
     ) => {
       const user = await haloCaches.usersCache.get(contextGamerTags[0]);
+      currentControllerRef.current?.abort('Superseded by new query');
       const _abortController = new AbortController();
+      currentControllerRef.current = _abortController;
+      const isCurrent = () => currentControllerRef.current === _abortController;
+      // Reflect cancellation immediately rather than waiting for the iterator to unwind
+      _abortController.signal.addEventListener('abort', () => {
+        if (isCurrent()) {
+          setLoading(false);
+        }
+      });
       setAbortController(_abortController);
       setMatches([]);
       setQueryPageSize(pageSize);
@@ -253,6 +263,9 @@ export function useMatchesQuery(contextGamerTags: string[]) {
       //appInsights.startTrackEvent('MatchesQuery');
       try {
         for await (const match of iterator) {
+          if (!isCurrent()) {
+            break;
+          }
           setMatches((matches) => {
             if (!matches.some((m) => m.MatchId === match.MatchId)) {
               return [...matches, match];
@@ -272,7 +285,9 @@ export function useMatchesQuery(contextGamerTags: string[]) {
                 duration: 5000,
               });
             }
-            setMatches([]);
+            if (isCurrent()) {
+              setMatches([]);
+            }
             return;
           } else if (isAbortError(e)) {
             return;
@@ -281,7 +296,9 @@ export function useMatchesQuery(contextGamerTags: string[]) {
         }
         throw e;
       } finally {
-        setLoading(false);
+        if (isCurrent()) {
+          setLoading(false);
+        }
         const properties: Record<string, string> = {
           gamertags: contextGamerTags.join(','),
           page: page.toString(),
