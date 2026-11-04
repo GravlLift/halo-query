@@ -6,7 +6,7 @@ const path = require('path');
 const nextConfig = {
   productionBrowserSourceMaps: true,
   output: 'standalone',
-  transpilePackages: ['@gravllift/utilities', '@gravllift/halo-helpers'],
+  transpilePackages: ['@gravllift/utilities', '@gravllift/halo-helpers', '@gravllift/halo-film', '@gravllift/halo-infinite-maps'],
   outputFileTracingRoot: path.join(__dirname, '../../'),
   eslint: {
     ignoreDuringBuilds: true,

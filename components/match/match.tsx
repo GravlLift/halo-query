@@ -1,7 +1,10 @@
 'use client';
 import {
   Box,
+  Button,
   Center,
+  CloseButton,
+  Dialog,
   Flex,
   Heading,
   Link,
@@ -46,6 +49,7 @@ import PlayerCategoryTable from './player-category-table';
 import Score from './score';
 import SkillRankingsTable from './skill-rankings-table';
 import { useTeamPresets } from './team-presets';
+import Replay from '../replay/replay';
 
 export interface MatchProps {
   matchId: string;
@@ -163,7 +167,7 @@ export default function Match({ matchId, filters }: MatchProps) {
 
   return (
     <>
-      <Flex justifyContent="center">
+      <Flex justifyContent="center" mt="2">
         <Box maxW="1000px" w="100%">
           <NavigationButtons
             focusPlayerPromise={focusPlayerPromise}
@@ -264,6 +268,30 @@ export default function Match({ matchId, filters }: MatchProps) {
           </Flex>
           {match && (
             <>
+              <Dialog.Root size="full" lazyMount unmountOnExit>
+                <Dialog.Trigger asChild>
+                  <Button variant="outline" size="sm">
+                    Open Dialog
+                  </Button>
+                </Dialog.Trigger>
+                <Portal>
+                  <Dialog.Backdrop />
+                  <Dialog.Positioner>
+                    <Dialog.Content
+                      h="100dvh"
+                      display="flex"
+                      flexDirection="column"
+                    >
+                      <Dialog.CloseTrigger asChild>
+                        <CloseButton size="sm" />
+                      </Dialog.CloseTrigger>
+                      <Dialog.Body flex={1} minH={0} pt={10}>
+                        <Replay match={match} />
+                      </Dialog.Body>
+                    </Dialog.Content>
+                  </Dialog.Positioner>
+                </Portal>
+              </Dialog.Root>
               {'Files' in match.MatchInfo.MapVariant ? (
                 <Center mb={2}>
                   <Box
