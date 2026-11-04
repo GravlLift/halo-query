@@ -1,6 +1,7 @@
 import '@gravllift/utilities';
 import type { JSX } from 'react';
 import Assault from './articles/assault';
+import Replays from './articles/replays';
 import BulkEsr from './articles/bulk-esr';
 import Cu29PatchRolledOut from './articles/cu29-patch-rolled-out';
 import DeathCounterfactualsAreBonkers from './articles/death-counterfactuals-are-bonkers';
@@ -24,6 +25,11 @@ const articles: Record<
     Component: () => JSX.Element;
   }
 > = {
+  replays: {
+    date: '2026-11-04',
+    title: 'Replays Feature',
+    Component: Replays,
+  },
   'bulk-esr': {
     date: '2026-08-03',
     title: 'Bulk ESR Page',

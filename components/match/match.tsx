@@ -27,8 +27,8 @@ import {
   ResolvablePromise,
 } from '@gravllift/utilities';
 import { MatchSkill } from 'halo-infinite-api';
-import { ExternalLink } from 'lucide-react';
-import { DateTime, Duration } from 'luxon';
+import { ExternalLink, TvMinimalPlay } from 'lucide-react';
+import { Duration } from 'luxon';
 import { useEffect, useMemo, useState } from 'react';
 import { Unsubscribable } from 'rxjs';
 import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
@@ -40,16 +40,17 @@ import GameVariantCategoryDisplay from '../game-variant-category-display/game-va
 import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import { Loading } from '../loading';
 import { useNavigationController } from '../navigation-context';
+import Replay from '../replay/replay';
 import RoleGraph from '../role-graph';
 import { Tooltip } from '../ui/tooltip';
 import { VerticalCenter } from '../vertical-center';
 import FFARoleChart from './ffa-role-chart';
+import MatchHeader from './match-header';
 import { NavigationButtons } from './navigation-buttons';
 import PlayerCategoryTable from './player-category-table';
 import Score from './score';
 import SkillRankingsTable from './skill-rankings-table';
 import { useTeamPresets } from './team-presets';
-import Replay from '../replay/replay';
 
 export interface MatchProps {
   matchId: string;
@@ -176,36 +177,7 @@ export default function Match({ matchId, filters }: MatchProps) {
           />
           <Flex gap={2}>
             <Box flexGrow={1}>
-              <Heading size="lg">
-                {match ? (
-                  <>
-                    {'PublicName' in match.MatchInfo.UgcGameVariant ? (
-                      match.MatchInfo.UgcGameVariant.PublicName
-                    ) : (
-                      <>
-                        <GameVariantCategoryDisplay
-                          gameVariantCategory={
-                            match.MatchInfo.GameVariantCategory
-                          }
-                        />{' '}
-                      </>
-                    )}
-                    {'PublicName' in match.MatchInfo.MapVariant
-                      ? ` on ${match.MatchInfo.MapVariant.PublicName}`
-                      : ''}
-                  </>
-                ) : (
-                  matchId
-                )}
-              </Heading>
-              <Box flexGrow={1}>
-                {match &&
-                  DateTime.fromISO(match.MatchInfo.StartTime).toLocaleString(
-                    DateTime.DATETIME_SHORT,
-                  )}
-              </Box>
-            </Box>
-            <VerticalCenter>
+              <MatchHeader matchId={matchId} match={match} />
               <Menu.Root>
                 <Menu.Trigger as={Link} aria-label="External Links">
                   <Text hideBelow="sm">External Match Links</Text>
@@ -264,34 +236,42 @@ export default function Match({ matchId, filters }: MatchProps) {
                   </Menu.Positioner>
                 </Portal>
               </Menu.Root>
+            </Box>
+            <VerticalCenter hideBelow="md">
+              {match && (
+                <Dialog.Root size="full" lazyMount unmountOnExit={false}>
+                  <Dialog.Trigger asChild>
+                    <Button variant="outline" size="sm">
+                      <TvMinimalPlay />
+                      <Text>Watch Replay</Text>
+                    </Button>
+                  </Dialog.Trigger>
+                  <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content
+                        h="100dvh"
+                        display="flex"
+                        flexDirection="column"
+                      >
+                        <Dialog.CloseTrigger asChild>
+                          <CloseButton size="sm" />
+                        </Dialog.CloseTrigger>
+                        <Dialog.Title p={4}>
+                          <MatchHeader matchId={matchId} match={match} />
+                        </Dialog.Title>
+                        <Dialog.Body flex={1} minH={0} pb={'70px'}>
+                          <Replay match={match} />
+                        </Dialog.Body>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Portal>
+                </Dialog.Root>
+              )}
             </VerticalCenter>
           </Flex>
           {match && (
             <>
-              <Dialog.Root size="full" lazyMount unmountOnExit>
-                <Dialog.Trigger asChild>
-                  <Button variant="outline" size="sm">
-                    Open Dialog
-                  </Button>
-                </Dialog.Trigger>
-                <Portal>
-                  <Dialog.Backdrop />
-                  <Dialog.Positioner>
-                    <Dialog.Content
-                      h="100dvh"
-                      display="flex"
-                      flexDirection="column"
-                    >
-                      <Dialog.CloseTrigger asChild>
-                        <CloseButton size="sm" />
-                      </Dialog.CloseTrigger>
-                      <Dialog.Body flex={1} minH={0} pt={10}>
-                        <Replay match={match} />
-                      </Dialog.Body>
-                    </Dialog.Content>
-                  </Dialog.Positioner>
-                </Portal>
-              </Dialog.Root>
               {'Files' in match.MatchInfo.MapVariant ? (
                 <Center mb={2}>
                   <Box
