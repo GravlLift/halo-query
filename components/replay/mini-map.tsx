@@ -661,10 +661,6 @@ export default function MiniMap({
           bg="blackAlpha.700"
           color="white"
         >
-          <Text fontSize="xs" fontVariantNumeric="tabular-nums">
-            {Math.round(view.zoom * 100)}%
-          </Text>
-          {/* Logarithmic so each step is the same relative zoom; top is zoomed in. */}
           <Slider.Root
             aria-label={['Zoom']}
             orientation="vertical"

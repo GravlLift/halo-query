@@ -13,7 +13,7 @@ export default function MatchHeader({
 }) {
   return (
     <>
-      <Heading size="lg">
+      <Text fontSize="lg">
         {match ? (
           <>
             {'PublicName' in match.MatchInfo.UgcGameVariant ? (
@@ -32,7 +32,7 @@ export default function MatchHeader({
         ) : (
           matchId
         )}
-      </Heading>
+      </Text>
       <Box flexGrow={1}>
         <Text fontSize="sm">
           {match &&

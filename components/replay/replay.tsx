@@ -98,7 +98,7 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
     const abort = new AbortController();
     abortRef.current = abort;
     try {
-      setState({ status: 'loading', progress: 'Fetching film manifest…' });
+      setState({ status: 'loading', progress: 'Fetching film manifest...' });
       const film = await haloInfiniteClient.spectateMatch(match.MatchId, {
         signal: abort.signal,
       });
@@ -115,8 +115,9 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
         onProgress: (downloaded, total) =>
           setState({
             status: 'loading',
-            progress: `Downloaded chunk ${downloaded}/${total}…`,
+            progress: `Downloaded chunk ${downloaded}/${total}...`,
           }),
+        onStage: (progress) => setState({ status: 'loading', progress }),
       });
       setTimeMs(replay.startMs);
       setState({ status: 'ready', replay });
@@ -172,7 +173,7 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
             <Text>
               {state.status === 'loading'
                 ? state.progress
-                : 'Fetching film manifest…'}
+                : 'Fetching film manifest...'}
             </Text>
           </>
         )}
