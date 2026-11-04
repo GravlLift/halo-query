@@ -1,12 +1,12 @@
-import { Box, Button, Flex, Slider, Text } from '@chakra-ui/react';
-import { useEffect, useRef, useState } from 'react';
+import { Box, Button, Flex, Slider } from '@chakra-ui/react';
 import type {
-  MapObjective,
+  Replay as FilmReplay,
   HillState,
+  MapObjective,
   ReplayProjectile,
   ZoneState,
 } from '@gravllift/halo-film';
-import type { Replay as FilmReplay } from '@gravllift/halo-film';
+import { useEffect, useRef, useState } from 'react';
 import { LoadedBackground, LoadState } from './types';
 
 const DEFAULT_VIEW: View = { zoom: 1, panX: 0, panY: 0 };
