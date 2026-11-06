@@ -3,7 +3,6 @@ import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 import { config } from '../config';
 import { TelemetryLevel, telemetryLevel } from '../telemetry-level';
 import { handleDependencyTelemetry } from './dependency-telemetry-handler';
-// import './websocket-dependency-tracker';
 
 declare global {
   const WorkerGlobalScope: { new (): unknown } | undefined;

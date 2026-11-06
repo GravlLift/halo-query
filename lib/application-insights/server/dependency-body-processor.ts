@@ -1,7 +1,4 @@
 import { ResolvablePromise } from '@gravllift/utilities';
-import { BatchInterceptor } from '@mswjs/interceptors';
-import { ClientRequestInterceptor } from '@mswjs/interceptors/ClientRequest';
-import { FetchInterceptor } from '@mswjs/interceptors/fetch';
 import {
   Span,
   SpanKind,
@@ -12,12 +9,15 @@ import {
 import { HttpRequestCustomAttributeFunction } from '@opentelemetry/instrumentation-http';
 import { RequestHookFunction } from '@opentelemetry/instrumentation-undici';
 import { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { randomUUID } from 'crypto';
 import {
   ATTR_HTTP_REQUEST_HEADER,
   ATTR_HTTP_RESPONSE_HEADER,
 } from '@opentelemetry/semantic-conventions';
 import ExpiryMap from 'expiry-map';
 import { ClientRequest } from 'http';
+
+const REQUEST_ID_HEADER = 'x-halo-query-request-id';
 
 // Persist HTTP bodies for 10 minutes
 type RequestResponseData = {
@@ -26,9 +26,6 @@ type RequestResponseData = {
 };
 
 export class DependencyBodyProcessor implements SpanProcessor {
-  private hostnameRequestIdMap = new ExpiryMap<string, string[]>(
-    10 * 60 * 1000
-  );
   private dependencyCompletePromises = new ExpiryMap<
     string,
     ResolvablePromise<RequestResponseData>
@@ -40,52 +37,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
   private dependencyHandledPromises: Promise<void>[] = [];
 
   constructor() {
-    const interceptor = new BatchInterceptor({
-      name: 'dependency-body-processing-interceptor',
-      interceptors: [new ClientRequestInterceptor(), new FetchInterceptor()],
-    });
-
-    interceptor.apply();
-    interceptor.on('request', async ({ request, requestId }) => {
-      request.headers.set('msw-request-id', requestId);
-      const hostname = new URL(request.url).hostname;
-      const hostnameRequestMapEntry =
-        this.hostnameRequestIdMap.get(hostname) ?? [];
-      hostnameRequestMapEntry.push(requestId);
-      this.hostnameRequestIdMap.set(hostname, hostnameRequestMapEntry);
-    });
-    interceptor.on('response', async ({ request, response, requestId }) => {
-      const completionPromise = this.dependencyCompletePromises.get(requestId);
-
-      if (!completionPromise) {
-        return;
-      }
-
-      const clonedResponse = response.clone();
-
-      Promise.all([request.text(), clonedResponse.text()])
-        .then(([requestBody, responseBody]) => {
-          completionPromise.resolve({
-            request: {
-              body: requestBody,
-            },
-            response: {
-              headers: response.headers,
-              body: responseBody,
-            },
-          });
-        })
-        .catch((err) => {
-          completionPromise.reject(err);
-        });
-    });
-    interceptor.on('unhandledException', ({ requestId, error }) => {
-      this.dependencyCompletePromises.get(requestId)?.reject(error);
-      throw error; // https://github.com/mswjs/interceptors?tab=readme-ov-file#error-handling
-    });
-
-    // TODO: Add handler for node errors:
-    // https://github.com/mswjs/interceptors/issues/667
+    this.installFetchCapture();
   }
 
   async forceFlush() {
@@ -100,8 +52,11 @@ export class DependencyBodyProcessor implements SpanProcessor {
     request
   ) => {
     let headers: [string, string | undefined][];
+    let requestId: string | undefined;
 
     if (request instanceof ClientRequest) {
+      requestId = randomUUID();
+      request.setHeader(REQUEST_ID_HEADER, requestId);
       const headerNames = request.getHeaderNames();
       headers = [];
       for (const headerName of headerNames) {
@@ -113,26 +68,32 @@ export class DependencyBodyProcessor implements SpanProcessor {
         .split('\r\n')
         .map((header) => header.split(': ') as [string, string]);
     } else if (Array.isArray(request.headers)) {
-      headers = request.headers.map((header) => {
-        // header might be a colon-separated string or several colon-separated strings
-        if (typeof header === 'string') {
-          const [key, ...rest] = header.split(': ');
-          return [key, rest[0]];
+      headers = [];
+      for (let index = 0; index < request.headers.length; index += 1) {
+        const header = request.headers[index];
+        if (Array.isArray(header)) {
+          const [key, ...values] = header;
+          headers.push([key.split(': ')[0], JSON.stringify(values)]);
+        } else if (header.includes(': ')) {
+          const [key, ...value] = header.split(': ');
+          headers.push([key, value.join(': ')]);
         } else {
-          // The same header was provided multiple times, serialize values as a JSON array
-          const key = header[0].split(': ')[0];
-          const values = header.map((h) => h.split(': ')[1]);
-          return [key, JSON.stringify(values)];
+          const value = request.headers[index + 1];
+          if (typeof value === 'string' || Array.isArray(value)) {
+            headers.push([
+              header,
+              Array.isArray(value) ? JSON.stringify(value) : value,
+            ]);
+            index += 1;
+          }
         }
-      });
+      }
     } else {
       headers = Object.entries(request.headers).map(([key, value]) => [
         key,
         value?.toString(),
       ]);
     }
-
-    let mswRequestId: string | undefined;
 
     for (const header of headers) {
       const [key, value] = header;
@@ -141,30 +102,127 @@ export class DependencyBodyProcessor implements SpanProcessor {
         continue;
       }
 
-      if (key === 'msw-request-id') {
-        mswRequestId = value;
+      if (key.toLowerCase() === REQUEST_ID_HEADER) {
+        requestId = value;
       }
 
       span.setAttribute(ATTR_HTTP_REQUEST_HEADER(key.toLowerCase()), value);
     }
 
-    if (!mswRequestId) {
-      // If the interceptor didn't annotate this request, skip body processing
+    if (!requestId) {
+      // If the capture wrapper didn't annotate this request, skip body processing
       // but still record available headers to avoid breaking instrumentation.
       return;
     }
 
-    this.prepareResponseHandler(mswRequestId, span);
+    this.prepareResponseHandler(requestId, span);
+    if (request instanceof ClientRequest) {
+      this.captureClientRequest(request, requestId);
+    }
   };
 
-  private prepareResponseHandler(mswRequestId: string, span: Span) {
-    if (!this.dependencyCompletePromises.has(mswRequestId)) {
+  private installFetchCapture() {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      const requestId = randomUUID();
+      request.headers.set(REQUEST_ID_HEADER, requestId);
+      const requestBodyPromise = request.clone().text().catch(() => '');
+
+      try {
+        const response = await originalFetch.call(globalThis, request);
+        const completionPromise = this.dependencyCompletePromises.get(requestId);
+        if (completionPromise) {
+          void Promise.all([
+            requestBodyPromise,
+            response.clone().text().catch(() => ''),
+          ])
+            .then(([requestBody, responseBody]) => {
+              completionPromise.resolve({
+                request: { body: requestBody },
+                response: {
+                  headers: new Headers(response.headers),
+                  body: responseBody,
+                },
+              });
+            })
+            .catch((error: Error) => completionPromise.reject(error));
+        }
+        return response;
+      } catch (error) {
+        this.dependencyCompletePromises.get(requestId)?.reject(error);
+        throw error;
+      }
+    };
+  }
+
+  private captureClientRequest(request: ClientRequest, requestId: string) {
+    const requestBodyChunks: Buffer[] = [];
+    const originalWrite = request.write;
+    Object.defineProperty(request, 'write', {
+      value: (...args: unknown[]) => {
+        const [chunk] = args;
+        if (typeof chunk === 'string' || chunk instanceof Uint8Array) {
+          requestBodyChunks.push(Buffer.from(chunk));
+        }
+        return Reflect.apply(originalWrite, request, args);
+      },
+    });
+
+    const originalEnd = request.end;
+    Object.defineProperty(request, 'end', {
+      value: (...args: unknown[]) => {
+        const [chunk] = args;
+        if (typeof chunk === 'string' || chunk instanceof Uint8Array) {
+          requestBodyChunks.push(Buffer.from(chunk));
+        }
+        return Reflect.apply(originalEnd, request, args);
+      },
+    });
+
+    request.once('response', (response) => {
+      const responseBodyChunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer | string) => {
+        responseBodyChunks.push(Buffer.from(chunk));
+      });
+      response.once('end', () => {
+        const responseHeaders = new Headers();
+        for (const [name, value] of Object.entries(response.headers)) {
+          if (Array.isArray(value)) {
+            for (const entry of value) {
+              responseHeaders.append(name, entry);
+            }
+          } else if (value !== undefined) {
+            responseHeaders.append(name, value);
+          }
+        }
+        this.dependencyCompletePromises.get(requestId)?.resolve({
+          request: {
+            body: Buffer.concat(requestBodyChunks).toString(),
+          },
+          response: {
+            headers: responseHeaders,
+            body: Buffer.concat(responseBodyChunks).toString(),
+          },
+        });
+      });
+      response.once('error', (error) => {
+        this.dependencyCompletePromises.get(requestId)?.reject(error);
+      });
+    });
+    request.once('error', (error) => {
+      this.dependencyCompletePromises.get(requestId)?.reject(error);
+    });
+  }
+
+  private prepareResponseHandler(requestId: string, span: Span) {
+    if (!this.dependencyCompletePromises.has(requestId)) {
       const spanContext = span.spanContext();
 
       const dependencyCompletePromise =
         new ResolvablePromise<RequestResponseData>();
       this.dependencyCompletePromises.set(
-        mswRequestId,
+        requestId,
         dependencyCompletePromise
       );
 
@@ -184,15 +242,12 @@ export class DependencyBodyProcessor implements SpanProcessor {
             newSpan.setAttribute('http.response.body', response.body);
           }
 
-          for (const [key, value] of Object.entries(response.headers)) {
-            if (value == null) {
-              continue;
-            }
+          response.headers.forEach((value, key) => {
             newSpan.setAttribute(
               ATTR_HTTP_RESPONSE_HEADER(key.toLowerCase()),
               value
             );
-          }
+          });
 
           newSpan.end(readableSpan.endTime);
         })
@@ -206,27 +261,8 @@ export class DependencyBodyProcessor implements SpanProcessor {
           newSpan.end(readableSpan.endTime);
         })
         .finally(async () => {
-          const readableSpan = await spanCompletePromise;
-          const httpUrl = readableSpan.attributes['http.url'];
-          if (typeof httpUrl === 'string') {
-            const hostname = new URL(httpUrl).hostname;
-            const hostnameRequestMapEntry =
-              this.hostnameRequestIdMap.get(hostname);
-            if (hostnameRequestMapEntry) {
-              const remainingHostnameRequests = hostnameRequestMapEntry.filter(
-                (id) => id !== mswRequestId
-              );
-              if (remainingHostnameRequests.length === 0) {
-                this.hostnameRequestIdMap.delete(hostname);
-              } else {
-                this.hostnameRequestIdMap.set(
-                  hostname,
-                  remainingHostnameRequests
-                );
-              }
-            }
-          }
-          this.dependencyCompletePromises.delete(mswRequestId);
+          await spanCompletePromise;
+          this.dependencyCompletePromises.delete(requestId);
           this.spanCompletePromises.delete(spanContext.spanId);
           this.dependencyHandledPromises.splice(
             this.dependencyHandledPromises.indexOf(dependencyHandledPromise),

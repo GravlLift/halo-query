@@ -1,12 +1,10 @@
 import { ResolvablePromise } from '@gravllift/utilities';
 import { IDependencyInitializerDetails } from '@microsoft/applicationinsights-dependencies-js';
 import { ApplicationInsights } from '@microsoft/applicationinsights-web';
-import { BatchInterceptor } from '@mswjs/interceptors';
-import { FetchInterceptor } from '@mswjs/interceptors/fetch';
-import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
 import ExpiryMap from 'expiry-map';
 import ExpirySet from 'expiry-set';
 import { Duration } from 'luxon';
+import { installHttpRequestCapture } from './http-request-capture';
 
 // Persist HTTP bodies for 10 minutes or until application insights
 // logs them
@@ -20,36 +18,14 @@ const data = new ExpiryMap<
 // Track which requests have been handled for 10 minutes, then forget
 const handledRequests = new ExpirySet<string>(10 * 60 * 1000);
 
-const interceptor = new BatchInterceptor({
-  name: 'dependency-body-processing-interceptor',
-  interceptors: [new FetchInterceptor(), new XMLHttpRequestInterceptor()],
-});
-
-interceptor.apply();
-interceptor.on('response', async ({ request, response }) => {
-  const appInsightsId = request.headers.get('request-id');
-  if (appInsightsId) {
-    let dataPromise = data.get(appInsightsId);
-
-    if (!dataPromise) {
-      dataPromise = new ResolvablePromise();
-      data.set(appInsightsId, dataPromise);
-    }
-
-    if (dataPromise.isCompleted) {
-      return;
-    }
-
-    dataPromise.resolve({
-      request: {
-        headers: request.headers,
-        body: await request.clone().text(),
-      },
-      response: {
-        headers: response.headers,
-        body: await response.clone().text(),
-      },
-    });
+installHttpRequestCapture((requestId, exchange) => {
+  let dataPromise = data.get(requestId);
+  if (!dataPromise) {
+    dataPromise = new ResolvablePromise();
+    data.set(requestId, dataPromise);
+  }
+  if (!dataPromise.isCompleted) {
+    dataPromise.resolve(exchange);
   }
 });
 

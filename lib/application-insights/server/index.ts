@@ -17,17 +17,17 @@ import { config } from '../config';
 const globalKey = '__azureMonitorInitialized__';
 const g = globalThis as unknown as Record<string, unknown>;
 
-const dependencyBodyProcessor = new DependencyBodyProcessor();
-const hooks = {
-  request: {
-    undici: [dependencyBodyProcessor.requestHook] as RequestHookFunction[],
-    http: [
-      dependencyBodyProcessor.requestHook,
-    ] as HttpRequestCustomAttributeFunction[],
-  },
-};
-
 if (config.connectionString && !g[globalKey]) {
+  const dependencyBodyProcessor = new DependencyBodyProcessor();
+  const hooks = {
+    request: {
+      undici: [dependencyBodyProcessor.requestHook] as RequestHookFunction[],
+      http: [
+        dependencyBodyProcessor.requestHook,
+      ] as HttpRequestCustomAttributeFunction[],
+    },
+  };
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useAzureMonitor({
     azureMonitorExporterOptions: {

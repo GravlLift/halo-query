@@ -29,7 +29,6 @@
     "@gravllift/utilities": "0.0.0",
     "@microsoft/applicationinsights-react-js": "^3.4.3",
     "@microsoft/applicationinsights-web": "^2.8.18",
-    "@mswjs/interceptors": "^0.40.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/instrumentation": "^0.207.0",
     "@opentelemetry/instrumentation-http": "^0.207.0",
