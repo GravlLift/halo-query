@@ -405,7 +405,8 @@ function draw(
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    const heading = (-(point.aimYawDeg ?? 0) * Math.PI) / 180;
+    const heading =
+      (-(point.aimYawDeg ?? point.facingYawDeg ?? 0) * Math.PI) / 180;
     // Wing angle sits between equilateral (120°) and a narrow dart (135°).
     const tip = 10;
     const back = 7.5;
