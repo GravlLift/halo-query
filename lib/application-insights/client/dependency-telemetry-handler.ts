@@ -31,7 +31,7 @@ installHttpRequestCapture((requestId, exchange) => {
 
 export const handleDependencyTelemetry = (
   envelope: IDependencyInitializerDetails,
-  telemetryClient: ApplicationInsights
+  telemetryClient: ApplicationInsights,
 ) => {
   let shouldSubmitTelemetry = true;
   if (['Http', 'Fetch'].includes(envelope.item.type as string)) {
@@ -68,7 +68,7 @@ export const handleDependencyTelemetry = (
           duration:
             typeof existingTelemetry.duration === 'string'
               ? Duration.fromISOTime(
-                  existingTelemetry.duration as string
+                  existingTelemetry.duration as string,
                 ).toMillis()
               : (existingTelemetry.duration as number),
           properties: {

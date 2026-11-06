@@ -3,7 +3,10 @@ export type CapturedHttpExchange = {
   response: { headers: Headers; body: string };
 };
 
-type ExchangeHandler = (requestId: string, exchange: CapturedHttpExchange) => void;
+type ExchangeHandler = (
+  requestId: string,
+  exchange: CapturedHttpExchange,
+) => void;
 
 type XMLHttpRequestState = {
   headers: [string, string][];
@@ -22,14 +25,26 @@ export function installHttpRequestCapture(onExchange: ExchangeHandler): void {
   globalThis.fetch = async (input, init) => {
     const request = new Request(input, init);
     const requestId = request.headers.get('request-id');
-    const requestBody = request.clone().text().catch(() => '');
+    const requestBody = request
+      .clone()
+      .text()
+      .catch(() => '');
     const response = await originalFetch.call(globalThis, request);
 
     if (requestId) {
-      void Promise.all([requestBody, response.clone().text().catch(() => '')])
+      void Promise.all([
+        requestBody,
+        response
+          .clone()
+          .text()
+          .catch(() => ''),
+      ])
         .then(([requestText, responseText]) => {
           onExchange(requestId, {
-            request: { headers: new Headers(request.headers), body: requestText },
+            request: {
+              headers: new Headers(request.headers),
+              body: requestText,
+            },
             response: {
               headers: new Headers(response.headers),
               body: responseText,
@@ -90,22 +105,26 @@ export function installHttpRequestCapture(onExchange: ExchangeHandler): void {
           void Promise.all([
             bodyToText(state.body),
             xhrResponseBodyToText(this),
-          ]).then(([requestText, responseText]) => {
-            const responseHeaders = new Headers();
-            for (const line of this.getAllResponseHeaders().trim().split(/[\r\n]+/)) {
-              const separator = line.indexOf(':');
-              if (separator > 0) {
-                responseHeaders.append(
-                  line.slice(0, separator).trim(),
-                  line.slice(separator + 1).trim(),
-                );
+          ])
+            .then(([requestText, responseText]) => {
+              const responseHeaders = new Headers();
+              for (const line of this.getAllResponseHeaders()
+                .trim()
+                .split(/[\r\n]+/)) {
+                const separator = line.indexOf(':');
+                if (separator > 0) {
+                  responseHeaders.append(
+                    line.slice(0, separator).trim(),
+                    line.slice(separator + 1).trim(),
+                  );
+                }
               }
-            }
-            onExchange(requestId, {
-              request: { headers: requestHeaders, body: requestText },
-              response: { headers: responseHeaders, body: responseText },
-            });
-          }).catch(() => {});
+              onExchange(requestId, {
+                request: { headers: requestHeaders, body: requestText },
+                response: { headers: responseHeaders, body: responseText },
+              });
+            })
+            .catch(() => {});
         },
         { once: true },
       );

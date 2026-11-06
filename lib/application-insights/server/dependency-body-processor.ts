@@ -49,7 +49,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
 
   requestHook: HttpRequestCustomAttributeFunction & RequestHookFunction = (
     span,
-    request
+    request,
   ) => {
     let headers: [string, string | undefined][];
     let requestId: string | undefined;
@@ -127,15 +127,22 @@ export class DependencyBodyProcessor implements SpanProcessor {
       const request = new Request(input, init);
       const requestId = randomUUID();
       request.headers.set(REQUEST_ID_HEADER, requestId);
-      const requestBodyPromise = request.clone().text().catch(() => '');
+      const requestBodyPromise = request
+        .clone()
+        .text()
+        .catch(() => '');
 
       try {
         const response = await originalFetch.call(globalThis, request);
-        const completionPromise = this.dependencyCompletePromises.get(requestId);
+        const completionPromise =
+          this.dependencyCompletePromises.get(requestId);
         if (completionPromise) {
           void Promise.all([
             requestBodyPromise,
-            response.clone().text().catch(() => ''),
+            response
+              .clone()
+              .text()
+              .catch(() => ''),
           ])
             .then(([requestBody, responseBody]) => {
               completionPromise.resolve({
@@ -221,10 +228,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
 
       const dependencyCompletePromise =
         new ResolvablePromise<RequestResponseData>();
-      this.dependencyCompletePromises.set(
-        requestId,
-        dependencyCompletePromise
-      );
+      this.dependencyCompletePromises.set(requestId, dependencyCompletePromise);
 
       const spanCompletePromise = new ResolvablePromise<ReadableSpan>();
       this.spanCompletePromises.set(spanContext.spanId, spanCompletePromise);
@@ -245,7 +249,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
           response.headers.forEach((value, key) => {
             newSpan.setAttribute(
               ATTR_HTTP_RESPONSE_HEADER(key.toLowerCase()),
-              value
+              value,
             );
           });
 
@@ -266,7 +270,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
           this.spanCompletePromises.delete(spanContext.spanId);
           this.dependencyHandledPromises.splice(
             this.dependencyHandledPromises.indexOf(dependencyHandledPromise),
-            1
+            1,
           );
         });
       this.dependencyHandledPromises.push(dependencyHandledPromise);
