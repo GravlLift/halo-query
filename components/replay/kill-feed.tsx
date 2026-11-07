@@ -140,10 +140,16 @@ const KillFeedContent = memo(
               <Box
                 key={index}
                 data-feed-index={index}
+                aria-current={index === activeIndex ? 'true' : undefined}
                 py={2}
                 px={1}
+                bg={index === activeIndex ? 'whiteAlpha.200' : undefined}
+                borderLeftWidth="3px"
+                borderLeftColor={
+                  index === activeIndex ? 'yellow.300' : 'transparent'
+                }
                 borderBottomWidth="1px"
-                borderColor="whiteAlpha.200"
+                borderBottomColor="whiteAlpha.200"
                 opacity={index <= activeIndex ? 1 : 0.6}
                 fontSize="xs"
                 overflowWrap="anywhere"
