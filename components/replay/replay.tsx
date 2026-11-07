@@ -8,11 +8,12 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
-import { Pause, Play } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { List, Pause, Play } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
 import { useTeamPresets } from '../match/team-presets';
 import MiniMap from './mini-map';
+import { KillFeed } from './kill-feed';
 import { TeamPanel } from './team-panel';
 import { Bounds, LoadState, LoadedBackground } from './types';
 
@@ -74,10 +75,16 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [hover, setHover] = useState<{ px: number; timeMs: number }>();
+  const [feedVisible, setFeedVisible] = useState(true);
+  const [feedOverlay, setFeedOverlay] = useState<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController>();
   const [background, setBackground] = useState<LoadedBackground>();
   const backgroundSpec =
     state.status === 'ready' ? state.replay.map.background : undefined;
+  const points = useMemo(
+    () => (state.status === 'ready' ? state.replay.at(timeMs) : []),
+    [state, timeMs],
+  );
   useEffect(() => {
     setBackground(undefined);
     if (!backgroundSpec) return;
@@ -233,25 +240,60 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
         <TeamPanel
           players={leftPlayers}
           replay={replay}
+          points={points}
           timeMs={timeMs}
           color={teamColorOf(leftTeam)}
           side="left"
         />
-        <MiniMap
-          state={state}
-          timeMs={timeMs}
-          teamColors={teamColors}
-          objectives={state.replay.map.objectives}
-          background={background}
-        />
+        <Box position="relative" display="grid" minW={0} minH={0}>
+          <MiniMap
+            state={state}
+            points={points}
+            timeMs={timeMs}
+            teamColors={teamColors}
+            objectives={state.replay.map.objectives}
+            background={background}
+            draggable={true}
+            leftOverlay={feedVisible ? feedOverlay : null}
+          />
+          <Box
+            ref={setFeedOverlay}
+            display={feedVisible ? 'block' : 'none'}
+            position="absolute"
+            top={2}
+            bottom={2}
+            left={2}
+            w="min(240px, 42%)"
+            p={2}
+            bg="blackAlpha.800"
+            borderRadius="md"
+          >
+            <KillFeed
+              entries={replay.killFeed}
+              timeMs={timeMs}
+              teamColors={teamColors}
+              visible={feedVisible}
+            />
+          </Box>
+        </Box>
         <TeamPanel
           players={rightPlayers}
           replay={replay}
+          points={points}
           timeMs={timeMs}
           color={teamColorOf(rightTeam)}
           side="right"
         />
         <Flex align="center" gap={3} gridColumn="1 / -1">
+          <Button
+            size="sm"
+            aria-label={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+            aria-pressed={feedVisible}
+            title={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+            onClick={() => setFeedVisible((visible) => !visible)}
+          >
+            <List size={16} />
+          </Button>
           <Button
             size="sm"
             aria-label={playing ? 'Pause' : 'Play'}

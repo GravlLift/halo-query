@@ -3,6 +3,7 @@ import type {
   Replay as FilmReplay,
   HillState,
   MapObjective,
+  ReplayPoint,
   ReplayProjectile,
   ZoneState,
 } from '@gravllift/halo-film';
@@ -304,17 +305,18 @@ function draw(
   canvas: HTMLCanvasElement,
   replay: FilmReplay,
   projectiles: ReplayProjectile[],
+  points: ReplayPoint[],
   timeMs: number,
   teamColors: string[],
   view: View,
   objectives: MapObjective[],
-  size: { width: number; height: number },
+  size: { width: number; height: number; leftInset: number },
   pixelRatio: number,
   background?: LoadedBackground,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const { width, height } = size;
+  const { width, height, leftInset } = size;
   // Everything below is drawn in CSS pixels, scaled to the backing store.
   const backingWidth = Math.ceil(width * pixelRatio);
   const backingHeight = Math.ceil(height * pixelRatio);
@@ -326,10 +328,10 @@ function draw(
   const spanX = Math.max(bounds.maxX - bounds.minX, 1e-6);
   const spanY = Math.max(bounds.maxY - bounds.minY, 1e-6);
   const scale = Math.min(
-    (width - PADDING * 2) / spanX,
+    Math.max(1, width - leftInset - PADDING * 2) / spanX,
     (height - PADDING * 2) / spanY,
   );
-  const offsetX = (width - spanX * scale) / 2;
+  const offsetX = leftInset + (width - leftInset - spanX * scale) / 2;
   const offsetY = (height - spanY * scale) / 2;
   // Film y grows toward the top of the map; canvas y grows downward.
   const toCanvas = (x: number, y: number): [number, number] => [
@@ -399,7 +401,7 @@ function draw(
     ctx.lineCap = 'butt';
   }
 
-  for (const point of replay.at(timeMs)) {
+  for (const point of points) {
     const [cx, cy] = toCanvas(point.x, point.y);
     ctx.fillStyle = colorFor(replay, point.actor, teamColors);
     ctx.strokeStyle = '#fff';
@@ -538,34 +540,55 @@ function draw(
 
 export default function MiniMap({
   state,
+  points,
   timeMs,
   teamColors,
   objectives,
   background,
+  draggable,
+  leftOverlay,
 }: {
   state: LoadState;
+  points: ReplayPoint[];
   timeMs: number;
   teamColors: string[];
   objectives: MapObjective[];
   background?: LoadedBackground;
+  draggable: boolean;
+  leftOverlay?: HTMLElement | null;
 }) {
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [view, setView] = useState<View>(DEFAULT_VIEW);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [size, setSize] = useState({ width: CANVAS_SIZE, height: CANVAS_SIZE });
+  const [size, setSize] = useState({
+    width: CANVAS_SIZE,
+    height: CANVAS_SIZE,
+    leftInset: 0,
+  });
 
   // The canvas fills the container; the map is fitted inside it when drawing.
   useEffect(() => {
     if (!container) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const width = Math.floor(entry.contentRect.width);
-      const height = Math.floor(entry.contentRect.height);
-      if (width > 0 && height > 0) setSize({ width, height });
+    const observer = new ResizeObserver(() => {
+      const rect = container.getBoundingClientRect();
+      const width = Math.floor(rect.width);
+      const height = Math.floor(rect.height);
+      const leftInset = leftOverlay
+        ? Math.max(
+            0,
+            Math.min(
+              width,
+              leftOverlay.getBoundingClientRect().right - rect.left,
+            ),
+          )
+        : 0;
+      if (width > 0 && height > 0) setSize({ width, height, leftInset });
     });
     observer.observe(container);
+    if (leftOverlay) observer.observe(leftOverlay);
     return () => observer.disconnect();
-  }, [container]);
+  }, [container, leftOverlay]);
 
   useEffect(() => {
     if (state.status === 'ready' && canvasRef.current) {
@@ -573,6 +596,7 @@ export default function MiniMap({
         canvasRef.current,
         state.replay,
         state.replay.projectiles,
+        points,
         timeMs,
         teamColors,
         view,
@@ -584,7 +608,16 @@ export default function MiniMap({
     }
     // teamColors is a fresh array each render; join keeps the dependency stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, timeMs, view, objectives, background, size, teamColors.join()]);
+  }, [
+    state,
+    points,
+    timeMs,
+    view,
+    objectives,
+    background,
+    size,
+    teamColors.join(),
+  ]);
 
   // Registered natively because React's wheel listeners are passive and
   // cannot stop the page from scrolling.
@@ -673,7 +706,12 @@ export default function MiniMap({
             onValueChange={({ value: [level] }) => {
               const target = Math.exp(level);
               setView((v) =>
-                zoomAbout(v, target / v.zoom, size.width / 2, size.height / 2),
+                zoomAbout(
+                  v,
+                  target / v.zoom,
+                  (size.width + size.leftInset) / 2,
+                  size.height / 2,
+                ),
               );
             }}
           >

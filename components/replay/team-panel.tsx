@@ -1,16 +1,18 @@
 import { Flex, Box } from '@chakra-ui/react';
-import type { Replay as FilmReplay } from '@gravllift/halo-film';
+import type { Replay as FilmReplay, ReplayPoint } from '@gravllift/halo-film';
 import { PlayerCard } from './player-card';
 
 export function TeamPanel({
   players,
   replay,
+  points,
   timeMs,
   color,
   side,
 }: {
   players: FilmReplay['players'];
   replay: FilmReplay;
+  points: ReplayPoint[];
   timeMs: number;
   color?: string;
   side: 'left' | 'right';
@@ -29,6 +31,7 @@ export function TeamPanel({
           <PlayerCard
             player={p}
             replay={replay}
+            point={points.find((point) => point.actor === p.actor)}
             timeMs={timeMs}
             color={color}
             side={side}
