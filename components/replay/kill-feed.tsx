@@ -11,7 +11,7 @@ function damagePercent(percent: number | undefined) {
   return percent === undefined ? null : (
     <Text
       as="span"
-      title="Estimated share of recorded damage from named attackers during the victim's life; damage records may be incomplete."
+      title="Raw killer and named-assister percentages from the film's PlayerKilledEvent. Other recorded damage contributors have no reported share here."
       opacity={0.8}
       whiteSpace="nowrap"
     >
@@ -26,11 +26,13 @@ export function KillFeed({
   timeMs,
   teamColors,
   visible,
+  onSeek,
 }: {
   entries: KillFeedEntry[];
   timeMs: number;
   teamColors: string[];
   visible: boolean;
+  onSeek: (timeMs: number) => void;
 }) {
   let activeIndex = -1;
   for (
@@ -46,6 +48,7 @@ export function KillFeed({
       activeIndex={activeIndex}
       teamColors={teamColors}
       visible={visible}
+      onSeek={onSeek}
     />
   );
 }
@@ -56,11 +59,13 @@ const KillFeedContent = memo(
     activeIndex,
     teamColors,
     visible,
+    onSeek,
   }: {
     entries: KillFeedEntry[];
     activeIndex: number;
     teamColors: string[];
     visible: boolean;
+    onSeek: (timeMs: number) => void;
   }) {
     const [autoScroll, setAutoScroll] = useState(true);
     const listRef = useRef<HTMLDivElement>(null);
@@ -138,9 +143,21 @@ const KillFeedContent = memo(
           ) : (
             entries.map((entry: KillFeedEntry, index) => (
               <Box
+                as="button"
                 key={index}
                 data-feed-index={index}
                 aria-current={index === activeIndex ? 'true' : undefined}
+                onClick={() => onSeek(entry.timeMs)}
+                display="block"
+                w="100%"
+                textAlign="left"
+                cursor="pointer"
+                _hover={{ bg: 'whiteAlpha.300' }}
+                _focusVisible={{
+                  outline: '2px solid',
+                  outlineColor: 'yellow.300',
+                  outlineOffset: '-2px',
+                }}
                 py={2}
                 px={1}
                 bg={index === activeIndex ? 'whiteAlpha.200' : undefined}
@@ -173,12 +190,11 @@ const KillFeedContent = memo(
                 </Flex>
                 {entry.damageAssists.length > 0 && (
                   <Box pl="42px" opacity={0.8}>
-                    {entry.damageAssists.map((assist, assistIndex) => (
-                      <span key={assist.xuid}>
-                        {assistIndex > 0 && ', '}
+                    {entry.damageAssists.map((assist) => (
+                      <Box key={assist.xuid} whiteSpace="nowrap">
                         {name(assist, 'Unknown')}
                         {damagePercent(assist.damagePercent)}
-                      </span>
+                      </Box>
                     ))}
                   </Box>
                 )}
@@ -193,6 +209,7 @@ const KillFeedContent = memo(
     previous.entries === next.entries &&
     previous.activeIndex === next.activeIndex &&
     previous.visible === next.visible &&
+    previous.onSeek === next.onSeek &&
     previous.teamColors.length === next.teamColors.length &&
     previous.teamColors.every(
       (color, index) => color === next.teamColors[index],

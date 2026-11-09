@@ -2,6 +2,7 @@ import { Box, Button, Flex, Slider } from '@chakra-ui/react';
 import type {
   Replay as FilmReplay,
   HillState,
+  KillFeedEntry,
   MapObjective,
   ReplayPoint,
   ReplayProjectile,
@@ -301,10 +302,61 @@ function drawProjectiles(
   }
 }
 
+function drawKillLinks(
+  ctx: CanvasRenderingContext2D,
+  replay: FilmReplay,
+  entries: KillFeedEntry[],
+  timeMs: number,
+  toCanvas: (x: number, y: number) => [number, number],
+  teamColors: string[],
+  shooterPoint: ReplayPoint,
+) {
+  const shooter = replay.players[shooterPoint.actor];
+  if (!shooter?.xuid) return;
+  for (const entry of entries) {
+    const age = timeMs - entry.timeMs;
+    if (
+      age < 0 ||
+      age > FIRE_FLASH_MS ||
+      entry.killer?.xuid !== shooter.xuid ||
+      !entry.victim
+    ) {
+      continue;
+    }
+    const victim = replay.players.find(
+      (player) => player.xuid === entry.victim?.xuid,
+    );
+    if (!victim) continue;
+    const beforeKill = Math.max(replay.startMs, entry.timeMs - 1);
+    const points = replay.at(beforeKill);
+    const to =
+      points.find((point) => point.actor === victim.actor) ??
+      replay
+        .graves(entry.timeMs + 1)
+        .find((grave) => grave.actor === victim.actor);
+    if (!to) continue;
+    const [cx, cy] = toCanvas(shooterPoint.x, shooterPoint.y);
+    const [endX, endY] = toCanvas(to.x, to.y);
+    const heading =
+      (-(shooterPoint.aimYawDeg ?? shooterPoint.facingYawDeg ?? 0) * Math.PI) /
+      180;
+    ctx.save();
+    ctx.strokeStyle = colorFor(replay, shooterPoint.actor, teamColors);
+    ctx.globalAlpha = 1 - age / FIRE_FLASH_MS;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(heading) * 10, cy + Math.sin(heading) * 10);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function draw(
   canvas: HTMLCanvasElement,
   replay: FilmReplay,
   projectiles: ReplayProjectile[],
+  killFeed: KillFeedEntry[],
   points: ReplayPoint[],
   timeMs: number,
   teamColors: string[],
@@ -459,6 +511,7 @@ function draw(
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+    drawKillLinks(ctx, replay, killFeed, timeMs, toCanvas, teamColors, point);
     const name = replay.players[point.actor]?.gamertag;
     if (name) {
       ctx.fillStyle = '#fff';
@@ -596,6 +649,7 @@ export default function MiniMap({
         canvasRef.current,
         state.replay,
         state.replay.projectiles,
+        state.replay.killFeed,
         points,
         timeMs,
         teamColors,

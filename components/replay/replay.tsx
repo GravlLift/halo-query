@@ -273,6 +273,7 @@ export default function Replay({ match }: { match: ProgressiveMatch }) {
               timeMs={timeMs}
               teamColors={teamColors}
               visible={feedVisible}
+              onSeek={setTimeMs}
             />
           </Box>
         </Box>
