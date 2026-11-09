@@ -165,11 +165,36 @@ export class DependencyBodyProcessor implements SpanProcessor {
 
   private captureClientRequest(request: ClientRequest, requestId: string) {
     const requestBodyChunks: Buffer[] = [];
+    const responseBodyChunks: Buffer[] = [];
+    let responseHeaders = new Headers();
+    let finished = false;
+    const finish = (error?: Error) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(captureTimeout);
+      const completionPromise = this.dependencyCompletePromises.get(requestId);
+      if (error) {
+        completionPromise?.reject(error);
+      } else {
+        completionPromise?.resolve({
+          request: { body: Buffer.concat(requestBodyChunks).toString() },
+          response: {
+            headers: responseHeaders,
+            body: Buffer.concat(responseBodyChunks).toString(),
+          },
+        });
+      }
+    };
+    const captureTimeout = setTimeout(() => finish(), 5 * 60 * 1000);
+    captureTimeout.unref();
     const originalWrite = request.write;
     Object.defineProperty(request, 'write', {
       value: (...args: unknown[]) => {
         const [chunk] = args;
-        if (typeof chunk === 'string' || chunk instanceof Uint8Array) {
+        if (
+          !finished &&
+          (typeof chunk === 'string' || chunk instanceof Uint8Array)
+        ) {
           requestBodyChunks.push(Buffer.from(chunk));
         }
         return Reflect.apply(originalWrite, request, args);
@@ -180,7 +205,10 @@ export class DependencyBodyProcessor implements SpanProcessor {
     Object.defineProperty(request, 'end', {
       value: (...args: unknown[]) => {
         const [chunk] = args;
-        if (typeof chunk === 'string' || chunk instanceof Uint8Array) {
+        if (
+          !finished &&
+          (typeof chunk === 'string' || chunk instanceof Uint8Array)
+        ) {
           requestBodyChunks.push(Buffer.from(chunk));
         }
         return Reflect.apply(originalEnd, request, args);
@@ -188,38 +216,34 @@ export class DependencyBodyProcessor implements SpanProcessor {
     });
 
     request.once('response', (response) => {
-      const responseBodyChunks: Buffer[] = [];
-      response.on('data', (chunk: Buffer | string) => {
-        responseBodyChunks.push(Buffer.from(chunk));
-      });
-      response.once('end', () => {
-        const responseHeaders = new Headers();
-        for (const [name, value] of Object.entries(response.headers)) {
-          if (Array.isArray(value)) {
-            for (const entry of value) {
-              responseHeaders.append(name, entry);
-            }
-          } else if (value !== undefined) {
-            responseHeaders.append(name, value);
+      responseHeaders = new Headers();
+      for (const [name, value] of Object.entries(response.headers)) {
+        if (Array.isArray(value)) {
+          for (const entry of value) {
+            responseHeaders.append(name, entry);
           }
+        } else if (value !== undefined) {
+          responseHeaders.append(name, value);
         }
-        this.dependencyCompletePromises.get(requestId)?.resolve({
-          request: {
-            body: Buffer.concat(requestBodyChunks).toString(),
-          },
-          response: {
-            headers: responseHeaders,
-            body: Buffer.concat(responseBodyChunks).toString(),
-          },
-        });
+      }
+      response.emit = new Proxy(response.emit, {
+        apply(target, thisArg, args) {
+          const [event, chunk] = args;
+          if (
+            !finished &&
+            event === 'data' &&
+            (typeof chunk === 'string' || chunk instanceof Uint8Array)
+          ) {
+            responseBodyChunks.push(Buffer.from(chunk));
+          }
+          return Reflect.apply(target, thisArg, args);
+        },
       });
-      response.once('error', (error) => {
-        this.dependencyCompletePromises.get(requestId)?.reject(error);
-      });
+      response.once('end', () => finish());
+      response.once('close', () => finish());
+      response.once('error', (error) => finish(error));
     });
-    request.once('error', (error) => {
-      this.dependencyCompletePromises.get(requestId)?.reject(error);
-    });
+    request.once('error', (error) => finish(error));
   }
 
   private prepareResponseHandler(requestId: string, span: Span) {
@@ -233,39 +257,53 @@ export class DependencyBodyProcessor implements SpanProcessor {
       const spanCompletePromise = new ResolvablePromise<ReadableSpan>();
       this.spanCompletePromises.set(spanContext.spanId, spanCompletePromise);
 
-      const dependencyHandledPromise = dependencyCompletePromise
-        .then(async ({ request, response }) => {
-          const readableSpan = await spanCompletePromise;
-          // Now that we have all attributes, clone the span
+      const timedOut = Symbol('timedOut');
+      let timeoutHandle: ReturnType<typeof setTimeout>;
+      const timeoutPromise = new Promise<typeof timedOut>((resolve) => {
+        timeoutHandle = setTimeout(() => resolve(timedOut), 6 * 60 * 1000);
+        timeoutHandle.unref();
+      });
+      const bodyResult = dependencyCompletePromise.then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+      const dependencyHandledPromise = Promise.all([
+        Promise.race([bodyResult, timeoutPromise]),
+        Promise.race([spanCompletePromise, timeoutPromise]),
+      ])
+        .then(([result, readableSpan]) => {
+          if (readableSpan === timedOut) return;
           const newSpan = copySpan(readableSpan);
 
-          if (request.body) {
-            newSpan.setAttribute('http.request.body', request.body);
-          }
-          if (response.body) {
-            newSpan.setAttribute('http.response.body', response.body);
-          }
+          if (result !== timedOut && 'value' in result) {
+            const { request, response } = result.value;
+            if (request.body) {
+              newSpan.setAttribute('http.request.body', request.body);
+            }
+            if (response.body) {
+              newSpan.setAttribute('http.response.body', response.body);
+            }
 
-          response.headers.forEach((value, key) => {
-            newSpan.setAttribute(
-              ATTR_HTTP_RESPONSE_HEADER(key.toLowerCase()),
-              value,
-            );
-          });
+            response.headers.forEach((value, key) => {
+              newSpan.setAttribute(
+                ATTR_HTTP_RESPONSE_HEADER(key.toLowerCase()),
+                value,
+              );
+            });
+          } else if (result !== timedOut && 'error' in result) {
+            newSpan.setStatus({
+              code: SpanStatusCode.ERROR,
+              message:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
+            });
+          }
 
           newSpan.end(readableSpan.endTime);
         })
-        .catch(async (err) => {
-          const readableSpan = await spanCompletePromise;
-          const newSpan = copySpan(readableSpan);
-          newSpan.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: err.message,
-          });
-          newSpan.end(readableSpan.endTime);
-        })
-        .finally(async () => {
-          await spanCompletePromise;
+        .finally(() => {
+          clearTimeout(timeoutHandle);
           this.dependencyCompletePromises.delete(requestId);
           this.spanCompletePromises.delete(spanContext.spanId);
           this.dependencyHandledPromises.splice(
