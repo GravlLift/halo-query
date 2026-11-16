@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
-import type { KillFeedEntry, KillFeedPlayer } from '@gravllift/halo-film';
+import type { KillFeedEntry, KillFeedPlayer } from '../../lib/film';
 import { memo, useEffect, useRef, useState } from 'react';
 
 function formatTime(ms: number) {

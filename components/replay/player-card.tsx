@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
-import type { Replay as FilmReplay, ReplayPoint } from '@gravllift/halo-film';
+import type { Replay as FilmReplay, ReplayPoint } from '../../lib/film';
 import { memo } from 'react';
 
 function StatBar({

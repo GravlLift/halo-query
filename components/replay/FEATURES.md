@@ -1,4 +1,1 @@
-- Stutter once a second
-- Kill feed
-- Equipment inventory
 - Sensor Beacon

@@ -7,7 +7,7 @@ import type {
   ReplayPoint,
   ReplayProjectile,
   ZoneState,
-} from '@gravllift/halo-film';
+} from '../../lib/film';
 import { useEffect, useRef, useState } from 'react';
 import { LoadedBackground, LoadState } from './types';
 

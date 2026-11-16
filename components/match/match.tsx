@@ -238,8 +238,13 @@ export default function Match({ matchId, filters }: MatchProps) {
               </Menu.Root>
             </Box>
             <VerticalCenter hideBelow="md">
-              {match && (
-                <Dialog.Root size="full" lazyMount unmountOnExit={false}>
+              {match && match.MatchId === matchId && (
+                <Dialog.Root
+                  key={matchId}
+                  size="full"
+                  lazyMount
+                  unmountOnExit={false}
+                >
                   <Dialog.Trigger asChild>
                     <Button variant="outline" size="sm">
                       <TvMinimalPlay />
@@ -261,7 +266,10 @@ export default function Match({ matchId, filters }: MatchProps) {
                           <MatchHeader matchId={matchId} match={match} />
                         </Dialog.Title>
                         <Dialog.Body flex={1} minH={0} pb={'70px'}>
-                          <Replay match={match} />
+                          <Replay
+                            match={match}
+                            navigationSignal={navigationSignal}
+                          />
                         </Dialog.Body>
                       </Dialog.Content>
                     </Dialog.Positioner>

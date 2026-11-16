@@ -1,7 +1,7 @@
 import { Box } from '@chakra-ui/react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { Replay, ReplayPoint } from '@gravllift/halo-film';
+import type { Replay, ReplayPoint } from '../../lib/film';
 import { PlayerCard } from './player-card';
 
 jest.mock('@chakra-ui/react', () => {

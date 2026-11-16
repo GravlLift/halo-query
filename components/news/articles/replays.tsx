@@ -9,7 +9,7 @@ export default function Replays() {
         the Halo Infinite development community has cracked the code for reading
         film files, and as a result there have been a number of applications
         showing up in the past few weeks. I think replays are a really useful
-        tool for analyzing matches, so I went ahead and put together replay
+        tool for analyzing matches, so I went ahead and put together a replay
         viewer for Halo Query too.
       </Text>
       <Text>

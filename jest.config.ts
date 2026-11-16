@@ -4,6 +4,7 @@ import type { Config } from 'jest';
 const config: Config = {
   displayName: 'halo-query',
   testEnvironment: 'jsdom',
+  testPathIgnorePatterns: ['/node_modules/', '/lib/film/'],
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': [
       'babel-jest',

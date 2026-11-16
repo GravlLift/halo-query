@@ -1,5 +1,5 @@
 import { Flex, Box } from '@chakra-ui/react';
-import type { Replay as FilmReplay, ReplayPoint } from '@gravllift/halo-film';
+import type { Replay as FilmReplay, ReplayPoint } from '../../lib/film';
 import { PlayerCard } from './player-card';
 
 export function TeamPanel({

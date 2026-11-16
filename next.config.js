@@ -6,7 +6,12 @@ const path = require('path');
 const nextConfig = {
   productionBrowserSourceMaps: true,
   output: 'standalone',
-  transpilePackages: ['@gravllift/utilities', '@gravllift/halo-helpers', '@gravllift/halo-film', '@gravllift/halo-infinite-maps'],
+  transpilePackages: [
+    '@gravllift/utilities',
+    '@gravllift/halo-helpers',
+    '@gravllift/halo-film',
+    '@gravllift/halo-infinite-maps',
+  ],
   outputFileTracingRoot: path.join(__dirname, '../../'),
   eslint: {
     ignoreDuringBuilds: true,
@@ -87,6 +92,11 @@ const nextConfig = {
         {
           source: '/proxy/:subdomain.halowaypoint.com/:path*',
           destination: 'https://:subdomain.halowaypoint.com/:path*',
+        },
+        {
+          source: '/proxy/s3infiniteugcsessions.blob.core.windows.net/:path*',
+          destination:
+            'https://s3infiniteugcsessions.blob.core.windows.net/:path*',
         },
       ],
     };

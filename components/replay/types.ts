@@ -1,4 +1,4 @@
-import type { MapBackground, MatchReplay } from '@gravllift/halo-film';
+import type { MapBackground, MatchReplay } from '../../lib/film';
 
 export type LoadState =
   | { status: 'idle' }
@@ -7,6 +7,9 @@ export type LoadState =
   | {
       status: 'ready';
       replay: MatchReplay;
+      complete: boolean;
+      progress?: string;
+      error?: string;
     };
 
 export type LoadedBackground = Omit<MapBackground, 'image'> & {
