@@ -130,12 +130,33 @@ export async function decodeReplay(
 ) {
   signal?.throwIfAborted();
   onStage?.('Parsing film...');
-  const parserChunks = chunks.map((chunk) => ({
-    index: chunk.index,
-    chunkType: chunk.chunkType,
-    bytes: Uint8Array.from(chunk.data).buffer,
-    fileRelativePath: chunk.fileRelativePath,
-  }));
+  let parserChunks: {
+    index: number;
+    chunkType: number;
+    bytes: ArrayBuffer;
+    fileRelativePath: string;
+  }[] = [];
+
+  // Fill missing chunks with empty data to avoid parsing errors.
+  for (let i = 0; i < Math.max(...chunks.map((c) => c.index)); i++) {
+    const chunk = chunks.find((c) => c.index === i);
+    if (!chunk) {
+      parserChunks.push({
+        index: i,
+        chunkType: 2,
+        bytes: new ArrayBuffer(0),
+        fileRelativePath: '',
+      });
+    } else {
+      parserChunks.push({
+        index: chunk.index,
+        chunkType: chunk.chunkType,
+        bytes: Uint8Array.from(chunk.data).buffer,
+        fileRelativePath: chunk.fileRelativePath,
+      });
+    }
+  }
+
   const data =
     match.MatchInfo.GameVariantCategory ===
     GameVariantCategory.MultiplayerKingOfTheHill
