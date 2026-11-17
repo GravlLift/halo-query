@@ -136,6 +136,15 @@ export default function Match({ matchId, filters }: MatchProps) {
     }
     return undefined;
   }, [match, focusPlayer]);
+  const matchFocusPlayerXuid = useMemo(() => {
+    if (!matchFocusPlayer) return undefined;
+    const player = match?.Players.find(
+      (p) =>
+        'gamertag' in p &&
+        p.gamertag?.toLowerCase() === matchFocusPlayer.toLowerCase(),
+    );
+    return player?.PlayerId;
+  }, [matchFocusPlayer]);
   useEffect(() => {
     if (matchFocusPlayer) {
       focusPlayerPromise.resolve(matchFocusPlayer);
@@ -196,13 +205,15 @@ export default function Match({ matchId, filters }: MatchProps) {
                           </Link>
                         )}
                       </Menu.Item>
-                      <Menu.Item asChild value="Halo Tracker">
-                        <Link
-                          target="_blank"
-                          href={`https://halotracker.com/halo-infinite/match/${matchId}`}
-                        >
-                          Halo Tracker
-                        </Link>
+                      <Menu.Item asChild value="OpenSpartan Films">
+                        {matchFocusPlayer && (
+                          <Link
+                            target="_blank"
+                            href={`https://films.openspartan.com/match/${matchId}?xuid=${matchFocusPlayerXuid}`}
+                          >
+                            OpenSpartan Films
+                          </Link>
+                        )}
                       </Menu.Item>
                       <Menu.Item asChild value="Halo Data Hive">
                         {matchFocusPlayer && (

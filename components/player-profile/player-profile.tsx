@@ -425,12 +425,12 @@ export default function PlayerProfile({ gamerTag }: { gamerTag: string }) {
                           Halo Waypoint
                         </Link>
                       </Menu.Item>
-                      <Menu.Item asChild value="Halo Tracker">
+                      <Menu.Item asChild value="OpenSpartan Films">
                         <Link
                           target="_blank"
-                          href={`https://halotracker.com/halo-infinite/profile/xbl/${profileGamertag}/overview`}
+                          href={`https://films.openspartan.com/player/${user?.xuid}`}
                         >
-                          Halo Tracker
+                          OpenSpartan Films
                         </Link>
                       </Menu.Item>
                       <Menu.Item asChild value="Halo Data Hive">
