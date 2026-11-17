@@ -21,6 +21,99 @@ function damagePercent(percent: number | undefined) {
   );
 }
 
+const KillFeedRow = memo(
+  function KillFeedRow({
+    entry,
+    index,
+    active,
+    occurred,
+    teamColors,
+    onSeek,
+  }: {
+    entry: KillFeedEntry;
+    index: number;
+    active: boolean;
+    occurred: boolean;
+    teamColors: string[];
+    onSeek: (timeMs: number) => void;
+  }) {
+    const name = (player: KillFeedPlayer | undefined, fallback: string) => (
+      <Text
+        as="span"
+        color={
+          player?.team !== undefined && player.team >= 0
+            ? teamColors[player.team % teamColors.length]
+            : undefined
+        }
+      >
+        {player?.gamertag || (player ? player.xuid : fallback)}
+      </Text>
+    );
+    return (
+      <Box
+        as="button"
+        data-feed-index={index}
+        aria-current={active ? 'true' : undefined}
+        onClick={() => onSeek(entry.timeMs)}
+        display="block"
+        w="100%"
+        textAlign="left"
+        cursor="pointer"
+        _hover={{ bg: 'whiteAlpha.300' }}
+        _focusVisible={{
+          outline: '2px solid',
+          outlineColor: 'yellow.300',
+          outlineOffset: '-2px',
+        }}
+        py={2}
+        px={1}
+        bg={active ? 'whiteAlpha.200' : undefined}
+        borderLeftWidth="3px"
+        borderLeftColor={active ? 'yellow.300' : 'transparent'}
+        borderBottomWidth="1px"
+        borderBottomColor="whiteAlpha.200"
+        opacity={occurred ? 1 : 0.6}
+        fontSize="xs"
+        overflowWrap="anywhere"
+      >
+        <Flex gap={2} align="baseline">
+          <Text flexShrink={0} fontVariantNumeric="tabular-nums" opacity={0.75}>
+            {formatTime(entry.timeMs)}
+          </Text>
+          <Box>
+            {name(entry.killer, 'Unknown killer')}
+            {damagePercent(entry.killerDamagePercent)}{' '}
+            <Text as="span" opacity={0.7}>
+              →
+            </Text>{' '}
+            {name(entry.victim, 'Unknown victim')}
+          </Box>
+        </Flex>
+        {entry.damageAssists.length > 0 && (
+          <Box pl="42px" opacity={0.8}>
+            {entry.damageAssists.map((assist) => (
+              <Box key={assist.xuid} whiteSpace="nowrap">
+                {name(assist, 'Unknown')}
+                {damagePercent(assist.damagePercent)}
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+    );
+  },
+  (previous, next) =>
+    previous.entry === next.entry &&
+    previous.index === next.index &&
+    previous.active === next.active &&
+    previous.occurred === next.occurred &&
+    previous.onSeek === next.onSeek &&
+    previous.teamColors.length === next.teamColors.length &&
+    previous.teamColors.every(
+      (color, index) => color === next.teamColors[index],
+    ),
+);
+
 export function KillFeed({
   entries,
   timeMs,
@@ -85,18 +178,6 @@ const KillFeedContent = memo(
       automaticScrollTop.current = list.scrollTop;
     }, [activeIndex, autoScroll, entries, visible]);
 
-    const name = (player: KillFeedPlayer | undefined, fallback: string) => (
-      <Text
-        as="span"
-        color={
-          player?.team !== undefined && player.team >= 0
-            ? teamColors[player.team % teamColors.length]
-            : undefined
-        }
-      >
-        {player?.gamertag || (player ? player.xuid : fallback)}
-      </Text>
-    );
     return (
       <Flex direction="column" h={0} minH="100%" minW={0} color="white">
         <Flex align="center" justify="space-between" gap={2} pb={2}>
@@ -142,63 +223,15 @@ const KillFeedContent = memo(
             </Text>
           ) : (
             entries.map((entry: KillFeedEntry, index) => (
-              <Box
-                as="button"
+              <KillFeedRow
                 key={index}
-                data-feed-index={index}
-                aria-current={index === activeIndex ? 'true' : undefined}
-                onClick={() => onSeek(entry.timeMs)}
-                display="block"
-                w="100%"
-                textAlign="left"
-                cursor="pointer"
-                _hover={{ bg: 'whiteAlpha.300' }}
-                _focusVisible={{
-                  outline: '2px solid',
-                  outlineColor: 'yellow.300',
-                  outlineOffset: '-2px',
-                }}
-                py={2}
-                px={1}
-                bg={index === activeIndex ? 'whiteAlpha.200' : undefined}
-                borderLeftWidth="3px"
-                borderLeftColor={
-                  index === activeIndex ? 'yellow.300' : 'transparent'
-                }
-                borderBottomWidth="1px"
-                borderBottomColor="whiteAlpha.200"
-                opacity={index <= activeIndex ? 1 : 0.6}
-                fontSize="xs"
-                overflowWrap="anywhere"
-              >
-                <Flex gap={2} align="baseline">
-                  <Text
-                    flexShrink={0}
-                    fontVariantNumeric="tabular-nums"
-                    opacity={0.75}
-                  >
-                    {formatTime(entry.timeMs)}
-                  </Text>
-                  <Box>
-                    {name(entry.killer, 'Unknown killer')}
-                    {damagePercent(entry.killerDamagePercent)}{' '}
-                    <Text as="span" opacity={0.7}>
-                      →
-                    </Text>{' '}
-                    {name(entry.victim, 'Unknown victim')}
-                  </Box>
-                </Flex>
-                {entry.damageAssists.length > 0 && (
-                  <Box pl="42px" opacity={0.8}>
-                    {entry.damageAssists.map((assist) => (
-                      <Box key={assist.xuid} whiteSpace="nowrap">
-                        {name(assist, 'Unknown')}
-                        {damagePercent(assist.damagePercent)}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
+                entry={entry}
+                index={index}
+                active={index === activeIndex}
+                occurred={index <= activeIndex}
+                teamColors={teamColors}
+                onSeek={onSeek}
+              />
             ))
           )}
         </Box>

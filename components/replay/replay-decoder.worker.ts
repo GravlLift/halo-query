@@ -28,3 +28,5 @@ self.addEventListener('message', async (event: MessageEvent<DecodeRequest>) => {
     } satisfies DecodeResponse);
   }
 });
+
+postMessage({ type: 'ready' } satisfies DecodeResponse);

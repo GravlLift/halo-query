@@ -17,10 +17,10 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
 
   const workerLeaderboard = useMemo((): ILeaderboardProvider => {
     function callLeaderboardProviderFn<
-      TFunction extends keyof ILeaderboardProvider
+      TFunction extends keyof ILeaderboardProvider,
     >(
       fn: TFunction,
-      args: Parameters<ILeaderboardProvider[TFunction]>
+      args: Parameters<ILeaderboardProvider[TFunction]>,
     ): ReturnType<ILeaderboardProvider[TFunction]> {
       const callId = Math.random();
       const abort = () => {
@@ -31,14 +31,17 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
       >();
       callMap.set(callId, promise);
       switch (fn) {
-        case 'getGamertagIndex':
-          args[3]?.addEventListener('abort', abort);
-          promise.finally(() => args[3]?.removeEventListener('abort', abort));
+        case 'getGamertagIndex': {
+          const signal = args[3];
+          signal?.addEventListener('abort', abort);
+          const cleanup = () => signal?.removeEventListener('abort', abort);
+          void promise.then(cleanup, cleanup);
           // Signal cannot be transmitted, remove it from arg list
           args = args.slice(0, 3) as Parameters<
             ILeaderboardProvider[TFunction]
           >;
           break;
+        }
       }
       workerRef.current?.postMessage({
         callId,
@@ -54,8 +57,8 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
           retryEverythingPolicy.execute(async () =>
             callLeaderboardProviderFn(
               prop as keyof ILeaderboardProvider,
-              args as any
-            )
+              args as any,
+            ),
           );
       },
     });
@@ -76,7 +79,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
             error: unknown;
             forceReload: boolean;
           }
-      >
+      >,
     ): void => {
       const promise = callMap.get(event.data.callId);
       if (!promise) {
@@ -90,12 +93,13 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         }
         if (event.data.forceReload && workerRef.current) {
           if (workerRestarts < 3) {
-            workerRef.current.postMessage({ terminate: true });
             workerRef.current.removeEventListener('message', messageHandler);
+            workerRef.current.terminate();
 
             workerRef.current = new Worker(
-              new URL('./worker.ts', import.meta.url)
+              new URL('./worker.ts', import.meta.url),
             );
+            workerRef.current.addEventListener('message', messageHandler);
             workerRestarts++;
           } else {
             const searchParams = new URLSearchParams(location.search);
@@ -112,8 +116,9 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
     workerRef.current.addEventListener('message', messageHandler);
 
     return () => {
-      workerRef.current?.postMessage({ terminate: true });
       workerRef.current?.removeEventListener('message', messageHandler);
+      workerRef.current?.terminate();
+      workerRef.current = null;
     };
   }, []);
 

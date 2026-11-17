@@ -30,6 +30,8 @@ export interface ZoneOccupant {
 }
 
 export interface ZoneState {
+  contested?: boolean;
+  inside?: (number | undefined)[];
   /** Index into the zones the timeline was built from. */
   zone: number;
   /** Holding team; -1 for neutral. */

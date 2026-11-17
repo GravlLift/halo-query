@@ -1,8 +1,4 @@
-import type {
-  FilmData,
-  FilmRecordsData,
-  JsonValue,
-} from '@gravllift/halo-film';
+import type { FilmData, FilmRecordsData } from '@gravllift/halo-film';
 import type { LinkedFilmPositions } from '../../../../libs/halo-film/src/decoders/positions';
 import type { StatRecord } from '../../../../libs/halo-film/src/decoders/stat-records';
 import {
@@ -11,27 +7,14 @@ import {
 } from '../../../../libs/halo-film/src/players/link-lives';
 import type { ScoreTimeline } from './timeline/score';
 import type { PlayerStatTimeline } from './timeline/player-stats';
+import { field, items, number } from './film-json';
+import { projectInventories } from './film-inventory';
+import {
+  WEAPON_FAMILY_NAMES,
+  isGrenadeFamily,
+} from '../../../../libs/halo-film/src/core/weapon-catalog';
 
 const milliseconds = (tick: number) => (tick * 1000) / 60;
-
-function field(
-  value: JsonValue | undefined,
-  key: string,
-): JsonValue | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value[key]
-    : undefined;
-}
-
-function number(value: JsonValue | undefined): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? value
-    : undefined;
-}
-
-function items(value: JsonValue | undefined): JsonValue[] {
-  return Array.isArray(value) ? value : [];
-}
 
 export function projectFilmData(data: FilmData): {
   positions: LinkedFilmPositions | null;
@@ -163,12 +146,11 @@ export function projectFilmData(data: FilmData): {
     worldObjects: { births: [], samples: [], drops: [] },
     carryEvents: [],
   };
-  records.inventories = actors.flatMap((actor) =>
-    actor.lives.map((life) => ({
-      timeMs: life.startMs - 0.001,
-      slot: life.slot,
-      weapons: [],
-    })),
+  records.inventories = projectInventories(
+    data,
+    data.players.flatMap((player, index) =>
+      actors[index].lives.map((life) => ({ ...life, playerId: player.id })),
+    ),
   );
   const slotAt = (playerId: number | undefined, timeMs: number) => {
     const index = data.players.findIndex((player) => player.id === playerId);
@@ -265,7 +247,12 @@ export function projectFilmData(data: FilmData): {
     const pickup = field(event, 'Pickup');
     const pickupSlot = slotAt(number(field(pickup, 'player')), timeMs);
     const family = number(field(pickup, 'item'));
-    if (pickupSlot !== undefined && family !== undefined)
+    if (
+      pickupSlot !== undefined &&
+      family !== undefined &&
+      WEAPON_FAMILY_NAMES.has(family) &&
+      !isGrenadeFamily(family)
+    )
       records.inventoryDeltas.push({
         timeMs,
         slot: pickupSlot,

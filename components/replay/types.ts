@@ -1,4 +1,5 @@
-import type { MapBackground, MatchReplay } from '../../lib/film';
+import type { MatchReplay } from '../../lib/film';
+import type { MapBackground, MapBounds } from '@gravllift/halo-film-ui/view';
 
 export type LoadState =
   | { status: 'idle' }
@@ -12,10 +13,5 @@ export type LoadState =
       error?: string;
     };
 
-export type LoadedBackground = Omit<MapBackground, 'image'> & {
-  element: HTMLImageElement;
-  /** Extent of the non-transparent pixels, in normalized film space. */
-  content: Bounds;
-};
-
-export type Bounds = { minX: number; maxX: number; minY: number; maxY: number };
+export type LoadedBackground = MapBackground;
+export type Bounds = MapBounds;

@@ -10,60 +10,22 @@ import {
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
 import { List, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { paintedBounds } from '@gravllift/halo-film-ui/view';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
 import { useTeamPresets } from '../match/team-presets';
 import MiniMap from './mini-map';
 import { KillFeed } from './kill-feed';
 import { TeamPanel } from './team-panel';
-import { Bounds, LoadState, LoadedBackground } from './types';
+import { LoadState, LoadedBackground } from './types';
 import { createReplayDecoder } from './replay-decoder';
 
-const CONTENT_ALPHA = 16;
-const CONTENT_PADDING = 0.03;
-/** Approximate width of the native slider thumb, which the track travel excludes. */
-const THUMB_PX = 16;
+/** Width of Chakra's default slider thumb, whose travel is excluded from the track. */
+const THUMB_PX = 20;
+const PLAYBACK_UI_INTERVAL_MS = 100;
 
 function formatTime(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-/** Bounding box of the image's painted pixels, padded, in normalized film space. */
-function paintedBounds(
-  image: HTMLImageElement,
-  extent: Bounds,
-): Bounds | undefined {
-  const { naturalWidth: w, naturalHeight: h } = image;
-  const scratch = document.createElement('canvas');
-  scratch.width = w;
-  scratch.height = h;
-  const ctx = scratch.getContext('2d');
-  if (!ctx) return undefined;
-  ctx.drawImage(image, 0, 0);
-  const { data } = ctx.getImageData(0, 0, w, h);
-  let left = w;
-  let right = -1;
-  let top = h;
-  let bottom = -1;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (data[(y * w + x) * 4 + 3] < CONTENT_ALPHA) continue;
-      if (x < left) left = x;
-      if (x > right) right = x;
-      if (y < top) top = y;
-      if (y > bottom) bottom = y;
-    }
-  }
-  if (right < 0) return undefined;
-  const spanX = extent.maxX - extent.minX;
-  const spanY = extent.maxY - extent.minY;
-  const pad = CONTENT_PADDING * Math.max(right - left, bottom - top);
-  return {
-    minX: extent.minX + ((left - pad) / w) * spanX,
-    maxX: extent.minX + ((right + 1 + pad) / w) * spanX,
-    maxY: extent.maxY - ((top - pad) / h) * spanY,
-    minY: extent.maxY - ((bottom + 1 + pad) / h) * spanY,
-  };
 }
 
 const SPEEDS = [1, 2, 4, 8, 16];
@@ -80,7 +42,6 @@ export default function Replay({
   const [state, setState] = useState<LoadState>({ status: 'idle' });
   const [timeMs, setTimeMs] = useState(0);
   const timeRef = useRef(timeMs);
-  timeRef.current = timeMs;
   const [filmEndMs, setFilmEndMs] = useState(0);
   const [pendingSeek, setPendingSeek] = useState<number>();
   const priorityRef = useRef<number>();
@@ -246,19 +207,42 @@ export default function Replay({
     const { replay } = state;
     let frame = 0;
     let last = performance.now();
+    let lastUiUpdate = last;
     const tick = (now: number) => {
       const delta = now - last;
       last = now;
       const next = Math.min(timeRef.current + delta * speed, replay.endMs);
       const ended = state.complete && next >= replay.endMs;
       timeRef.current = next;
-      setTimeMs(next);
+      if (ended || now - lastUiUpdate >= PLAYBACK_UI_INTERVAL_MS) {
+        lastUiUpdate = now;
+        setTimeMs(next);
+      }
       if (ended) setPlaying(false);
       else frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [state, playing, speed, pendingSeek]);
+
+  const seek = useCallback(
+    (next: number) => {
+      if (state.status !== 'ready') return;
+      setPlaying(false);
+      const { replay } = state;
+      if (next > replay.endMs && !state.complete) {
+        if (state.error) return;
+        priorityRef.current = next;
+        setPendingSeek(next);
+        return;
+      }
+      priorityRef.current = undefined;
+      setPendingSeek(undefined);
+      timeRef.current = next;
+      setTimeMs(next);
+    },
+    [state],
+  );
 
   if (state.status !== 'ready') {
     return (
@@ -304,19 +288,9 @@ export default function Replay({
           ),
         )
       : 0;
-  const seek = (next: number) => {
-    if (next > replay.endMs && !state.complete) {
-      if (state.error) return;
-      priorityRef.current = next;
-      setPendingSeek(next);
-      return;
-    }
-    priorityRef.current = undefined;
-    setPendingSeek(undefined);
-    timeRef.current = next;
-    setTimeMs(next);
-  };
-  const scores = replay.scores(timeMs);
+  const scores = [...replay.scores(timeMs)].sort(
+    (first, second) => (first.team ?? Infinity) - (second.team ?? Infinity),
+  );
   const teamIds = [
     ...new Set(
       replay.players.flatMap((p) => (p.team !== undefined ? [p.team] : [])),
@@ -379,9 +353,16 @@ export default function Replay({
               color={teamColorOf(leftTeam)}
               side="left"
             />
-            <Box position="relative" display="grid" minW={0} minH={0}>
+            <Box
+              data-testid="replay-map-container"
+              position="relative"
+              display="grid"
+              minW={0}
+              minH={0}
+            >
               <MiniMap
                 state={state}
+                clock={timeRef}
                 points={points}
                 timeMs={timeMs}
                 teamColors={teamColors}
@@ -390,6 +371,39 @@ export default function Replay({
                 draggable={true}
                 leftOverlay={feedVisible ? feedOverlay : null}
               />
+              {!state.complete && (
+                <Flex
+                  data-testid="replay-loading-status"
+                  position="absolute"
+                  top={2}
+                  right={2}
+                  zIndex={1}
+                  align="center"
+                  gap={2}
+                  maxW="min(360px, 60%)"
+                  p={2}
+                  bg="blackAlpha.800"
+                  borderRadius="sm"
+                  role="status"
+                  aria-label="Replay loading status"
+                >
+                  {!state.error && <Spinner size="xs" />}
+                  <Text
+                    minW={0}
+                    fontSize="sm"
+                    color={state.error ? 'red.500' : undefined}
+                  >
+                    {state.error
+                      ? `Loading stopped: ${state.error}`
+                      : (state.progress ?? 'Loading more of the replay...')}
+                  </Text>
+                  {state.error && (
+                    <Button size="xs" onClick={load} flexShrink={0}>
+                      Retry
+                    </Button>
+                  )}
+                </Flex>
+              )}
               <Box
                 ref={setFeedOverlay}
                 display={feedVisible ? 'block' : 'none'}
@@ -449,14 +463,16 @@ export default function Replay({
             size="sm"
             aria-label={playing ? 'Pause' : 'Play'}
             onClick={() => {
-              if (!playing && state.complete && timeMs >= replay.endMs)
-                setTimeMs(replay.startMs);
+              if (!playing && state.complete && timeRef.current >= replay.endMs)
+                timeRef.current = replay.startMs;
+              setTimeMs(timeRef.current);
               setPlaying((p) => !p);
             }}
           >
             {playing ? <Pause size={16} /> : <Play size={16} />}
           </Button>
           <Box
+            data-testid="replay-seek-track"
             position="relative"
             flexGrow={1}
             display="flex"
@@ -550,21 +566,6 @@ export default function Replay({
           </select>
         </Flex>
       </Grid>
-      {!state.complete && (
-        <Flex align="center" gap={2} flexShrink={0}>
-          {!state.error && <Spinner size="xs" />}
-          <Text fontSize="sm" color={state.error ? 'red.500' : undefined}>
-            {state.error
-              ? `Loading stopped: ${state.error}`
-              : (state.progress ?? 'Loading more of the replay...')}
-          </Text>
-          {state.error && (
-            <Button size="xs" onClick={load}>
-              Retry
-            </Button>
-          )}
-        </Flex>
-      )}
     </Flex>
   );
 }

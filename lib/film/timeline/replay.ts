@@ -134,10 +134,6 @@ function holdLast<T>(values: (T | undefined)[]): (T | undefined)[] {
 
 /** Gaps longer than this between samples of one life are not interpolated across. */
 const MAX_INTERPOLATION_GAP_MS = 500;
-/** Damage counts as a shot's hit from just before the shot to this long after it. */
-const SHOT_HIT_LEAD_MS = 50;
-const SHOT_HIT_WINDOW_MS = 1000;
-
 export interface Replay {
   startMs: number;
   endMs: number;
@@ -186,6 +182,7 @@ export interface FlagHome {
 }
 
 export interface ObjectiveCarries {
+  timeline?: ObjectiveTimelineEvent[];
   /** The flags and the skull, as read from the objects themselves. */
   objects?: FlagObject[];
   /** Instants at which a biped took hold of or let go of something. */
@@ -193,6 +190,24 @@ export interface ObjectiveCarries {
   /** How close, as a fraction of the map, a biped must be to take an object; unlimited when absent. */
   reach?: number;
 }
+
+export type ObjectiveTimelineEvent =
+  | {
+      timeMs: number;
+      kind: 'flag' | 'skull';
+      state: 'carried';
+      actor: number;
+      team?: number;
+    }
+  | {
+      timeMs: number;
+      kind: 'flag' | 'skull';
+      state: 'home' | 'dropped';
+      x: number;
+      y: number;
+      team?: number;
+    }
+  | { timeMs: number; kind: 'flag' | 'skull'; state: 'hidden'; team?: number };
 
 export interface ObjectiveState {
   kind: 'flag' | 'skull';
@@ -257,8 +272,6 @@ export interface ReplayFire {
   weapon: string;
   /** Aim heading of the shot, atan2(y, x) degrees, when the record had one. */
   aimYawDeg?: number;
-  /** Unit that took the shooter's nearest damage, where it stood when hurt. */
-  hit?: { actor: number; x: number; y: number; timeMs: number };
 }
 
 export interface PlayerLoadout {
@@ -381,7 +394,7 @@ function trackWeaponSlots(
   events: SlotEvent[],
 ): { drawn?: HeldWeapon; holstered?: HeldWeapon } {
   const slots: (HeldWeapon | undefined)[] = [0, 1].map((i) =>
-    keyframeCarried[i] === undefined
+    keyframeCarried[i] === undefined || keyframeCarried[i] === 0
       ? undefined
       : {
           family: keyframeCarried[i],
@@ -391,11 +404,24 @@ function trackWeaponSlots(
         },
   );
   let drawn = keyframeDrawn === 1 ? 1 : 0;
+  const seenFamilies = new Set<number>();
+  for (const index of [drawn, 1 - drawn]) {
+    const held = slots[index];
+    if (!held) continue;
+    if (seenFamilies.has(held.family)) slots[index] = undefined;
+    else seenFamilies.add(held.family);
+  }
   for (const event of events) {
     if (event.kind === 'fire') {
       const index = slots.findIndex((s) => s?.family === event.family);
       if (index >= 0) drawn = index;
-      else slots[drawn] = { family: event.family };
+      else {
+        slots[1 - drawn] =
+          slots[1 - drawn]?.family === event.family
+            ? undefined
+            : slots[1 - drawn];
+        slots[drawn] = { family: event.family };
+      }
       continue;
     }
     const { pickup, weapons } = event.delta;
@@ -406,6 +432,9 @@ function trackWeaponSlots(
           : slots[0] && !slots[1]
             ? 1
             : drawn;
+      for (let index = 0; index < slots.length; index++)
+        if (index !== target && slots[index]?.family === pickup.family)
+          slots[index] = undefined;
       slots[target] = { family: pickup.family };
       drawn = target;
     }
@@ -425,7 +454,7 @@ export function createReplay(
   playerStats?: PlayerStatTimeline,
   inventories: InventorySnapshot[] = [],
   fireEvents: FireEvent[] = [],
-  damageEvents: DamageEvent[] = [],
+  _damageEvents: DamageEvent[] = [],
   objectiveCarries: ObjectiveCarries = {},
   filmEndMs?: number,
   zoneInput?: {
@@ -470,7 +499,13 @@ export function createReplay(
   const inventoriesBySlot = new Map<number, InventorySnapshot[]>();
   for (const snap of inventories) {
     // An empty reading (dead or unread) must not erase the previous full one.
-    if (snap.weapons.length === 0) continue;
+    if (
+      snap.weapons.length === 0 &&
+      !snap.ammo?.length &&
+      !snap.grenades?.length &&
+      snap.abilityRank === undefined
+    )
+      continue;
     const list = inventoriesBySlot.get(snap.slot) ?? [];
     list.push(snap);
     inventoriesBySlot.set(snap.slot, list);
@@ -581,72 +616,16 @@ export function createReplay(
   for (const list of livesByActor.values()) {
     list.sort((a, b) => a.times[0] - b.times[0]);
   }
-  const livesBySlot = new Map<number, LifeSamples[]>();
-  for (const life of lives) {
-    const list = livesBySlot.get(life.slot) ?? [];
-    list.push(life);
-    livesBySlot.set(life.slot, list);
-  }
-  const damageByAttacker = new Map<number, DamageEvent[]>();
-  for (const damage of [...damageEvents].sort((a, b) => a.timeMs - b.timeMs)) {
-    if (
-      damage.attackerSlot === undefined ||
-      damage.victimSlot === undefined ||
-      damage.attackerSlot === damage.victimSlot ||
-      damage.magnitude <= 0
-    )
-      continue;
-    const list = damageByAttacker.get(damage.attackerSlot) ?? [];
-    list.push(damage);
-    damageByAttacker.set(damage.attackerSlot, list);
-  }
-  /** The damage dealt by the shooter nearest in time to a shot, within the pairing window. */
-  function hitOf(fire: FireEvent): ReplayFire['hit'] {
-    const list = damageByAttacker.get(fire.slot);
-    if (!list) return undefined;
-    let best: DamageEvent | undefined;
-    for (
-      let i = upperBound(list, fire.timeMs - SHOT_HIT_LEAD_MS);
-      i < list.length && list[i].timeMs <= fire.timeMs + SHOT_HIT_WINDOW_MS;
-      i++
-    ) {
-      if (
-        !best ||
-        Math.abs(list[i].timeMs - fire.timeMs) <
-          Math.abs(best.timeMs - fire.timeMs)
-      )
-        best = list[i];
-    }
-    // Damage can land just after the last sample of a life, so clamp into it.
-    const candidates =
-      best?.victimSlot === undefined
-        ? []
-        : (livesBySlot.get(best.victimSlot) ?? []);
-    const life = candidates.find(
-      (l) =>
-        best !== undefined &&
-        best.timeMs >= l.times[0] - SHOT_HIT_WINDOW_MS &&
-        best.timeMs <= l.times[l.times.length - 1] + SHOT_HIT_WINDOW_MS,
-    );
-    const at =
-      best && life
-        ? Math.min(
-            Math.max(best.timeMs, life.times[0]),
-            life.times[life.times.length - 1],
-          )
-        : 0;
-    const point = life ? sample(life, at) : null;
-    return point
-      ? {
-          actor: point.actor,
-          x: point.x,
-          y: point.y,
-          timeMs: best?.timeMs ?? 0,
-        }
-      : undefined;
-  }
-
   const flagTracks = buildFlagTracks(objectiveCarries, positions, lives, endMs);
+  const objectiveTimelines = new Map<string, ObjectiveTimelineEvent[]>();
+  for (const event of objectiveCarries.timeline ?? []) {
+    const key = `${event.kind}:${event.team ?? 'neutral'}`;
+    const own = objectiveTimelines.get(key) ?? [];
+    own.push(event);
+    objectiveTimelines.set(key, own);
+  }
+  for (const own of objectiveTimelines.values())
+    own.sort((first, second) => first.timeMs - second.timeMs);
   return {
     startMs,
     endMs,
@@ -712,7 +691,9 @@ export function createReplay(
       const until = Math.min(timeMs, latestLifeEnd);
       // A slot with neither a magazine nor a charge reading is empty.
       const slotAmmo = (latest.ammo ?? []).map((a) =>
-        a.mag === undefined && a.gauge === undefined ? { ...a, mag: 0 } : a,
+        a.mag === undefined && a.gauge === undefined && a.reserve === 0
+          ? { ...a, mag: 0 }
+          : a,
       );
       // Delta readings newer than the keyframe replace what it recorded.
       const live = liveInventory(
@@ -756,13 +737,17 @@ export function createReplay(
         keyframeDrawn,
         events,
       );
-      const drawnWeapon = tracked.drawn ?? { family: latest.weapons[0] };
+      const drawnWeapon = tracked.drawn ?? {
+        family: latest.weapons[0],
+        ...slotAmmo[keyframeDrawn],
+      };
       const holsteredName =
         tracked.holstered && WEAPON_FAMILY_NAMES.get(tracked.holstered.family);
       const ammoKnown =
         drawnWeapon.mag !== undefined ||
         drawnWeapon.gauge !== undefined ||
-        events.every((e) => e.kind === 'delta' && !e.delta.pickup);
+        (latest.ammoKnown !== false &&
+          events.every((e) => e.kind === 'delta' && !e.delta.pickup));
       return {
         weapon: WEAPON_FAMILY_NAMES.get(drawnWeapon.family),
         holstered:
@@ -795,9 +780,10 @@ export function createReplay(
             : [],
         ),
         equipment:
-          latest.abilityRank === undefined
+          latest.equipment ??
+          (latest.abilityRank === undefined
             ? undefined
-            : abilityName(latest.abilityRank),
+            : abilityName(latest.abilityRank)),
         atMs: live.atMs ?? latest.timeMs,
       };
     },
@@ -817,6 +803,52 @@ export function createReplay(
       return hillTimeline.at(timeMs);
     },
     objectives(timeMs) {
+      if (objectiveCarries.timeline) {
+        return [...objectiveTimelines.values()].flatMap<ObjectiveState>(
+          (timeline) => {
+            let low = 0;
+            let high = timeline.length;
+            while (low < high) {
+              const middle = (low + high) >>> 1;
+              if (timeline[middle].timeMs <= timeMs) low = middle + 1;
+              else high = middle;
+            }
+            const event = timeline[low - 1];
+            if (!event || event.state === 'hidden') return [];
+            if (event.state === 'carried') {
+              const life = livesByActor
+                .get(event.actor)
+                ?.find(
+                  (life) =>
+                    life.times[0] <= timeMs &&
+                    timeMs <= life.times[life.times.length - 1],
+                );
+              const point = life && sample(life, timeMs);
+              return point
+                ? [
+                    {
+                      kind: event.kind,
+                      state: event.state,
+                      actor: event.actor,
+                      team: event.team,
+                      x: point.x,
+                      y: point.y,
+                    },
+                  ]
+                : [];
+            }
+            return [
+              {
+                kind: event.kind,
+                state: event.state,
+                team: event.team,
+                x: event.x,
+                y: event.y,
+              },
+            ];
+          },
+        );
+      }
       const states: ObjectiveState[] = [];
       for (const track of flagTracks) {
         const segment = track.segments.find(
@@ -883,12 +915,20 @@ export function createReplay(
       const fires = actorFires(actor);
       return fires
         .slice(upperBound(fires, fromMs), upperBound(fires, toMs))
-        .map((fire) => ({
-          timeMs: fire.timeMs,
-          weapon: fire.weapon,
-          aimYawDeg: fire.aimYawDeg,
-          hit: hitOf(fire),
-        }));
+        .map((fire) => {
+          const life = (livesByActor.get(actor) ?? []).find(
+            (entry) =>
+              entry.times[0] <= fire.timeMs &&
+              fire.timeMs <= entry.times[entry.times.length - 1],
+          );
+          return {
+            timeMs: fire.timeMs,
+            weapon: fire.weapon,
+            aimYawDeg:
+              fire.aimYawDeg ??
+              (life ? sample(life, fire.timeMs)?.aimYawDeg : undefined),
+          };
+        });
     },
     graves(timeMs) {
       const graves: ReplayGrave[] = [];

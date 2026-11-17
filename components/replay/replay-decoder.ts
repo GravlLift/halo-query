@@ -14,6 +14,7 @@ export interface DecodeRequest {
 }
 
 export type DecodeResponse =
+  | { type: 'ready' }
   | { type: 'stage'; stage: string }
   | { type: 'result'; data: ReplayBuildData }
   | { type: 'error'; message: string };
@@ -23,6 +24,13 @@ export function createReplayDecoder() {
     new URL('./replay-decoder.worker.ts', import.meta.url),
   );
   const sent = new Set<number>();
+  let started = false;
+  const onReady = (event: MessageEvent<DecodeResponse>) => {
+    if (event.data.type !== 'ready') return;
+    started = true;
+    worker.removeEventListener('message', onReady);
+  };
+  worker.addEventListener('message', onReady);
 
   return {
     decode: (
@@ -34,13 +42,18 @@ export function createReplayDecoder() {
       signal?: AbortSignal,
     ): Promise<ReplayBuildData> =>
       new Promise((resolve, reject) => {
+        let startupTimeout: ReturnType<typeof setTimeout> | undefined;
         const cleanup = () => {
+          clearTimeout(startupTimeout);
           worker.removeEventListener('message', onMessage);
           worker.removeEventListener('error', onError);
           worker.removeEventListener('messageerror', onError);
           signal?.removeEventListener('abort', onAbort);
         };
         const onMessage = (event: MessageEvent<DecodeResponse>) => {
+          started = true;
+          clearTimeout(startupTimeout);
+          if (event.data.type === 'ready') return;
           if (event.data.type === 'stage') {
             onStage?.(event.data.stage);
             return;
@@ -66,6 +79,19 @@ export function createReplayDecoder() {
         worker.addEventListener('error', onError);
         worker.addEventListener('messageerror', onError);
         signal?.addEventListener('abort', onAbort, { once: true });
+        if (!started) {
+          startupTimeout = setTimeout(() => {
+            if (started) return;
+            cleanup();
+            worker.removeEventListener('message', onReady);
+            worker.terminate();
+            reject(
+              new Error(
+                'Replay worker did not start within 30 seconds. Retry loading the replay, or hard-refresh this tab if its worker bundle is stale.',
+              ),
+            );
+          }, 30_000);
+        }
         const newChunks = chunks.filter((chunk) => !sent.has(chunk.index));
         try {
           const request: DecodeRequest = {
@@ -82,6 +108,9 @@ export function createReplayDecoder() {
           reject(error);
         }
       }),
-    terminate: () => worker.terminate(),
+    terminate: () => {
+      worker.removeEventListener('message', onReady);
+      worker.terminate();
+    },
   };
 }

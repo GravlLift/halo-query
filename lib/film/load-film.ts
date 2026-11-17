@@ -29,6 +29,16 @@ import type { ObjectiveCarries, Replay } from './timeline/replay';
 import { buildScoreTimeline } from './timeline/score';
 import { buildFlagObjects, buildSkullObject } from './timeline/flag-objects';
 import { parseFilm } from '@gravllift/libfilmshell-wasm';
+import { projectOddballTimeline } from './film-objectives';
+import { projectFlagTimeline } from './film-flags';
+import {
+  projectWorldObjects,
+  worldObjectsAt,
+  projectWorldZones,
+  worldZonesAt,
+  worldHillsAt,
+  type ReplayWorldObject,
+} from './film-world';
 
 const DEFAULT_CONCURRENCY = 6;
 /** How near a biped must be to an objective to pick it up. */
@@ -87,6 +97,7 @@ const SHROUD_RADIUS_M = 3.5;
 
 /** A match replay: the film's timeline plus the static map information around it. */
 export interface MatchReplay extends Replay {
+  worldObjects(timeMs: number): ReplayWorldObject[];
   /** Time the first group of actors has spawned, if positions are available. */
   firstSpawnMs?: number;
   projectiles: ReplayProjectile[];
@@ -191,6 +202,18 @@ export async function decodeFilmData(
       actor.gamertag = player.gamertag ?? actor.gamertag;
     }
   }
+  const worldZones = projectWorldZones(data, positions);
+  if (worldZones.zones.length) {
+    for (let index = objectives.length - 1; index >= 0; index--) {
+      if (
+        ['strongholds_zone', 'hill', 'extraction_zone'].includes(
+          objectives[index].role,
+        )
+      )
+        objectives.splice(index, 1);
+    }
+    objectives.push(...worldZones.zones.map((zone) => zone.objective));
+  }
   if (positions.actors.some((actor) => actor.xuid)) {
     const knownXuids = new Set(positions.actors.map((actor) => actor.xuid));
     for (const player of players) {
@@ -260,6 +283,12 @@ export async function decodeFilmData(
       ? records.worldObjects
       : { births: [], samples: [], drops: [] };
   let carries: ObjectiveCarries = {};
+  if (!data.records) {
+    const timeline =
+      projectFlagTimeline(data, positions, objectives) ??
+      projectOddballTimeline(data, positions, objectives);
+    if (timeline) carries = { timeline };
+  }
   if (scan.births.length > 0 || scan.drops.length > 0) {
     const flagHomes = objectives
       .filter((o) => o.role === 'flag_spawn')
@@ -363,6 +392,8 @@ export async function decodeFilmData(
     metersToFilm,
     objectives,
     mapName,
+    worldObjects: projectWorldObjects(data, positions),
+    worldZones,
   };
 }
 
@@ -387,6 +418,8 @@ export function createMatchReplay(data: ReplayBuildData): MatchReplay {
     metersToFilm,
     objectives,
     mapName,
+    worldObjects = [],
+    worldZones,
   } = data;
   const replay = createReplay(
     positions,
@@ -416,6 +449,13 @@ export function createMatchReplay(data: ReplayBuildData): MatchReplay {
           )
           .at(-1);
   return Object.assign(replay, {
+    zones: worldZones?.zones.length
+      ? (timeMs: number) => worldZonesAt(worldZones, timeMs)
+      : replay.zones,
+    hills: worldZones?.hills
+      ? (timeMs: number) => worldHillsAt(worldZones, timeMs)
+      : replay.hills,
+    worldObjects: (timeMs: number) => worldObjectsAt(worldObjects, timeMs),
     firstSpawnMs,
     killFeed,
     projectiles: flights.map((flight): ReplayProjectile => {
