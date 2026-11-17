@@ -342,7 +342,7 @@ export class DependencyBodyProcessor implements SpanProcessor {
 }
 
 function copySpan(existingSpan: ReadableSpan): Span {
-  const tracer = trace.getTracer('lightspeed');
+  const tracer = trace.getTracer('haloquery');
   const newSpan = tracer.startSpan(existingSpan.name, {
     attributes: existingSpan.attributes,
     kind: existingSpan.kind,

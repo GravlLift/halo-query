@@ -5,6 +5,7 @@ import {
   Grid,
   Slider,
   Spinner,
+  NativeSelect,
   Text,
 } from '@chakra-ui/react';
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
@@ -28,7 +29,7 @@ function formatTime(ms: number) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-const SPEEDS = [1, 2, 4, 8, 16];
+const SPEEDS = [0.25, 0.5, 0.75, 1, 2, 4, 8, 16];
 
 export default function Replay({
   match,
@@ -553,17 +554,21 @@ export default function Replay({
           <Text fontVariantNumeric="tabular-nums" minW="90px" textAlign="right">
             {formatTime(pendingSeek ?? timeMs)} / {formatTime(endMs)}
           </Text>
-          <select
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            aria-label="Playback speed"
-          >
-            {SPEEDS.map((s) => (
-              <option key={s} value={s}>
-                {s}x
-              </option>
-            ))}
-          </select>
+          <NativeSelect.Root size="xs" maxW="60px">
+            <NativeSelect.Field
+              placeholder="Select option"
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.currentTarget.value))}
+              aria-label="Playback speed"
+            >
+              {SPEEDS.map((s) => (
+                <option key={s} value={s}>
+                  {s}x
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
         </Flex>
       </Grid>
     </Flex>
