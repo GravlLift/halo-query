@@ -104,7 +104,16 @@ export function projectFlagTimeline(
       rank: 3,
       kind: 'drop',
       actor: actorOf(kill.victim),
-      point: normalizedPoint(data.coordinates, kill.position),
+      point: normalizedPoint(
+        data.coordinates,
+        kill.position
+          ? {
+              x: kill.position.x,
+              y: kill.position.y,
+              z: kill.position.z ?? null,
+            }
+          : undefined,
+      ),
     });
   for (const [ground, object] of data.groundWeapons.entries()) {
     if (number(field(object, 'tag')) !== FLAG_IDENTITY) continue;

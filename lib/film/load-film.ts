@@ -28,7 +28,7 @@ import {
 import type { ObjectiveCarries, Replay } from './timeline/replay';
 import { buildScoreTimeline } from './timeline/score';
 import { buildFlagObjects, buildSkullObject } from './timeline/flag-objects';
-import { parseFilm } from '@gravllift/libfilmshell-wasm';
+import { parseFilm, parseFilmWithTeams } from '@gravllift/libfilmshell-wasm';
 import { projectOddballTimeline } from './film-objectives';
 import { projectFlagTimeline } from './film-flags';
 import {
@@ -130,13 +130,24 @@ export async function decodeReplay(
 ) {
   signal?.throwIfAborted();
   onStage?.('Parsing film...');
-  const data = await parseFilm(
-    chunks.map((chunk) => ({
-      index: chunk.index,
-      chunkType: chunk.chunkType,
-      bytes: Uint8Array.from(chunk.data).buffer,
-    })),
-  );
+  const parserChunks = chunks.map((chunk) => ({
+    index: chunk.index,
+    chunkType: chunk.chunkType,
+    bytes: Uint8Array.from(chunk.data).buffer,
+    fileRelativePath: chunk.fileRelativePath,
+  }));
+  const data =
+    match.MatchInfo.GameVariantCategory ===
+    GameVariantCategory.MultiplayerKingOfTheHill
+      ? await parseFilmWithTeams(
+          parserChunks,
+          match.Players.flatMap((player) => {
+            const xuid = xuidOf(player.PlayerId);
+            const team = player.LastTeamId;
+            return xuid && (team === 0 || team === 1) ? [{ xuid, team }] : [];
+          }),
+        )
+      : await parseFilm(parserChunks);
   signal?.throwIfAborted();
   const endMs = partial
     ? chunks

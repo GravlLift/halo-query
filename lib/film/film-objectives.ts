@@ -164,7 +164,15 @@ export function projectOddballTimeline(
         rank: 3,
         state: 'death',
         actor,
-        point: worldPoint(kill.position),
+        point: worldPoint(
+          kill.position
+            ? {
+                x: kill.position.x,
+                y: kill.position.y,
+                z: kill.position.z ?? null,
+              }
+            : undefined,
+        ),
       });
   }
   actions.sort(
