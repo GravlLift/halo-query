@@ -1,14 +1,14 @@
-import type { FilmData } from '@gravllift/halo-film';
-import type { LinkedFilmPositions } from '../../../../libs/halo-film/src/decoders/positions';
+import type { FilmData } from '@gravllift/halo-helpers/film-data';
+import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import {
   WEAPON_FAMILY_NAMES,
   EQUIPMENT_TAG_NAMES,
   isGrenadeFamily,
-} from '../../../../libs/halo-film/src/core/weapon-catalog';
+} from '@gravllift/halo-film-ui/film/core/weapon-catalog';
 import {
   FLAG_IDENTITY,
   SKULL_IDENTITY,
-} from '../../../../libs/halo-film/src/decoders/world-object-births';
+} from '@gravllift/halo-film-ui/film/decoders/world-object-births';
 import { field, items, number } from './film-json';
 import { normalizedPoint } from './film-space';
 import type { MapObjective } from '@gravllift/halo-infinite-maps';

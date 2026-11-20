@@ -6,7 +6,7 @@ import {
   roundScoreAt,
   roundsWonAt,
 } from './score';
-import type { StatRecord } from '../../../../../libs/halo-film/src/decoders/stat-records';
+import type { StatRecord } from '@gravllift/halo-helpers/film-types';
 
 const record = (
   slot: number,

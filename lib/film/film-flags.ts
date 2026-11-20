@@ -1,6 +1,6 @@
-import type { FilmData } from '@gravllift/halo-film';
-import type { LinkedFilmPositions } from '../../../../libs/halo-film/src/decoders/positions';
-import { FLAG_IDENTITY } from '../../../../libs/halo-film/src/decoders/world-object-births';
+import type { FilmData } from '@gravllift/halo-helpers/film-data';
+import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
+import { FLAG_IDENTITY } from '@gravllift/halo-film-ui/film/decoders/world-object-births';
 import type { ObjectiveTimelineEvent } from './timeline/replay';
 import { field, number } from './film-json';
 import { normalizedPoint } from './film-space';

@@ -1,4 +1,4 @@
-import type { JsonValue } from '@gravllift/halo-film';
+import type { JsonValue } from '@gravllift/halo-helpers/film-data';
 
 export function field(
   value: JsonValue | undefined,

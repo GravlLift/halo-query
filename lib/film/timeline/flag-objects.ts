@@ -2,9 +2,11 @@ import type { FlagHome } from './replay';
 import {
   FLAG_IDENTITY,
   SKULL_IDENTITY,
-  type WorldObjectDrop,
-  type WorldObjectScan,
-} from '../../../../../libs/halo-film/src/decoders/world-object-births';
+} from '@gravllift/halo-film-ui/film/decoders/world-object-births';
+import type {
+  WorldObjectDrop,
+  WorldObjectScan,
+} from '@gravllift/halo-helpers/film-types';
 
 /** A flag that rests longer than this without a position update has stopped moving. */
 const PATH_GAP_MS = 2000;
@@ -91,18 +93,22 @@ export function buildFlagSegments(
     | { timeMs: number; rank: number; kind: 'grab'; carrier: number };
   const events: Event[] = [
     ...flag.resets.map((timeMs): Event => ({ timeMs, rank: 0, kind: 'reset' })),
-    ...flag.drops.map((d): Event => ({
-      timeMs: d.timeMs,
-      rank: 1,
-      kind: 'drop',
-      path: d.path,
-    })),
-    ...grabs.map((g): Event => ({
-      timeMs: g.timeMs,
-      rank: 2,
-      kind: 'grab',
-      carrier: g.carrier,
-    })),
+    ...flag.drops.map(
+      (d): Event => ({
+        timeMs: d.timeMs,
+        rank: 1,
+        kind: 'drop',
+        path: d.path,
+      }),
+    ),
+    ...grabs.map(
+      (g): Event => ({
+        timeMs: g.timeMs,
+        rank: 2,
+        kind: 'grab',
+        carrier: g.carrier,
+      }),
+    ),
   ].sort((a, b) => a.timeMs - b.timeMs || a.rank - b.rank);
   return events.flatMap((event, i): FlagSegment[] => {
     const toMs = events[i + 1]?.timeMs ?? endMs;

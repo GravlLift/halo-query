@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { FilmData } from '@gravllift/halo-film';
-import type { LinkedFilmPositions } from '../../../../libs/halo-film/src/decoders/positions';
+import type { FilmData } from '@gravllift/halo-helpers/film-data';
+import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import { projectFlagTimeline } from './film-flags';
 import { createReplay } from './timeline/replay';
 import {

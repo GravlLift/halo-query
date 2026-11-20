@@ -9,7 +9,6 @@ const nextConfig = {
   transpilePackages: [
     '@gravllift/utilities',
     '@gravllift/halo-helpers',
-    '@gravllift/halo-film',
     '@gravllift/halo-film-ui',
     '@gravllift/halo-infinite-maps',
     'films-ui',

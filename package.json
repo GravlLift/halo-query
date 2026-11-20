@@ -14,7 +14,7 @@
     "build": "next build",
     "start": "next start",
     "test": "jest -c jest.config.ts",
-    "test:film": "tsx --test lib/film/*.test.ts lib/film/timeline/*.test.ts",
+    "test:film": "tsx --tsconfig tsconfig.film-test.json --test lib/film/*.test.ts lib/film/timeline/*.test.ts",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {
@@ -25,7 +25,6 @@
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@gravllift/libfilmshell-wasm": "0.0.0",
-    "@gravllift/halo-film": "0.0.0",
     "@gravllift/halo-film-ui": "0.0.0",
     "@gravllift/halo-helpers": "0.0.0",
     "@gravllift/halo-infinite-maps": "0.0.0",

@@ -1,4 +1,4 @@
-import type { StatRecord } from '../../../../../libs/halo-film/src/decoders/stat-records';
+import type { StatRecord } from '@gravllift/halo-helpers/film-types';
 import { inside, type ZoneOccupant, type ZoneShape } from './zone-state';
 
 /** Stat component of a team's hill control counter; its `a` channel counts controlled seconds. */

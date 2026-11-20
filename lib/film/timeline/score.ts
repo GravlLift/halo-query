@@ -1,5 +1,4 @@
-import type { FilmChunkSource } from '../../../../../libs/halo-film/src/core/film-input';
-import { extractStatRecords, type StatRecord } from '../../../../../libs/halo-film/src/decoders/stat-records';
+import type { StatRecord } from '@gravllift/halo-helpers/film-types';
 
 /** Stat component carrying the mode score as displayed (A channel). */
 const MODE_SCORE_COMPONENT = 0;
@@ -186,13 +185,6 @@ export function buildScoreTimeline(
     teams.forEach((t, i) => (t.team = ordered[i].team));
   }
   return { teams, rounds: spans };
-}
-
-export async function extractScoreTimeline(
-  chunkSource: FilmChunkSource,
-  finalScores: readonly { team: number; score: number }[] = [],
-): Promise<ScoreTimeline> {
-  return buildScoreTimeline(await extractStatRecords(chunkSource), finalScores);
 }
 
 /**

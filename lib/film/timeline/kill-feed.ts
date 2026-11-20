@@ -1,9 +1,11 @@
-import type { DamageEvent } from '../../../../../libs/halo-film/src/decoders/damage-events';
-import type { HighlightEvent } from '../../../../../libs/halo-film/src/decoders/highlight-events';
-import type { PlayerKilledEvent } from '../../../../../libs/halo-film/src/decoders/kill-events';
-import type { PlayerGameEvent } from '../../../../../libs/halo-film/src/decoders/kill-events';
-import type { FilmPlayer } from '../../../../../libs/halo-film/src/decoders/roster';
-import type { LinkedFilmPositions } from '../../../../../libs/halo-film/src/decoders/positions';
+import type {
+  DamageEvent,
+  FilmPlayer,
+  HighlightEvent,
+  LinkedFilmPositions,
+  PlayerGameEvent,
+  PlayerKilledEvent,
+} from '@gravllift/halo-helpers/film-types';
 
 const KILL_EVENT_PAIR_WINDOW_MS = 250;
 

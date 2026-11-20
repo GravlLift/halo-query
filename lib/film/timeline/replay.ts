@@ -1,13 +1,16 @@
-import type { LinkedFilmPositions } from '../../../../../libs/halo-film/src/decoders/positions';
-import type { InventorySnapshot } from '../../../../../libs/halo-film/src/decoders/inventory';
-import type { InventoryDelta } from '../../../../../libs/halo-film/src/decoders/inventory-deltas';
-import type { FireEvent } from '../../../../../libs/halo-film/src/decoders/fire-events';
-import type { DamageEvent } from '../../../../../libs/halo-film/src/decoders/damage-events';
+import type {
+  CarryEvent,
+  DamageEvent,
+  FireEvent,
+  InventoryDelta,
+  InventorySnapshot,
+  LinkedFilmPositions,
+} from '@gravllift/halo-helpers/film-types';
 import {
   GRENADE_NAMES,
   WEAPON_FAMILY_NAMES,
   abilityName,
-} from '../../../../../libs/halo-film/src/core/weapon-catalog';
+} from '@gravllift/halo-film-ui/film/core/weapon-catalog';
 import {
   isRoundBased,
   roundScoreAt,
@@ -15,7 +18,6 @@ import {
   scoreAt,
   type ScoreTimeline,
 } from './score';
-import type { CarryEvent } from '../../../../../libs/halo-film/src/decoders/carry-events';
 import {
   buildFlagSegments,
   findGrabs,

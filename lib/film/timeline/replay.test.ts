@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { LinkedFilmPositions } from '../../../../../libs/halo-film/src/decoders/positions';
+import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import { createReplay } from './replay';
 
 describe('replay loadout', () => {

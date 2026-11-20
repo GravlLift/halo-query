@@ -3,14 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
-import type { FilmData } from '@gravllift/halo-film';
-import type { FilmParser } from '@gravllift/halo-film';
-import { parseFilm as parseWasmFilm } from '@gravllift/libfilmshell-wasm';
-import { parseFilm } from '@gravllift/halo-film';
+import type { FilmData } from '@gravllift/halo-helpers/film-data';
 import {
   createMatchReplay,
   decodeFilmData,
-  decodeReplay,
   type FilmMatchStats,
   type FilmManifest,
 } from './load-film';
@@ -90,19 +86,14 @@ function sampleData(): FilmData {
 }
 
 describe('FilmData replay boundary', () => {
-  it('accepts either library as the same parser interface', () => {
-    const wasm: FilmParser = { parseFilm: parseWasmFilm };
-    const native: FilmParser = { parseFilm };
-    assert.equal(typeof wasm.parseFilm, 'function');
-    assert.equal(typeof native.parseFilm, 'function');
-  });
-
   it('projects WASM-shaped lives without native records', async () => {
     const data = sampleData();
     const projected = projectFilmData(data);
     assert.equal(projected.positions?.actors[0].xuid, '2533274800000000');
     assert.equal(projected.positions?.tracks[0].samples[0].aimYawDeg, 0);
-    const replay = createMatchReplay(await decodeFilmData(data, match));
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, undefined, false),
+    );
     assert.equal(replay.endMs, 1000);
     assert.equal(replay.players[0].team, 1);
     const point = replay.at(500)[0];
@@ -111,30 +102,11 @@ describe('FilmData replay boundary', () => {
     assert.equal(point.shield, 0.5);
   });
 
-  it('accepts a synchronous parser through the chunk-loading boundary', async () => {
-    let called = false;
-    const data = await decodeReplay(
-      { CustomData: { FilmMajorVersion: 41, Chunks: [] } },
-      [],
-      match,
-      undefined,
-      false,
-      undefined,
-      {
-        parseFilm(chunks) {
-          called = true;
-          assert.deepEqual(chunks, []);
-          return sampleData();
-        },
-      },
-    );
-    assert.equal(called, true);
-    assert.equal(data.positions.actors[0].gamertag, 'Spartan');
-  });
-
   it('survives JSON serialization without native decoder records', async () => {
     const data: FilmData = JSON.parse(JSON.stringify(sampleData()));
-    const replay = createMatchReplay(await decodeFilmData(data, match));
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, undefined, false),
+    );
     assert.equal(replay.at(500).length, 1);
   });
 
@@ -144,7 +116,9 @@ describe('FilmData replay boundary', () => {
       { tick: 30, owner: { Team: 4 }, slot: 0, value: 3 },
       { tick: 30, owner: { Player: 7 }, slot: 4, value: 2 },
     ];
-    const replay = createMatchReplay(await decodeFilmData(data, match));
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, undefined, false),
+    );
     assert.equal(
       replay.scores(750).find((score) => score.team === 4)?.score,
       3,
@@ -182,10 +156,10 @@ const wasmBytes = path.resolve(
 );
 
 describe(
-  'parser interchangeability',
+  'WASM film parser',
   { skip: !existsSync(fixture) || !existsSync(wasmBytes) },
   () => {
-    it('builds a replay from either real parser through the same FilmData adapter', async () => {
+    it('builds a replay from a real film through the FilmData adapter', async () => {
       const manifest: FilmManifest = JSON.parse(
         readFileSync(path.join(fixture, 'manifest.json'), 'utf8'),
       );
@@ -199,18 +173,17 @@ describe(
       const wasm = await import(pathToFileURL(wasmPath).href);
       wasm.initSync({ module: readFileSync(wasmBytes) });
       const fromWasm: FilmData = JSON.parse(wasm.parse_film(chunks));
-      const fromTypescript = await parseFilm(chunks);
-      for (const data of [fromTypescript, fromWasm]) {
-        assert.ok(
-          data.lives.length > 0,
-          `${data.records ? 'TypeScript' : 'WASM'} returned ${data.players.length} players but no lives`,
-        );
-        const replay = createMatchReplay(await decodeFilmData(data, match));
-        assert.ok(replay.players.length > 0);
-        assert.ok(replay.firstSpawnMs !== undefined);
-        assert.ok(replay.at(replay.firstSpawnMs).length > 0);
-        assert.ok(replay.endMs > 0);
-      }
+      assert.ok(
+        fromWasm.lives.length > 0,
+        `WASM returned ${fromWasm.players.length} players but no lives`,
+      );
+      const replay = createMatchReplay(
+        await decodeFilmData(fromWasm, match, undefined, undefined, false),
+      );
+      assert.ok(replay.players.length > 0);
+      assert.ok(replay.firstSpawnMs !== undefined);
+      assert.ok(replay.at(replay.firstSpawnMs).length > 0);
+      assert.ok(replay.endMs > 0);
     });
   },
 );

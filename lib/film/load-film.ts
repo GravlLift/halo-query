@@ -1,9 +1,9 @@
-import { type FilmData } from '@gravllift/halo-film';
+import { type FilmData } from '@gravllift/halo-helpers/film-data';
 import { projectFilmData, projectScoreboard } from './film-data';
-import {
-  CHUNK_TYPE_HIGHLIGHTS,
-  type FilmChunkInput,
-} from '../../../../libs/halo-film/src/core/film-input';
+import type {
+  DecoderFilmChunkInput as FilmChunkInput,
+  ProjectileFlight,
+} from '@gravllift/halo-helpers/film-types';
 import {
   GameVariantCategory,
   mapBackgroundFor,
@@ -15,7 +15,6 @@ import type {
   MapObjective,
 } from '@gravllift/halo-infinite-maps';
 import { buildPlayerStats } from './timeline/player-stats';
-import type { ProjectileFlight } from '../../../../libs/halo-film/src/decoders/projectiles';
 import { createReplay } from './timeline/replay';
 import { buildKillFeed, type KillFeedEntry } from './timeline/kill-feed';
 import { extractHillControl, type HillInput } from './timeline/hill-state';
@@ -40,6 +39,7 @@ import {
   type ReplayWorldObject,
 } from './film-world';
 
+const CHUNK_TYPE_HIGHLIGHTS = 3;
 const DEFAULT_CONCURRENCY = 6;
 /** How near a biped must be to an objective to pick it up. */
 const CARRY_REACH_M = 4;
@@ -138,7 +138,11 @@ export async function decodeReplay(
   }[] = [];
 
   // Fill missing chunks with empty data to avoid parsing errors.
-  for (let i = 0; i < Math.max(...chunks.map((c) => c.index)); i++) {
+  const maxChunkIndex = chunks.reduce(
+    (max, chunk) => Math.max(max, chunk.index),
+    -1,
+  );
+  for (let i = 0; i <= maxChunkIndex; i++) {
     const chunk = chunks.find((c) => c.index === i);
     if (!chunk) {
       parserChunks.push({

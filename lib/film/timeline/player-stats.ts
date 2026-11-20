@@ -1,6 +1,5 @@
-import type { FilmChunkSource } from '../../../../../libs/halo-film/src/core/film-input';
 import { realRounds, strictlyIncreasing, type ScorePoint } from './score';
-import { extractStatRecords, type StatRecord } from '../../../../../libs/halo-film/src/decoders/stat-records';
+import type { StatRecord } from '@gravllift/halo-helpers/film-types';
 
 const FIRST_PLAYER_SLOT = 10;
 const LAST_PLAYER_SLOT = 24;
@@ -127,13 +126,6 @@ export function buildPlayerStats(
       if (rest[i]) p.xuid = rest[i].xuid;
     });
   return { players };
-}
-
-export async function extractPlayerStats(
-  chunkSource: FilmChunkSource,
-  finals: readonly FinalPlayerStats[] = [],
-): Promise<PlayerStatTimeline> {
-  return buildPlayerStats(await extractStatRecords(chunkSource), finals);
 }
 
 export function statsAt(

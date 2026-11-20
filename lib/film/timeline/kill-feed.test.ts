@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type {
+  Actor,
   HighlightEvent,
   HighlightEventType,
-} from '../../../../../libs/halo-film/src/decoders/highlight-events';
-import type { Actor } from '../../../../../libs/halo-film/src/players/link-lives';
+} from '@gravllift/halo-helpers/film-types';
 import { buildKillFeed } from './kill-feed';
 
 const event = (

@@ -1,13 +1,13 @@
-import type { FilmData } from '@gravllift/halo-film';
+import type { FilmData } from '@gravllift/halo-helpers/film-data';
 import type {
   InventorySnapshot,
   SlotAmmo,
-} from '../../../../libs/halo-film/src/decoders/inventory';
+} from '@gravllift/halo-helpers/film-types';
 import {
   WEAPON_FAMILY_NAMES,
   isGrenadeFamily,
   EQUIPMENT_TAG_NAMES as equipmentNames,
-} from '../../../../libs/halo-film/src/core/weapon-catalog';
+} from '@gravllift/halo-film-ui/film/core/weapon-catalog';
 import { field, items, number } from './film-json';
 
 interface InventoryLife {

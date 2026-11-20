@@ -1,4 +1,7 @@
-import type { FilmCoordinatesData, JsonValue } from '@gravllift/halo-film';
+import type {
+  FilmCoordinatesData,
+  JsonValue,
+} from '@gravllift/halo-helpers/film-data';
 import { field, number } from './film-json';
 
 export function normalizedPoint(

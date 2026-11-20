@@ -30,9 +30,9 @@ export type { HillState, HillTeamProgress } from './timeline/hill-state';
 export type {
   ProjectileFlight,
   ProjectilePoint,
-} from '../../../../libs/halo-film/src/decoders/projectiles';
+} from '@gravllift/halo-helpers/film-types';
 export type {
   MapBackground,
   MapObjective,
 } from '@gravllift/halo-infinite-maps';
-export type { FilmChunkInput } from '../../../../libs/halo-film/src/core/film-input';
+export type { DecoderFilmChunkInput as FilmChunkInput } from '@gravllift/halo-helpers/film-types';

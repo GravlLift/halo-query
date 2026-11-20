@@ -1,4 +1,4 @@
-import type { StatRecord } from '../../../../../libs/halo-film/src/decoders/stat-records';
+import type { StatRecord } from '@gravllift/halo-helpers/film-types';
 
 /** Stat component of a team's zone-capture counter; its `b` channel counts captures. */
 const ZONE_CAPTURE_COMPONENT = 20;

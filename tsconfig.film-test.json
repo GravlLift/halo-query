@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@gravllift/halo-helpers": ["libs/halo-helpers/src/index.ts"],
+      "@gravllift/libfilmshell-wasm": ["libs/halo-filmshell-wasm/src/node.js"],
+      "@gravllift/utilities": ["libs/utilities/src/index.ts"]
+    }
+  }
+}

@@ -1,10 +1,13 @@
-import type { FilmData, FilmRecordsData } from '@gravllift/halo-film';
-import type { LinkedFilmPositions } from '../../../../libs/halo-film/src/decoders/positions';
-import type { StatRecord } from '../../../../libs/halo-film/src/decoders/stat-records';
-import {
-  linkLives,
-  type Actor,
-} from '../../../../libs/halo-film/src/players/link-lives';
+import type {
+  FilmData,
+  FilmRecordsData,
+} from '@gravllift/halo-helpers/film-data';
+import type {
+  Actor,
+  LinkedFilmPositions,
+  StatRecord,
+} from '@gravllift/halo-helpers/film-types';
+import { linkLives } from '@gravllift/halo-film-ui/film/players/link-lives';
 import type { ScoreTimeline } from './timeline/score';
 import type { PlayerStatTimeline } from './timeline/player-stats';
 import { field, items, number } from './film-json';
@@ -12,7 +15,7 @@ import { projectInventories } from './film-inventory';
 import {
   WEAPON_FAMILY_NAMES,
   isGrenadeFamily,
-} from '../../../../libs/halo-film/src/core/weapon-catalog';
+} from '@gravllift/halo-film-ui/film/core/weapon-catalog';
 
 const milliseconds = (tick: number) => (tick * 1000) / 60;
 
