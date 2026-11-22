@@ -427,193 +427,201 @@ export default function Match({ matchId, filters }: MatchProps) {
           )}
         </Box>
       </Flex>
-      {match ? (
-        <>
-          {match.Players.some((p) => 'Skill' in p && p.Skill) ? (
-            <>
-              <Center>
-                <Box width="100%">
-                  <Heading size="md">
-                    {match.MatchInfo.TeamsEnabled ? 'Team' : 'Player'} Skills
-                  </Heading>
-                </Box>
-              </Center>
-              <Box overflowX={'auto'} mb={2}>
-                <Table.Root variant={'line'} showColumnBorder size="sm">
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeader>
-                        {match.MatchInfo.TeamsEnabled ? 'Team' : 'Player'}
-                      </Table.ColumnHeader>
-                      {csrExists ? (
+      <Box px={4} pb="60px">
+        {match ? (
+          <>
+            {match.Players.some((p) => 'Skill' in p && p.Skill) ? (
+              <>
+                <Center>
+                  <Box width="100%">
+                    <Heading size="md">
+                      {match.MatchInfo.TeamsEnabled ? 'Team' : 'Player'} Skills
+                    </Heading>
+                  </Box>
+                </Center>
+                <Box overflowX={'auto'} mb={2}>
+                  <Table.Root variant={'line'} showColumnBorder size="sm">
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.ColumnHeader>
+                          {match.MatchInfo.TeamsEnabled ? 'Team' : 'Player'}
+                        </Table.ColumnHeader>
+                        {csrExists ? (
+                          <Table.ColumnHeader textAlign="end">
+                            <Tooltip content="Competitive Skill Ranking">
+                              <Text>CSR</Text>
+                            </Tooltip>
+                          </Table.ColumnHeader>
+                        ) : null}
                         <Table.ColumnHeader textAlign="end">
-                          <Tooltip content="Competitive Skill Ranking">
-                            <Text>CSR</Text>
+                          <Tooltip content="Matchmaking Ranking">
+                            <Text>MMR</Text>
                           </Tooltip>
                         </Table.ColumnHeader>
-                      ) : null}
-                      <Table.ColumnHeader textAlign="end">
-                        <Tooltip content="Matchmaking Ranking">
-                          <Text>MMR</Text>
-                        </Tooltip>
-                      </Table.ColumnHeader>
-                      {tierCounterfactualsExist ? (
-                        <>
-                          <Table.ColumnHeader textAlign="end">
-                            <Tooltip content="Expected Skill Ranking">
-                              <Text>ESR</Text>
-                            </Tooltip>
-                          </Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="end">
-                            <Tooltip content="Performance Skill Ranking - Kills">
-                              <Text>PSR-K</Text>
-                            </Tooltip>
-                          </Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="end">
-                            <Tooltip content="Performance Skill Ranking - Deaths">
-                              <Text>PSR-D</Text>
-                            </Tooltip>
-                          </Table.ColumnHeader>
-                        </>
-                      ) : null}
-                    </Table.Row>
-                  </Table.Header>
-                  <Table.Body color="gray.300">
-                    {Array.from(match.Players.groupBy((p) => p.LastTeamId))
-                      .sortBy(
-                        ([teamId]) =>
-                          match.Teams.find((t) => t.TeamId === teamId)?.Rank ??
-                          Number.MAX_SAFE_INTEGER,
-                      )
-                      .map(([teamId, players]) => {
-                        const sortedTeamPlayers = players.sortByDesc(
-                          (p) =>
-                            ('Skill' in p &&
-                              (skillRank(p.Skill, 'Kills', 'Count') ??
-                                (p.Skill &&
-                                  'Kills' in p.Skill.StatPerformances &&
-                                  p.Skill.StatPerformances.Kills.Count))) ||
-                            0,
-                        );
-                        const teamPlayersWithPreCsr = sortedTeamPlayers.filter(
-                          (p) =>
-                            'Skill' in p &&
-                            p.Skill &&
-                            !isNaN(p.Skill.RankRecap.PreMatchCsr.Value) &&
-                            p.Skill.RankRecap.PreMatchCsr.Value > -1,
-                        );
-                        let teamMmr: number | 'Infinity' | undefined =
-                          undefined;
-                        for (const p of players) {
-                          if (
-                            'Skill' in p &&
-                            (typeof p.Skill?.TeamMmr === 'number' ||
-                              p.Skill?.TeamMmr === 'Infinity')
-                          ) {
-                            teamMmr = p.Skill.TeamMmr;
-                            break;
-                          }
-                        }
-                        return (
-                          <Table.Row
-                            key={teamId}
-                            backgroundColor={
-                              match.MatchInfo.TeamsEnabled
-                                ? teamPresets[teamId]?.color
-                                : undefined
+                        {tierCounterfactualsExist ? (
+                          <>
+                            <Table.ColumnHeader textAlign="end">
+                              <Tooltip content="Expected Skill Ranking">
+                                <Text>ESR</Text>
+                              </Tooltip>
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">
+                              <Tooltip content="Performance Skill Ranking - Kills">
+                                <Text>PSR-K</Text>
+                              </Tooltip>
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">
+                              <Tooltip content="Performance Skill Ranking - Deaths">
+                                <Text>PSR-D</Text>
+                              </Tooltip>
+                            </Table.ColumnHeader>
+                          </>
+                        ) : null}
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body color="gray.300">
+                      {Array.from(match.Players.groupBy((p) => p.LastTeamId))
+                        .sortBy(
+                          ([teamId]) =>
+                            match.Teams.find((t) => t.TeamId === teamId)
+                              ?.Rank ?? Number.MAX_SAFE_INTEGER,
+                        )
+                        .map(([teamId, players]) => {
+                          const sortedTeamPlayers = players.sortByDesc(
+                            (p) =>
+                              ('Skill' in p &&
+                                (skillRank(p.Skill, 'Kills', 'Count') ??
+                                  (p.Skill &&
+                                    'Kills' in p.Skill.StatPerformances &&
+                                    p.Skill.StatPerformances.Kills.Count))) ||
+                              0,
+                          );
+                          const teamPlayersWithPreCsr =
+                            sortedTeamPlayers.filter(
+                              (p) =>
+                                'Skill' in p &&
+                                p.Skill &&
+                                !isNaN(p.Skill.RankRecap.PreMatchCsr.Value) &&
+                                p.Skill.RankRecap.PreMatchCsr.Value > -1,
+                            );
+                          let teamMmr: number | 'Infinity' | undefined =
+                            undefined;
+                          for (const p of players) {
+                            if (
+                              'Skill' in p &&
+                              (typeof p.Skill?.TeamMmr === 'number' ||
+                                p.Skill?.TeamMmr === 'Infinity')
+                            ) {
+                              teamMmr = p.Skill.TeamMmr;
+                              break;
                             }
-                          >
-                            <Table.Cell>
-                              {(players.length === 1 &&
-                                'gamertag' in players[0] &&
-                                players[0].gamertag) ||
-                                teamPresets[teamId]?.name}
-                            </Table.Cell>
-                            {csrExists ? (
+                          }
+                          return (
+                            <Table.Row
+                              key={teamId}
+                              backgroundColor={
+                                match.MatchInfo.TeamsEnabled
+                                  ? teamPresets[teamId]?.color
+                                  : undefined
+                              }
+                            >
+                              <Table.Cell>
+                                {(players.length === 1 &&
+                                  'gamertag' in players[0] &&
+                                  players[0].gamertag) ||
+                                  teamPresets[teamId]?.name}
+                              </Table.Cell>
+                              {csrExists ? (
+                                <Table.Cell textAlign="end">
+                                  {teamPlayersWithPreCsr.length > 0
+                                    ? teamPlayersWithPreCsr
+                                        .map(
+                                          (p) =>
+                                            'Skill' in p &&
+                                            p.Skill?.RankRecap.PreMatchCsr
+                                              .Value,
+                                        )
+                                        .average()
+                                        .toFixed(2)
+                                    : 'Unrated'}
+                                </Table.Cell>
+                              ) : null}
                               <Table.Cell textAlign="end">
-                                {teamPlayersWithPreCsr.length > 0
-                                  ? teamPlayersWithPreCsr
+                                {typeof teamMmr === 'number'
+                                  ? teamMmr?.toFixed(2)
+                                  : teamMmr ||
+                                    players.find(
+                                      (
+                                        p,
+                                      ): p is typeof p & {
+                                        Skill?: MatchSkill;
+                                      } => 'Skill' in p,
+                                    )?.Skill?.TeamMmr}
+                              </Table.Cell>
+                              {tierCounterfactualsExist ? (
+                                <>
+                                  <Table.Cell textAlign="end">
+                                    {sortedTeamPlayers
                                       .map(
                                         (p) =>
                                           'Skill' in p &&
-                                          p.Skill?.RankRecap.PreMatchCsr.Value,
+                                          skillRankCombined(
+                                            p.Skill,
+                                            'Expected',
+                                          ),
                                       )
                                       .average()
-                                      .toFixed(2)
-                                  : 'Unrated'}
-                              </Table.Cell>
-                            ) : null}
-                            <Table.Cell textAlign="end">
-                              {typeof teamMmr === 'number'
-                                ? teamMmr?.toFixed(2)
-                                : teamMmr ||
-                                  players.find(
-                                    (
-                                      p,
-                                    ): p is typeof p & { Skill?: MatchSkill } =>
-                                      'Skill' in p,
-                                  )?.Skill?.TeamMmr}
-                            </Table.Cell>
-                            {tierCounterfactualsExist ? (
-                              <>
-                                <Table.Cell textAlign="end">
-                                  {sortedTeamPlayers
-                                    .map(
-                                      (p) =>
-                                        'Skill' in p &&
-                                        skillRankCombined(p.Skill, 'Expected'),
-                                    )
-                                    .average()
-                                    .toFixed(2)}
-                                </Table.Cell>
-                                <Table.Cell textAlign="end">
-                                  {sortedTeamPlayers
-                                    .map(
-                                      (p) =>
-                                        'Skill' in p &&
-                                        skillRank(p.Skill, 'Kills', 'Count'),
-                                    )
-                                    .average()
-                                    .toFixed(2)}
-                                </Table.Cell>
-                                <Table.Cell textAlign="end">
-                                  {sortedTeamPlayers
-                                    .map(
-                                      (p) =>
-                                        'Skill' in p &&
-                                        skillRank(p.Skill, 'Deaths', 'Count'),
-                                    )
-                                    .average()
-                                    .toFixed(2)}
-                                </Table.Cell>
-                              </>
-                            ) : null}
-                          </Table.Row>
-                        );
-                      })}
-                  </Table.Body>
-                </Table.Root>
-              </Box>
-            </>
-          ) : null}
-          <Box mb={2}>
-            <Heading size="md">Carnage Stats</Heading>
-            <PlayerCategoryTable
-              match={match}
-              category={playerStatsCategory}
-              playersByTeam={playersByTeam}
-              teamPresets={teamPresets}
-            />
-          </Box>
-          {match.Players[0] &&
-          'Skill' in match.Players[0] &&
-          match.Players[0].Skill ? (
-            <SkillRankingsTable match={match} playersByTeam={playersByTeam} />
-          ) : null}
-        </>
-      ) : (
-        <Loading centerProps={{ height: '200px' }} />
-      )}
+                                      .toFixed(2)}
+                                  </Table.Cell>
+                                  <Table.Cell textAlign="end">
+                                    {sortedTeamPlayers
+                                      .map(
+                                        (p) =>
+                                          'Skill' in p &&
+                                          skillRank(p.Skill, 'Kills', 'Count'),
+                                      )
+                                      .average()
+                                      .toFixed(2)}
+                                  </Table.Cell>
+                                  <Table.Cell textAlign="end">
+                                    {sortedTeamPlayers
+                                      .map(
+                                        (p) =>
+                                          'Skill' in p &&
+                                          skillRank(p.Skill, 'Deaths', 'Count'),
+                                      )
+                                      .average()
+                                      .toFixed(2)}
+                                  </Table.Cell>
+                                </>
+                              ) : null}
+                            </Table.Row>
+                          );
+                        })}
+                    </Table.Body>
+                  </Table.Root>
+                </Box>
+              </>
+            ) : null}
+            <Box mb={2}>
+              <Heading size="md">Carnage Stats</Heading>
+              <PlayerCategoryTable
+                match={match}
+                category={playerStatsCategory}
+                playersByTeam={playersByTeam}
+                teamPresets={teamPresets}
+              />
+            </Box>
+            {match.Players[0] &&
+            'Skill' in match.Players[0] &&
+            match.Players[0].Skill ? (
+              <SkillRankingsTable match={match} playersByTeam={playersByTeam} />
+            ) : null}
+          </>
+        ) : (
+          <Loading centerProps={{ height: '200px' }} />
+        )}
+      </Box>
     </>
   );
 }

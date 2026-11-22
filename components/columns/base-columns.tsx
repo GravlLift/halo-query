@@ -1,5 +1,11 @@
 'use client';
-import { skillRank, skillRankCombined } from '@gravllift/halo-helpers';
+import {
+  compareXuids,
+  GameType,
+  recoverHaloModeMmr,
+  skillRank,
+  skillRankCombined,
+} from '@gravllift/halo-helpers';
 import '@gravllift/utilities';
 import { GameVariantCategory, MatchOutcome } from 'halo-infinite-api';
 import { DateTime, Duration } from 'luxon';
@@ -136,7 +142,7 @@ export const columns = {
       'Skill' in player &&
       player.Skill &&
       Object.entries('Skill' in player && player.Skill.TeamMmrs).find(
-        ([teamId]) => +teamId !== ('Skill' in player && player.Skill?.TeamId)
+        ([teamId]) => +teamId !== ('Skill' in player && player.Skill?.TeamId),
       )?.[1],
     format: (teamMmr) =>
       typeof teamMmr === 'number' ? teamMmr.toFixed(2) : teamMmr,
@@ -163,10 +169,10 @@ export const columns = {
               (p) =>
                 'Skill' in p &&
                 p.Skill &&
-                p.Skill.RankRecap.PreMatchCsr.Value > -1
+                p.Skill.RankRecap.PreMatchCsr.Value > -1,
             )
               .map((p) =>
-                'Skill' in p ? p.Skill?.RankRecap.PreMatchCsr.Value : null
+                'Skill' in p ? p.Skill?.RankRecap.PreMatchCsr.Value : null,
               )
               .average()
         : null;
@@ -193,7 +199,7 @@ export const columns = {
             (p) =>
               p.LastTeamId !== team?.TeamId &&
               p.Skill &&
-              p.Skill?.RankRecap.PreMatchCsr.Value > -1
+              p.Skill?.RankRecap.PreMatchCsr.Value > -1,
           )
             .map((p) => p.Skill?.RankRecap.PreMatchCsr.Value)
             .average()
@@ -261,7 +267,7 @@ export const columns = {
         (t) =>
           t.Players.map((g) => (
             <GamertagDisplay player={g} key={g.xuid} fetchIfMissing />
-          ))
+          )),
       ),
   },
   'Team Expected Skill Rank Average': {
@@ -275,7 +281,7 @@ export const columns = {
         (team &&
           'Players' in team &&
           team.Players.map((p) =>
-            'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null
+            'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null,
           ).average()) ||
         null
       );
@@ -293,7 +299,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map((p) =>
-              'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null
+              'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null,
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.min(...truthyValues) : null;
@@ -311,7 +317,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map((p) =>
-              'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null
+              'Skill' in p ? skillRankCombined(p.Skill, 'Expected') : null,
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.max(...truthyValues) : null;
@@ -330,7 +336,7 @@ export const columns = {
         (team &&
           'Players' in team &&
           team.Players.map((p) =>
-            'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null
+            'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null,
           ).average()) ||
         null
       );
@@ -348,7 +354,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map((p) =>
-              'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null
+              'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null,
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.min(...truthyValues) : null;
@@ -367,7 +373,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map((p) =>
-              'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null
+              'Skill' in p ? skillRank(p.Skill, 'Kills', 'Count') : null,
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.max(...truthyValues) : null;
@@ -387,7 +393,7 @@ export const columns = {
         (team &&
           'Players' in team &&
           team.Players.map((p) =>
-            'Skill' in p ? skillRank(p.Skill, 'Deaths', 'Count') : null
+            'Skill' in p ? skillRank(p.Skill, 'Deaths', 'Count') : null,
           ).average()) ||
         null
       );
@@ -405,7 +411,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map(
-              (p) => 'Skill' in p && skillRank(p.Skill, 'Deaths', 'Count')
+              (p) => 'Skill' in p && skillRank(p.Skill, 'Deaths', 'Count'),
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.min(...truthyValues) : null;
@@ -424,7 +430,7 @@ export const columns = {
       const truthyValues =
         team && 'Players' in team
           ? team.Players.map(
-              (p) => 'Skill' in p && skillRank(p.Skill, 'Deaths', 'Count')
+              (p) => 'Skill' in p && skillRank(p.Skill, 'Deaths', 'Count'),
             ).filter((v): v is number => v != null)
           : [];
       return truthyValues?.length ? Math.max(...truthyValues) : null;
@@ -695,21 +701,28 @@ export const columns = {
       const enemyTeamPlayers =
         'MatchStats' in match
           ? match.MatchStats.Players.filter(
-              (p) => p.LastTeamId !== team?.TeamId
+              (p) => p.LastTeamId !== team?.TeamId,
             )
           : [];
+      const recoveredPlayer = recoverHaloModeMmr({
+        skillData: match.Players.map((p) => ({
+          Id: 'PlayerId' in p ? p.PlayerId : p.xuid,
+          Result: 'Skill' in p ? (p.Skill ?? null) : null,
+        })),
+        gameType: match.MatchInfo.UgcGameVariant.AssetId as GameType,
+      }).players.find((p) => compareXuids(p.xuid, player.PlayerId));
       return (
         <CsrDeltaDisplay
           skill={'Skill' in player ? player.Skill : undefined}
           outcome={player.Outcome}
           allEnemiesFinished={enemyTeamPlayers.every(
-            (p) => p.ParticipationInfo.PresentAtCompletion
+            (p) => p.ParticipationInfo.PresentAtCompletion,
           )}
           allTeammatesFinished={
             (team &&
               'Players' in team &&
               team.Players.every(
-                (p) => p.ParticipationInfo.PresentAtCompletion
+                (p) => p.ParticipationInfo.PresentAtCompletion,
               )) ??
             true
           }
@@ -718,6 +731,7 @@ export const columns = {
               ? team.Players.map((p) => ('Skill' in p ? p.Skill : undefined))
               : []
           }
+          recoveredPlayer={recoveredPlayer}
         />
       );
     },
@@ -729,7 +743,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.SelfCounterfactuals
         : undefined,
-    177
+    177,
   ),
   ...counterfactualColumns(
     'Bronze',
@@ -737,7 +751,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Bronze
         : undefined,
-    181
+    181,
   ),
   ...counterfactualColumns(
     'Silver',
@@ -745,7 +759,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Silver
         : undefined,
-    185
+    185,
   ),
   ...counterfactualColumns(
     'Gold',
@@ -753,7 +767,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Gold
         : undefined,
-    189
+    189,
   ),
   ...counterfactualColumns(
     'Platinum',
@@ -761,7 +775,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Platinum
         : undefined,
-    193
+    193,
   ),
   ...counterfactualColumns(
     'Diamond',
@@ -769,7 +783,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Diamond
         : undefined,
-    197
+    197,
   ),
   ...counterfactualColumns(
     'Onyx',
@@ -777,7 +791,7 @@ export const columns = {
       'Skill' in player
         ? player.Skill?.Counterfactuals?.TierCounterfactuals.Onyx
         : undefined,
-    201
+    201,
   ),
   'Player Expected Skill Rank Kills': {
     id: 205,
@@ -850,7 +864,7 @@ Object.values(columns).forEach((column) => {
     throw new Error(
       `Duplicate column id found: ${column.id}. Next available ID is ${
         Math.max(...Object.values(columns).map((c) => c.id)) + 1
-      }.`
+      }.`,
     );
   }
 });
@@ -1029,6 +1043,6 @@ export const categories: TableCategory<TableCategory>[] = [
 
 export const orderedColumns = categories.flatMap((topLevelCategory) =>
   topLevelCategory.children.flatMap(
-    (secondLevelCategory) => secondLevelCategory.children
-  )
+    (secondLevelCategory) => secondLevelCategory.children,
+  ),
 );

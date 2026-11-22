@@ -9,7 +9,11 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
-import { skillRank, skillRankCombined } from '@gravllift/halo-helpers';
+import {
+  RecoveredPlayer,
+  skillRank,
+  skillRankCombined,
+} from '@gravllift/halo-helpers';
 import { MatchOutcome, MatchSkill, PlaylistCsr } from 'halo-infinite-api';
 import {
   ChevronDown,
@@ -39,8 +43,8 @@ function CsrEsrExplanation({
     ? csr < esr - 50
       ? Too.Low
       : csr > esr + 50
-      ? Too.High
-      : Too.JustRight
+        ? Too.High
+        : Too.JustRight
     : undefined;
 
   let str = `Their pre-game CSR of ${csr} was `;
@@ -98,8 +102,8 @@ function PlayerPerformanceExplanation({
       ? psr < esr - 100
         ? Too.Low
         : psr > esr + 100
-        ? Too.High
-        : Too.JustRight
+          ? Too.High
+          : Too.JustRight
       : undefined;
   let listIcon: JSX.Element;
 
@@ -262,6 +266,7 @@ export default function CsrDeltaDisplay(props: {
   allTeammatesFinished: boolean;
   allEnemiesFinished: boolean;
   teamSkills: (MatchSkill<1 | 0> | undefined)[];
+  recoveredPlayer: RecoveredPlayer | undefined;
 }) {
   if (
     props.skill?.RankRecap == null ||
@@ -295,7 +300,10 @@ export default function CsrDeltaDisplay(props: {
                     playerOutcome={props.outcome}
                     delta={delta}
                     rankRecap={props.skill.RankRecap}
-                    esr={skillRankCombined(props.skill, 'Expected')}
+                    esr={
+                      props.recoveredPlayer?.modeMmrSkill ??
+                      skillRankCombined(props.skill, 'Expected')
+                    }
                     psr={skillRank(props.skill, 'Kills', 'Count')}
                     allTeammatesFinished={props.allTeammatesFinished}
                     allEnemiesFinished={props.allEnemiesFinished}

@@ -25,6 +25,7 @@ This repository contains everything needed to run the web app on its own. It dep
 - **Player Search & Profile**: Navigate to `/players/[gamertag]` to view profile details and gamerpic.
 - **Match Browser**: `/matches` lists recent matches; drill into `/matches/[matchId]` for full match analysis.
 - **Leaderboard**: `/leaderboard` shows ranked entries using helper cache + queue mechanisms.
+- **MMR Research**: `/mmr-research` accepts multiple [OpenSpartan/mmr](https://github.com/OpenSpartan/mmr) match exports with schema validation and per-file upload results.
 - **OAuth2 Flow**: `/oauth2/callback` and `/oauth2/logout` implement access token acquisition and session clearing.
 - **Proxy Endpoints**: Under `/proxy/` a structured set of routes wraps external Halo/XBL services (e.g. Waypoint profile, Xbox Live batch settings, XSTS authorization) with proper request shaping.
 - **Telemetry & Monitoring**: `instrumentation.ts` conditionally registers server-side Application Insights + OpenTelemetry exporters when running in the Node.js runtime.
@@ -104,8 +105,21 @@ Required/optional variables:
 | `UPSTASH_REDIS_REST_URL`                            |
 | Yes                                                 | Upstash Redis REST URL used for server-side caching (gamertags, user lookups, etc.). |
 | `UPSTASH_REDIS_REST_TOKEN`                          | Yes                                                                                  | Upstash Redis REST token paired with the URL above.                                                                     |
-| `AZURE_STORAGE_CONNECTION_STRING`                   | Optional                                                                             | Azure Blob Storage connection used by the XSTS blacklist route to fetch `blacklist.json` (feature is skipped if unset). |
+| `AZURE_STORAGE_CONNECTION_STRING`                   | Optional                                                                             | Server-only Azure Blob connection for the XSTS blacklist and MMR research uploads. Required for research contributions. |
 | `AZURE_STORAGE_CONTAINER_NAME`                      | Optional                                                                             | Blob container name that holds `blacklist.json`.                                                                        |
+| `AZURE_MMR_STORAGE_CONTAINER_NAME`                  | Optional                                                                             | Separate research container; defaults to `mmr-research`.                                                                |
+
+### MMR Research Uploads
+
+The page accepts up to 100 JSON files per queue, each at most 1 MB, from `%LOCALAPPDATA%\hi-mmr\matches`.
+Users must consent to contributing player gamertags, Xbox user IDs, and ratings. Files are validated in the browser and again by `POST /api/mmr-research` before storage.
+The server uses the existing Azure connection string and creates the research container, with no public access, if absent. The credential needs container-create and blob-read/write permissions. Do not enable public access on this container or expose the connection string with a `NEXT_PUBLIC_` prefix.
+
+Original JSON is preserved. Identical JSON under the same filename is skipped (whitespace and object key order are ignored). Different contents are stored as `name (2).json`, then `name (3).json`, and so on. Existing versions are checked for identical content too. Conditional writes prevent concurrent uploads from overwriting each other. Invalid exports never reach storage, and failed uploads can be retried individually by removing other queued files or together using the upload button.
+
+The contribution endpoint is intentionally public and bounds individual request sizes. Configure hosting-level rate limiting or bot protection before exposing it broadly. It does not accept raw captures or unknown export fields. No Azure credentials are sent to the browser.
+
+Storage SDK reference: https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-upload-javascript
 
 Notes
 

@@ -16,6 +16,7 @@ import QuerySavingSharing from './articles/query-saving-sharing';
 import Post from './post';
 import OpenSource from './articles/open-source';
 import Teammates from './articles/teammates';
+import MmrResearch from './articles/mmr-research';
 
 const articles: Record<
   string,
@@ -25,6 +26,11 @@ const articles: Record<
     Component: () => JSX.Element;
   }
 > = {
+  'mmr-research': {
+    date: '2026-11-22',
+    title: 'Help Improve ESR for Players in Parties',
+    Component: MmrResearch,
+  },
   replays: {
     date: '2026-11-04',
     title: 'Replays Feature',
