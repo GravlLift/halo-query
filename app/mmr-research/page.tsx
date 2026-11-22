@@ -154,6 +154,12 @@ export default function MmrResearchPage() {
           OpenSpartan / mmr
         </Link>
       </Flex>
+      <Box mb={6}>
+        <Text>
+          Press "o" while running the OpenSpartan mmr tool to open the folder
+          containing your match data.
+        </Text>
+      </Box>
       <Box
         borderWidth="1px"
         borderStyle="dashed"
