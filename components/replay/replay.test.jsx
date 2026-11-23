@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { loadFilm } from '../../lib/film';
 import Replay from './replay';
 import { createReplayDecoder } from './replay-decoder';
-import { KillFeed } from './kill-feed';
+import { EventFeed } from './event-feed';
 import MiniMap from './mini-map';
 import { TeamPanel } from './team-panel';
 
@@ -265,11 +265,11 @@ it('keeps the kill feed seek handler stable across playback ticks', async () => 
   const root = createRoot(container);
   try {
     await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
-    const seek = KillFeed.mock.calls.at(-1)[0].onSeek;
+    const seek = EventFeed.mock.calls.at(-1)[0].onSeek;
     act(() => container.querySelector('[aria-label="Play"]').click());
     const tick = requestFrame.mock.calls.at(-1)[0];
     act(() => tick(performance.now() + 16));
-    expect(KillFeed.mock.calls.at(-1)[0].onSeek).toBe(seek);
+    expect(EventFeed.mock.calls.at(-1)[0].onSeek).toBe(seek);
   } finally {
     act(() => root.unmount());
     requestFrame.mockRestore();

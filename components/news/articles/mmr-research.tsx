@@ -50,7 +50,7 @@ export default function MmrResearch() {
         </Link>
       </Text>
       <Center maxWidth="100%">
-        <Image src="/skill-rankings-table.png" alt="New Skill Table"></Image>
+        <Image src="/skill-rankings-table.png" alt="New Skill Table" />
       </Center>
     </>
   );

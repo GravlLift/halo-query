@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { KillFeed } from './kill-feed';
+import { EventFeed } from './event-feed';
 
 const mockNames = jest.fn();
 
@@ -53,7 +53,7 @@ async function setup() {
   const render = (timeMs, teamColors = ['blue', 'red'], seek = onSeek) =>
     act(async () =>
       root.render(
-        <KillFeed
+        <EventFeed
           entries={entries}
           timeMs={timeMs}
           teamColors={teamColors}

@@ -114,7 +114,7 @@ const KillFeedRow = memo(
     ),
 );
 
-export function KillFeed({
+export function EventFeed({
   entries,
   timeMs,
   teamColors,
@@ -136,7 +136,7 @@ export function KillFeed({
     activeIndex = index;
   }
   return (
-    <KillFeedContent
+    <EventFeedContent
       entries={entries}
       activeIndex={activeIndex}
       teamColors={teamColors}
@@ -146,8 +146,8 @@ export function KillFeed({
   );
 }
 
-const KillFeedContent = memo(
-  function KillFeedContent({
+const EventFeedContent = memo(
+  function EventFeedContent({
     entries,
     activeIndex,
     teamColors,
@@ -182,7 +182,7 @@ const KillFeedContent = memo(
       <Flex direction="column" h={0} minH="100%" minW={0} color="white">
         <Flex align="center" justify="space-between" gap={2} pb={2}>
           <Text fontWeight="bold" fontSize="sm">
-            Kill feed
+            Event feed
           </Text>
           <Flex
             as="label"

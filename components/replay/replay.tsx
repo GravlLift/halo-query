@@ -15,7 +15,7 @@ import { paintedBounds } from '@gravllift/halo-film-ui/view';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
 import { useTeamPresets } from '../match/team-presets';
 import MiniMap from './mini-map';
-import { KillFeed } from './kill-feed';
+import { EventFeed } from './event-feed';
 import { TeamPanel } from './team-panel';
 import { LoadState, LoadedBackground } from './types';
 import { createReplayDecoder } from './replay-decoder';
@@ -50,7 +50,6 @@ export default function Replay({
   const [speed, setSpeed] = useState(1);
   const [hover, setHover] = useState<{ px: number; timeMs: number }>();
   const [feedVisible, setFeedVisible] = useState(true);
-  const [feedOverlay, setFeedOverlay] = useState<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController>();
   const [background, setBackground] = useState<LoadedBackground>();
   const backgroundSpec =
@@ -341,11 +340,22 @@ export default function Replay({
       >
         <Box position="relative" minW={0} minH={0}>
           <Grid
-            templateColumns="auto minmax(0, 1fr) auto"
+            templateColumns={`${
+              feedVisible ? '280px' : ''
+            } auto minmax(0, 1fr) auto`}
             gap={3}
             h="100%"
             minH={0}
           >
+            <Box display={feedVisible ? 'block' : 'none'} bg="black.800">
+              <EventFeed
+                entries={replay.killFeed}
+                timeMs={timeMs}
+                teamColors={teamColors}
+                visible={feedVisible}
+                onSeek={seek}
+              />
+            </Box>
             <TeamPanel
               players={leftPlayers}
               replay={replay}
@@ -370,7 +380,7 @@ export default function Replay({
                 objectives={state.replay.map.objectives}
                 background={background}
                 draggable={true}
-                leftOverlay={feedVisible ? feedOverlay : null}
+                leftOverlay={null}
               />
               {!state.complete && (
                 <Flex
@@ -405,26 +415,6 @@ export default function Replay({
                   )}
                 </Flex>
               )}
-              <Box
-                ref={setFeedOverlay}
-                display={feedVisible ? 'block' : 'none'}
-                position="absolute"
-                top={2}
-                bottom={2}
-                left={2}
-                w="min(240px, 42%)"
-                p={2}
-                bg="blackAlpha.800"
-                borderRadius="md"
-              >
-                <KillFeed
-                  entries={replay.killFeed}
-                  timeMs={timeMs}
-                  teamColors={teamColors}
-                  visible={feedVisible}
-                  onSeek={seek}
-                />
-              </Box>
             </Box>
             <TeamPanel
               players={rightPlayers}
