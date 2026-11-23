@@ -245,7 +245,6 @@ export default function MmrResearchPage() {
         </Text>
         <Flex gap={2}>
           <Button
-            variant="ghost"
             title="Clear queue"
             aria-label="Clear queue"
             disabled={busy || files.length === 0}
@@ -314,7 +313,6 @@ export default function MmrResearchPage() {
             </Text>
             <Button
               size="xs"
-              variant="ghost"
               title={`Remove ${entry.file.name}`}
               aria-label={`Remove ${entry.file.name}`}
               disabled={busy}

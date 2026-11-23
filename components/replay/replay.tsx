@@ -1,24 +1,32 @@
 import {
   Box,
   Button,
+  chakra,
   Flex,
   Grid,
   Slider,
   Spinner,
   NativeSelect,
+  Splitter,
   Text,
+  useSplitter,
 } from '@chakra-ui/react';
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
-import { List, Pause, Play } from 'lucide-react';
+import { Pause, Play, Video, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { paintedBounds } from '@gravllift/halo-film-ui/view';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
+import { useLocalStorage } from '../../lib/hooks/local-storage';
 import { useTeamPresets } from '../match/team-presets';
 import MiniMap from './mini-map';
 import { EventFeed } from './event-feed';
 import { TeamPanel } from './team-panel';
 import { LoadState, LoadedBackground } from './types';
 import { createReplayDecoder } from './replay-decoder';
+import { MediaPanel } from './media/media-panel';
+
+const MEDIA_PANEL_ID = 'media';
+const MEDIA_PANEL_DEFAULT_SIZE = 25;
 
 /** Width of Chakra's default slider thumb, whose travel is excluded from the track. */
 const THUMB_PX = 20;
@@ -50,6 +58,33 @@ export default function Replay({
   const [speed, setSpeed] = useState(1);
   const [hover, setHover] = useState<{ px: number; timeMs: number }>();
   const [feedVisible, setFeedVisible] = useState(true);
+  const [aligning, setAligning] = useState(false);
+  const [mediaHintDismissed, setMediaHintDismissed, mediaHintReady] =
+    useLocalStorage('replay.mediaHintDismissed', false);
+  const mediaPanelSizeRef = useRef(MEDIA_PANEL_DEFAULT_SIZE);
+  const splitter = useSplitter({
+    panels: [
+      { id: 'replay', minSize: 40 },
+      {
+        id: MEDIA_PANEL_ID,
+        collapsible: true,
+        collapsedSize: 0,
+        minSize: 15,
+        maxSize: 60,
+      },
+    ],
+    defaultSize: [100, 0],
+    onResizeEnd: ({ size: [, mediaSize] }) => {
+      if (mediaSize) mediaPanelSizeRef.current = mediaSize;
+    },
+  });
+  const mediaCollapsed = splitter.isPanelCollapsed(MEDIA_PANEL_ID);
+  const toggleMediaPanel = () =>
+    splitter.setSizes(
+      mediaCollapsed
+        ? [100 - mediaPanelSizeRef.current, mediaPanelSizeRef.current]
+        : [100, 0],
+    );
   const abortRef = useRef<AbortController>();
   const [background, setBackground] = useState<LoadedBackground>();
   const backgroundSpec =
@@ -338,121 +373,251 @@ export default function Replay({
         minH={0}
         w="100%"
       >
-        <Box position="relative" minW={0} minH={0}>
-          <Grid
-            templateColumns={`${
-              feedVisible ? '280px' : ''
-            } auto minmax(0, 1fr) auto`}
-            gap={3}
-            h="100%"
-            minH={0}
-          >
-            <Box display={feedVisible ? 'block' : 'none'} bg="black.800">
-              <EventFeed
-                entries={replay.killFeed}
-                timeMs={timeMs}
-                teamColors={teamColors}
-                visible={feedVisible}
-                onSeek={seek}
-              />
-            </Box>
-            <TeamPanel
-              players={leftPlayers}
-              replay={replay}
-              points={points}
-              timeMs={timeMs}
-              color={teamColorOf(leftTeam)}
-              side="left"
-            />
-            <Box
-              data-testid="replay-map-container"
-              position="relative"
-              display="grid"
-              minW={0}
+        <Splitter.RootProvider value={splitter} minW={0} minH={0} gap={2}>
+          <Splitter.Panel id="replay" position="relative" minW={0} minH={0}>
+            <Grid
+              templateColumns={`${
+                feedVisible ? '280px ' : ''
+              }auto auto minmax(0, 1fr) auto`}
+              columnGap={3}
+              h="100%"
               minH={0}
             >
-              <MiniMap
-                state={state}
-                clock={timeRef}
+              <Box display={feedVisible ? 'block' : 'none'} bg="black.800">
+                <EventFeed
+                  entries={replay.killFeed}
+                  timeMs={timeMs}
+                  teamColors={teamColors}
+                  visible={feedVisible}
+                  onSeek={seek}
+                />
+              </Box>
+              <chakra.button
+                type="button"
+                aria-label={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+                aria-pressed={feedVisible}
+                title={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+                onClick={() => setFeedVisible((visible) => !visible)}
+                // Pull into the grid gap so the handle sits flush against the feed.
+                ml={feedVisible ? -3 : 0}
+                w="8px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                cursor="pointer"
+                borderRadius="sm"
+                _hover={{ bg: 'bg.emphasized' }}
+                _focusVisible={{
+                  outline: '2px solid',
+                  outlineColor: 'teal.500',
+                }}
+              >
+                <Box
+                  w="2px"
+                  h="24px"
+                  borderRadius="full"
+                  bg="border.emphasized"
+                />
+              </chakra.button>
+              <TeamPanel
+                players={leftPlayers}
+                replay={replay}
                 points={points}
                 timeMs={timeMs}
-                teamColors={teamColors}
-                objectives={state.replay.map.objectives}
-                background={background}
-                draggable={true}
-                leftOverlay={null}
+                color={teamColorOf(leftTeam)}
+                side="left"
               />
-              {!state.complete && (
-                <Flex
-                  data-testid="replay-loading-status"
-                  position="absolute"
-                  top={2}
-                  right={2}
-                  zIndex={1}
-                  align="center"
-                  gap={2}
-                  maxW="min(360px, 60%)"
-                  p={2}
-                  bg="blackAlpha.800"
-                  borderRadius="sm"
-                  role="status"
-                  aria-label="Replay loading status"
-                >
-                  {!state.error && <Spinner size="xs" />}
-                  <Text
-                    minW={0}
-                    fontSize="sm"
-                    color={state.error ? 'red.500' : undefined}
+              <Box
+                data-testid="replay-map-container"
+                position="relative"
+                display="grid"
+                minW={0}
+                minH={0}
+              >
+                <MiniMap
+                  state={state}
+                  clock={timeRef}
+                  points={points}
+                  timeMs={timeMs}
+                  teamColors={teamColors}
+                  objectives={state.replay.map.objectives}
+                  background={background}
+                  draggable={true}
+                  leftOverlay={null}
+                />
+                {!state.complete && (
+                  <Flex
+                    data-testid="replay-loading-status"
+                    position="absolute"
+                    top={2}
+                    right={2}
+                    zIndex={1}
+                    align="center"
+                    gap={2}
+                    maxW="min(360px, 60%)"
+                    p={2}
+                    bg="blackAlpha.800"
+                    borderRadius="sm"
+                    role="status"
+                    aria-label="Replay loading status"
                   >
-                    {state.error
-                      ? `Loading stopped: ${state.error}`
-                      : (state.progress ?? 'Loading more of the replay...')}
-                  </Text>
-                  {state.error && (
-                    <Button size="xs" onClick={load} flexShrink={0}>
-                      Retry
-                    </Button>
-                  )}
-                </Flex>
-              )}
-            </Box>
-            <TeamPanel
-              players={rightPlayers}
-              replay={replay}
-              points={points}
-              timeMs={timeMs}
-              color={teamColorOf(rightTeam)}
-              side="right"
-            />
-          </Grid>
-          {pendingSeek !== undefined && (
-            <Flex
+                    {!state.error && <Spinner size="xs" />}
+                    <Text
+                      minW={0}
+                      fontSize="sm"
+                      color={state.error ? 'red.500' : undefined}
+                    >
+                      {state.error
+                        ? `Loading stopped: ${state.error}`
+                        : (state.progress ?? 'Loading more of the replay...')}
+                    </Text>
+                    {state.error && (
+                      <Button size="xs" onClick={load} flexShrink={0}>
+                        Retry
+                      </Button>
+                    )}
+                  </Flex>
+                )}
+              </Box>
+              <TeamPanel
+                players={rightPlayers}
+                replay={replay}
+                points={points}
+                timeMs={timeMs}
+                color={teamColorOf(rightTeam)}
+                side="right"
+              />
+            </Grid>
+            {mediaCollapsed && mediaHintReady && !mediaHintDismissed && (
+              <Flex
+                position="absolute"
+                top="50%"
+                right={3}
+                transform="translateY(-50%)"
+                zIndex={2}
+                align="start"
+                gap={2}
+                maxW="min(280px, calc(100% - 24px))"
+                p={3}
+                bg="bg.emphasized"
+                borderWidth="1px"
+                borderRadius="md"
+                boxShadow="md"
+                _after={{
+                  content: '""',
+                  position: 'absolute',
+                  left: '100%',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  borderLeft: '8px solid',
+                  borderLeftColor: 'bg.emphasized',
+                }}
+                role="note"
+                aria-label="Media panel feature"
+              >
+                <Text fontSize="sm">
+                  Add gameplay footage to watch alongside the replay.
+                  Double-click to open the media panel.
+                </Text>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-label="Dismiss media panel hint"
+                  onClick={() => setMediaHintDismissed(true)}
+                  flexShrink={0}
+                >
+                  <X size={14} />
+                </Button>
+              </Flex>
+            )}
+            {pendingSeek !== undefined && (
+              <Flex
+                position="absolute"
+                inset={0}
+                align="center"
+                justify="center"
+                bg="blackAlpha.600"
+                pointerEvents="none"
+                role="status"
+                aria-label="Loading requested replay position"
+              >
+                <Spinner size="xl" />
+              </Flex>
+            )}
+          </Splitter.Panel>
+          <Splitter.ResizeTrigger
+            id={`replay:${MEDIA_PANEL_ID}`}
+            aria-label={
+              mediaCollapsed
+                ? 'Media panel (double-click to expand)'
+                : 'Resize media panel (double-click to collapse)'
+            }
+            title={
+              mediaCollapsed
+                ? 'Double-click to show media'
+                : 'Drag to resize, double-click to hide media'
+            }
+            onDoubleClick={toggleMediaPanel}
+            // zag-js's resize math throws when resizing from a 0-size panel.
+            onPointerDownCapture={(e) => {
+              if (mediaCollapsed) e.stopPropagation();
+            }}
+            onKeyDownCapture={(e) => {
+              if (!mediaCollapsed) return;
+              e.stopPropagation();
+              if (e.key === 'Enter') toggleMediaPanel();
+            }}
+          >
+            <Splitter.ResizeTriggerSeparator bg="border" />
+            <Splitter.ResizeTriggerIndicator
               position="absolute"
-              inset={0}
-              align="center"
-              justify="center"
-              bg="blackAlpha.600"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              minW={6}
+              minH={8}
               pointerEvents="none"
-              role="status"
-              aria-label="Loading requested replay position"
+              aria-hidden="true"
             >
-              <Spinner size="xl" />
-            </Flex>
-          )}
-        </Box>
+              <Video size={14} />
+            </Splitter.ResizeTriggerIndicator>
+          </Splitter.ResizeTrigger>
+          <Splitter.Panel
+            id={MEDIA_PANEL_ID}
+            minW={0}
+            minH={0}
+            // zag-js applies minSize as min-width until a panel is explicitly collapsed.
+            style={mediaCollapsed ? { minWidth: 0 } : undefined}
+          >
+            <MediaPanel
+              clock={timeRef}
+              timeMs={timeMs}
+              playing={playing}
+              speed={speed}
+              waiting={pendingSeek !== undefined}
+              aligning={aligning}
+              onAligningChange={(next) => {
+                if (next) setPlaying(false);
+                setAligning(next);
+              }}
+              match={match}
+              matchDurationMs={endMs}
+            />
+          </Splitter.Panel>
+        </Splitter.RootProvider>
         <Flex align="center" gap={3} gridColumn="1 / -1">
           <Button
             size="sm"
-            aria-label={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
-            aria-pressed={feedVisible}
-            title={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
-            onClick={() => setFeedVisible((visible) => !visible)}
-          >
-            <List size={16} />
-          </Button>
-          <Button
-            size="sm"
             aria-label={playing ? 'Pause' : 'Play'}
+            disabled={aligning}
+            title={
+              aligning ? 'Finish aligning media to resume playback' : undefined
+            }
             onClick={() => {
               if (!playing && state.complete && timeRef.current >= replay.endMs)
                 timeRef.current = replay.startMs;

@@ -1,5 +1,5 @@
-// Copies the map background images from @gravllift/halo-infinite-maps into public/.
-import { cpSync, mkdirSync } from 'node:fs';
+// Copies map background images and the mediainfo.js wasm into public/.
+import { copyFileSync, cpSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -11,3 +11,10 @@ const source = path.join(
 const target = path.join(process.cwd(), 'public', 'map-backgrounds');
 mkdirSync(target, { recursive: true });
 cpSync(source, target, { recursive: true });
+
+const mediaInfoTarget = path.join(process.cwd(), 'public', 'mediainfo');
+mkdirSync(mediaInfoTarget, { recursive: true });
+copyFileSync(
+  require.resolve('mediainfo.js/MediaInfoModule.wasm'),
+  path.join(mediaInfoTarget, 'MediaInfoModule.wasm'),
+);

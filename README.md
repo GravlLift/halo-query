@@ -108,6 +108,8 @@ Required/optional variables:
 | `AZURE_STORAGE_CONNECTION_STRING`                   | Optional                                                                             | Server-only Azure Blob connection for the XSTS blacklist and MMR research uploads. Required for research contributions. |
 | `AZURE_STORAGE_CONTAINER_NAME`                      | Optional                                                                             | Blob container name that holds `blacklist.json`.                                                                        |
 | `AZURE_MMR_STORAGE_CONTAINER_NAME`                  | Optional                                                                             | Separate research container; defaults to `mmr-research`.                                                                |
+| `TWITCH_CLIENT_ID`                                  | Optional                                                                             | Twitch app client ID used by `/api/twitch-video` to align replay Twitch VODs by broadcast time.                         |
+| `TWITCH_CLIENT_SECRET`                              | Optional                                                                             | Twitch app client secret paired with the ID above. Without both, Twitch VODs fall back to URL `t=` alignment.           |
 
 ### MMR Research Uploads
 

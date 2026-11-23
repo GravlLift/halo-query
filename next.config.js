@@ -74,6 +74,11 @@ const nextConfig = {
       ...config.experiments,
       topLevelAwait: true,
     };
+    // The wasm is served from public/mediainfo via locateFile, so skip bundling its URL.
+    config.module.rules.push({
+      test: /[\\/]mediainfo\.js[\\/]dist[\\/]/,
+      parser: { url: false },
+    });
 
     return config;
   },

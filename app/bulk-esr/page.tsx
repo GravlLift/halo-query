@@ -369,7 +369,7 @@ export default function BulkEsrPage() {
                       <Editable.Input w={'100%'} />
                       <Editable.Control>
                         <Editable.EditTrigger asChild>
-                          <IconButton variant="ghost" size="xs">
+                          <IconButton size="xs">
                             <LuPencilLine />
                           </IconButton>
                         </Editable.EditTrigger>

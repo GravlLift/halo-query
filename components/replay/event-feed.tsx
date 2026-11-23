@@ -12,7 +12,6 @@ function damagePercent(percent: number | undefined) {
     <Text
       as="span"
       title="Raw killer and named-assister percentages from the film's PlayerKilledEvent. Other recorded damage contributors have no reported share here."
-      opacity={0.8}
       whiteSpace="nowrap"
     >
       {' '}
@@ -59,7 +58,7 @@ const KillFeedRow = memo(
         w="100%"
         textAlign="left"
         cursor="pointer"
-        _hover={{ bg: 'whiteAlpha.300' }}
+        _hover={{ bg: 'white.300' }}
         _focusVisible={{
           outline: '2px solid',
           outlineColor: 'yellow.300',
@@ -67,30 +66,27 @@ const KillFeedRow = memo(
         }}
         py={2}
         px={1}
-        bg={active ? 'whiteAlpha.200' : undefined}
+        bg={active ? 'white.200' : undefined}
         borderLeftWidth="3px"
         borderLeftColor={active ? 'yellow.300' : 'transparent'}
         borderBottomWidth="1px"
-        borderBottomColor="whiteAlpha.200"
+        borderBottomColor="white.200"
         opacity={occurred ? 1 : 0.6}
         fontSize="xs"
         overflowWrap="anywhere"
       >
         <Flex gap={2} align="baseline">
-          <Text flexShrink={0} fontVariantNumeric="tabular-nums" opacity={0.75}>
+          <Text flexShrink={0} fontVariantNumeric="tabular-nums">
             {formatTime(entry.timeMs)}
           </Text>
           <Box>
             {name(entry.killer, 'Unknown killer')}
-            {damagePercent(entry.killerDamagePercent)}{' '}
-            <Text as="span" opacity={0.7}>
-              →
-            </Text>{' '}
+            {damagePercent(entry.killerDamagePercent)} <Text as="span">→</Text>{' '}
             {name(entry.victim, 'Unknown victim')}
           </Box>
         </Flex>
         {entry.damageAssists.length > 0 && (
-          <Box pl="42px" opacity={0.8}>
+          <Box pl="42px">
             {entry.damageAssists.map((assist) => (
               <Box key={assist.xuid} whiteSpace="nowrap">
                 {name(assist, 'Unknown')}
@@ -218,9 +214,7 @@ const EventFeedContent = memo(
           }}
         >
           {entries.length === 0 ? (
-            <Text fontSize="xs" opacity={0.7}>
-              No kill events available.
-            </Text>
+            <Text fontSize="xs">No kill events available.</Text>
           ) : (
             entries.map((entry: KillFeedEntry, index) => (
               <KillFeedRow

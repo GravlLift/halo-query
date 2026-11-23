@@ -38,7 +38,8 @@ jest.mock('./mini-map', () => ({
   default: jest.fn(() => null),
 }));
 jest.mock('./team-panel', () => ({ TeamPanel: jest.fn(() => null) }));
-jest.mock('./kill-feed', () => ({ KillFeed: jest.fn(() => null) }));
+jest.mock('./event-feed', () => ({ EventFeed: jest.fn(() => null) }));
+jest.mock('./media/media-panel', () => ({ MediaPanel: jest.fn(() => null) }));
 jest.mock('@chakra-ui/react', () => {
   const React = require('react');
   const component = React.forwardRef(
@@ -103,6 +104,20 @@ jest.mock('@chakra-ui/react', () => {
     Text: component,
     Button: button,
     Spinner: component,
+    chakra: { button },
+    NativeSelect: { Root: component, Field: component, Indicator: component },
+    Splitter: {
+      RootProvider: component,
+      Panel: component,
+      ResizeTrigger: component,
+      ResizeTriggerSeparator: component,
+      ResizeTriggerIndicator: component,
+    },
+    useSplitter: () => ({
+      isPanelCollapsed: () => true,
+      expandPanel: jest.fn(),
+      collapsePanel: jest.fn(),
+    }),
     Slider: {
       Root: slider,
       Control: component,
@@ -111,6 +126,49 @@ jest.mock('@chakra-ui/react', () => {
       Thumbs: component,
     },
   };
+});
+
+it('shows a dismissible hint for opening the media panel', async () => {
+  localStorage.removeItem('replay.mediaHintDismissed');
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const hint = container.querySelector('[aria-label="Media panel feature"]');
+    expect(hint.textContent).toContain('Add gameplay footage');
+    expect(hint.textContent).toContain('Double-click to open the media panel.');
+    expect(
+      container.querySelector('[aria-label="Media panel (double-click to expand)"] svg.lucide-video'),
+    ).not.toBeNull();
+    act(() => container.querySelector('[aria-label="Dismiss media panel hint"]').click());
+    expect(container.querySelector('[aria-label="Media panel feature"]')).toBeNull();
+    expect(localStorage.getItem('replay.mediaHintDismissed')).toBe('true');
+    await act(async () => root.render(null));
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    expect(container.querySelector('[aria-label="Media panel feature"]')).toBeNull();
+  } finally {
+    act(() => root.unmount());
+    localStorage.removeItem('replay.mediaHintDismissed');
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
 });
 
 it.each([
