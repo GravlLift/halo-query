@@ -17,7 +17,7 @@ export default function MmrResearch() {
         parties. I&apos;d like to further validate and refine these findings,
         but unfortunately, OpenSpartan&apos;s tool can only provide data when
         running on a player&apos;s PC while they are in a match. Since I can
-        only collect data from my own matches, there&apos; only so much I can
+        only collect data from my own matches, there&apos;s only so much I can
         learn.
       </Text>
       <Text>
