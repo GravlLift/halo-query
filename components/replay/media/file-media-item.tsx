@@ -127,10 +127,12 @@ export function FileMediaItem({
       offset === undefined
     )
       return;
+    const target = targetMediaTime(playback.clock.current, offset);
+    const clampedTarget = Number.isNaN(player.duration)
+      ? target
+      : Math.min(Math.max(target, 0), player.duration);
     if (
-      Math.abs(
-        player.currentTime - targetMediaTime(playback.clock.current, offset),
-      ) <= DRIFT_THRESHOLD_SEC
+      Math.abs(player.currentTime - clampedTarget) <= DRIFT_THRESHOLD_SEC
     )
       return;
     applyOffset(player.currentTime - playback.clock.current / 1000);
@@ -151,6 +153,29 @@ export function FileMediaItem({
     if (programmaticSeek.current) programmaticSeek.current = false;
     else onPlayerTimeChange();
   }, [file.name, onPlayerTimeChange, player, seekId]);
+
+  const onManualOffsetInput = useCallback(
+    (details: { value: string; valueAsNumber: number }) => {
+      onOffsetInput(details);
+      if (
+        !playback.aligning ||
+        !player ||
+        !Number.isFinite(details.valueAsNumber) ||
+        Number.isNaN(player.duration)
+      )
+        return;
+      const offsetSec = Math.round(details.valueAsNumber * 100) / 100;
+      const target = Math.min(
+        Math.max(targetMediaTime(playback.clock.current, offsetSec), 0),
+        player.duration,
+      );
+      if (player.currentTime !== target) {
+        programmaticSeek.current = true;
+        player.currentTime = target;
+      }
+    },
+    [onOffsetInput, playback.aligning, playback.clock, player],
+  );
 
   useEffect(() => {
     const objectUrl = URL.createObjectURL(file);
@@ -207,7 +232,7 @@ export function FileMediaItem({
         },
       );
       lastSeekAt.current = now;
-      programmaticSeek.current = !playback.aligning;
+      if (!playback.aligning) programmaticSeek.current = true;
     },
     onSeeked: onPlayerSeeked,
     onTimeUpdate: onPlayerTimeChange,
@@ -218,7 +243,7 @@ export function FileMediaItem({
       title={file.name}
       offset={offset}
       offsetText={offsetText}
-      onOffsetInput={onOffsetInput}
+      onOffsetInput={onManualOffsetInput}
       onRemove={onRemove}
       error={loadError}
       isAligning={playback.aligning}

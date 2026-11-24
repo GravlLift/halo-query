@@ -5,6 +5,7 @@ import { MediaPanel } from './media-panel';
 import { MediaItem } from './media-item';
 import { useMediaSync } from './use-media-sync';
 import { bindFileMediaTiming, FileMediaItem } from './file-media-item';
+import * as mediaItemFrame from './media-item-frame';
 import { setTimingsrc } from 'timingsrc';
 
 jest.mock('./media-item', () => ({ MediaItem: jest.fn(() => null) }));
@@ -310,6 +311,7 @@ describe('media audio hover card', () => {
 
   it('detaches during manual alignment and uses the user scrub as the offset', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const frame = jest.spyOn(mediaItemFrame, 'MediaItemFrame');
     const createObjectURL = URL.createObjectURL;
     const revokeObjectURL = URL.revokeObjectURL;
     const pause = HTMLMediaElement.prototype.pause;
@@ -347,8 +349,45 @@ describe('media audio hover card', () => {
         expect.stringContaining('clip.mp4'),
         expect.objectContaining({ targetSec: 20, replaySec: 10, aligning: true }),
       );
+      const input = container.querySelector('input');
+      await act(async () => {
+        frame.mock.calls.at(-1)[0].onOffsetInput({ value: '12', valueAsNumber: 12 });
+      });
+      expect(Number(input.value)).toBe(12);
+      expect(video.currentTime).toBe(22);
+      await act(async () => {
+        video.dispatchEvent(new Event('seeking', { bubbles: true }));
+        video.dispatchEvent(new Event('seeked', { bubbles: true }));
+      });
+      expect(Number(input.value)).toBe(12);
+      await act(async () => {
+        frame.mock.calls.at(-1)[0].onOffsetInput({ value: '13', valueAsNumber: 13 });
+        frame.mock.calls.at(-1)[0].onOffsetInput({ value: '14', valueAsNumber: 14 });
+      });
+      expect(video.currentTime).toBe(24);
+      await act(async () => {
+        video.dispatchEvent(new Event('seeking', { bubbles: true }));
+        video.dispatchEvent(new Event('seeked', { bubbles: true }));
+      });
+      expect(Number(input.value)).toBe(14);
+      await act(async () => {
+        frame.mock.calls.at(-1)[0].onOffsetInput({ value: '200', valueAsNumber: 200 });
+      });
+      expect(video.currentTime).toBe(100);
+      await act(async () => {
+        video.dispatchEvent(new Event('seeking', { bubbles: true }));
+        video.dispatchEvent(new Event('seeked', { bubbles: true }));
+        video.dispatchEvent(new Event('timeupdate', { bubbles: true }));
+      });
+      expect(Number(input.value)).toBe(200);
+      await act(async () => {
+        video.currentTime = 22;
+        video.dispatchEvent(new Event('seeking', { bubbles: true }));
+        video.dispatchEvent(new Event('seeked', { bubbles: true }));
+      });
+      expect(Number(input.value)).toBe(12);
       await act(async () => render(props));
-      expect(video.currentTime).toBe(20);
+      expect(video.currentTime).toBe(22);
     } finally {
       await act(async () => root.render(null));
       if (saved === null) localStorage.removeItem(storageKey);
@@ -356,6 +395,7 @@ describe('media audio hover card', () => {
       URL.createObjectURL = createObjectURL;
       URL.revokeObjectURL = revokeObjectURL;
       HTMLMediaElement.prototype.pause = pause;
+      frame.mockRestore();
       log.mockRestore();
     }
   });

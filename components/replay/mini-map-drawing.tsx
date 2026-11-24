@@ -1,5 +1,5 @@
 import { Flex, IconButton } from '@chakra-ui/react';
-import { Hand, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { Hand, Pen, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { getStroke } from 'perfect-freehand';
 import { useRef, useState, type PointerEvent } from 'react';
 import {
@@ -25,6 +25,7 @@ export default function MiniMapDrawing({
   size: MapSize;
   view: MapView;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [color, setColor] = useState(COLORS[0]);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -132,82 +133,100 @@ export default function MiniMapDrawing({
         color="white"
       >
         <IconButton
-          aria-label="Pan map"
-          title="Pan map"
-          aria-pressed={!drawing}
-          variant={!drawing ? 'solid' : 'ghost'}
-          size="2xs"
-          onClick={() => setDrawing(false)}
-        >
-          <Hand size={16} />
-        </IconButton>
-        <IconButton
-          aria-label="Draw on map"
-          title="Draw on map"
-          aria-pressed={drawing}
-          variant={drawing ? 'solid' : 'ghost'}
-          size="2xs"
-          onClick={() => setDrawing(true)}
-        >
-          <Pencil size={16} />
-        </IconButton>
-        {COLORS.map((swatch) => (
-          <button
-            key={swatch}
-            type="button"
-            aria-label={`Draw in ${swatch}`}
-            title={`Draw in ${swatch}`}
-            aria-pressed={color === swatch}
-            onClick={() => setColor(swatch)}
-            style={{
-              background: swatch,
-              width: 20,
-              height: 20,
-              flexShrink: 0,
-              borderRadius: '50%',
-              border:
-                color === swatch
-                  ? '2px solid #111111'
-                  : '2px solid transparent',
-              outline: color === swatch ? '2px solid white' : 'none',
-              cursor: 'pointer',
-            }}
-          />
-        ))}
-        <input
-          type="color"
-          aria-label="Drawing color"
-          title="Drawing color"
-          value={color}
-          onChange={(event) => setColor(event.target.value)}
-          style={{
-            width: 24,
-            height: 24,
-            padding: 0,
-            border: 0,
-            cursor: 'pointer',
-          }}
-        />
-        <IconButton
-          aria-label="Undo drawing"
-          title="Undo drawing"
+          aria-label={
+            expanded ? 'Collapse drawing toolbar' : 'Expand drawing toolbar'
+          }
+          title={
+            expanded ? 'Collapse drawing toolbar' : 'Expand drawing toolbar'
+          }
+          aria-expanded={expanded}
           variant="ghost"
           size="2xs"
-          disabled={!strokes.length}
-          onClick={() => setStrokes((previous) => previous.slice(0, -1))}
+          onClick={() => setExpanded((previous) => !previous)}
         >
-          <Undo2 size={16} />
+          <Pen size={16} />
         </IconButton>
-        <IconButton
-          aria-label="Clear drawings"
-          title="Clear drawings"
-          variant="ghost"
-          size="2xs"
-          disabled={!strokes.length}
-          onClick={() => setStrokes([])}
-        >
-          <Trash2 size={16} />
-        </IconButton>
+        {expanded && (
+          <>
+            <IconButton
+              aria-label="Pan map"
+              title="Pan map"
+              aria-pressed={!drawing}
+              variant={!drawing ? 'solid' : 'ghost'}
+              size="2xs"
+              onClick={() => setDrawing(false)}
+            >
+              <Hand size={16} />
+            </IconButton>
+            <IconButton
+              aria-label="Draw on map"
+              title="Draw on map"
+              aria-pressed={drawing}
+              variant={drawing ? 'solid' : 'ghost'}
+              size="2xs"
+              onClick={() => setDrawing(true)}
+            >
+              <Pencil size={16} />
+            </IconButton>
+            {COLORS.map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                aria-label={`Draw in ${swatch}`}
+                title={`Draw in ${swatch}`}
+                aria-pressed={color === swatch}
+                onClick={() => setColor(swatch)}
+                style={{
+                  background: swatch,
+                  width: 20,
+                  height: 20,
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  border:
+                    color === swatch
+                      ? '2px solid #111111'
+                      : '2px solid transparent',
+                  outline: color === swatch ? '2px solid white' : 'none',
+                  cursor: 'pointer',
+                }}
+              />
+            ))}
+            <input
+              type="color"
+              aria-label="Drawing color"
+              title="Drawing color"
+              value={color}
+              onChange={(event) => setColor(event.target.value)}
+              style={{
+                width: 24,
+                height: 24,
+                padding: 0,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            />
+            <IconButton
+              aria-label="Undo drawing"
+              title="Undo drawing"
+              variant="ghost"
+              size="2xs"
+              disabled={!strokes.length}
+              onClick={() => setStrokes((previous) => previous.slice(0, -1))}
+            >
+              <Undo2 size={16} />
+            </IconButton>
+            <IconButton
+              aria-label="Clear drawings"
+              title="Clear drawings"
+              variant="ghost"
+              size="2xs"
+              disabled={!strokes.length}
+              onClick={() => setStrokes([])}
+            >
+              <Trash2 size={16} />
+            </IconButton>
+          </>
+        )}
       </Flex>
     </>
   );

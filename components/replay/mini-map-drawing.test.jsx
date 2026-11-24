@@ -76,7 +76,34 @@ function stroke() {
   pointer('pointerup', 250, 260);
 }
 
+it('starts collapsed and preserves the selected tool, color and drawings when reopened', () => {
+  expect(host.querySelectorAll('button')).toHaveLength(1);
+  expect(host.querySelector('[aria-label="Expand drawing toolbar"]')
+    .getAttribute('aria-expanded')).toBe('false');
+  expect(host.querySelector('[aria-label="Draw on map"]')).toBeNull();
+
+  click('Expand drawing toolbar');
+  expect(host.querySelector('[aria-label="Collapse drawing toolbar"]')
+    .getAttribute('aria-expanded')).toBe('true');
+  click('Draw on map');
+  click('Draw in #f87171');
+  stroke();
+  const path = host.querySelector('g path').getAttribute('d');
+
+  click('Collapse drawing toolbar');
+  expect(host.querySelectorAll('button')).toHaveLength(1);
+  expect(host.querySelector('g path').getAttribute('d')).toBe(path);
+
+  click('Expand drawing toolbar');
+  expect(host.querySelector('[aria-label="Draw on map"]')
+    .getAttribute('aria-pressed')).toBe('true');
+  expect(host.querySelector('[aria-label="Draw in #f87171"]')
+    .getAttribute('aria-pressed')).toBe('true');
+  expect(host.querySelector('g path').getAttribute('d')).toBe(path);
+});
+
 it('defaults to pan and only captures drawing input in draw mode', () => {
+  click('Expand drawing toolbar');
   expect(host.querySelector('svg').style.pointerEvents).toBe('none');
   stroke();
   expect(host.querySelector('g').children).toHaveLength(0);
@@ -90,6 +117,7 @@ it('defaults to pan and only captures drawing input in draw mode', () => {
 });
 
 it('captures map coordinates and keeps paths anchored through pan, zoom and resize', () => {
+  click('Expand drawing toolbar');
   click('Draw on map');
   stroke();
   const { toScreen, scale } = mapTransform(bounds, size, view);
@@ -121,6 +149,7 @@ it('captures map coordinates and keeps paths anchored through pan, zoom and resi
 it('draws a thin continuous line on normalized maps rather than oversized end caps', () => {
   const normalizedBounds = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
   render({ bounds: normalizedBounds });
+  click('Expand drawing toolbar');
   click('Draw on map');
   pointer('pointerdown', 200, 200);
   for (let horizontal = 210; horizontal <= 340; horizontal += 10)
@@ -139,6 +168,7 @@ it('draws a thin continuous line on normalized maps rather than oversized end ca
 });
 
 it('keeps individual stroke colors and supports undo and clear', () => {
+  click('Expand drawing toolbar');
   click('Draw on map');
   click('Draw in #f87171');
   stroke();
@@ -156,6 +186,7 @@ it('keeps individual stroke colors and supports undo and clear', () => {
 });
 
 it('discards canceled strokes and ignores other pointers', () => {
+  click('Expand drawing toolbar');
   click('Draw on map');
   pointer('pointerdown', 200, 200);
   pointer('pointerup', 300, 300, 2);
