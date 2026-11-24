@@ -183,6 +183,7 @@ export function TwitchMediaItem({
           ? 'Twitch videos only follow 1x playback.'
           : undefined
       }
+      isAligning={playback.aligning}
     >
       <Box position="relative" w="100%" aspectRatio={16 / 9}>
         <Box ref={containerRef} position="absolute" inset={0} />
