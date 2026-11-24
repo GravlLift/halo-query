@@ -131,9 +131,7 @@ export function FileMediaItem({
     const clampedTarget = Number.isNaN(player.duration)
       ? target
       : Math.min(Math.max(target, 0), player.duration);
-    if (
-      Math.abs(player.currentTime - clampedTarget) <= DRIFT_THRESHOLD_SEC
-    )
+    if (Math.abs(player.currentTime - clampedTarget) <= DRIFT_THRESHOLD_SEC)
       return;
     applyOffset(player.currentTime - playback.clock.current / 1000);
   }, [playback.aligning, playback.clock, player, offset, applyOffset]);
