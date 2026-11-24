@@ -6,6 +6,7 @@ import { createReplayDecoder } from './replay-decoder';
 import { EventFeed } from './event-feed';
 import MiniMap from './mini-map';
 import { TeamPanel } from './team-panel';
+import { MediaPanel } from './media/media-panel';
 
 jest.mock('../../lib/film', () => ({ loadFilm: jest.fn() }));
 jest.mock('./replay-decoder', () => ({
@@ -341,6 +342,42 @@ it('keeps the kill feed seek handler stable across playback ticks', async () => 
     const tick = requestFrame.mock.calls.at(-1)[0];
     act(() => tick(performance.now() + 16));
     expect(EventFeed.mock.calls.at(-1)[0].onSeek).toBe(seek);
+  } finally {
+    act(() => root.unmount());
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('holds media at the loaded replay boundary and resumes when more arrives', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const requestFrame = jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(123);
+  const cancelFrame = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+  const replay = {
+    startMs: 0, endMs: 20000, players: [], map: { objectives: [] },
+    at: () => [], scores: () => [], killFeed: [], projectiles: [],
+  };
+  let options;
+  loadFilm.mockImplementation((received) => {
+    options = received;
+    received.onReplay(replay, false);
+    return new Promise(() => {});
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(false);
+    const tick = requestFrame.mock.calls.at(-1)[0];
+    act(() => tick(performance.now() + 21000));
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(true);
+    act(() => options.onReplay({ ...replay, endMs: 40000 }, false));
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(false);
   } finally {
     act(() => root.unmount());
     requestFrame.mockRestore();

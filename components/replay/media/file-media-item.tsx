@@ -1,15 +1,24 @@
 import { Flex, Icon } from '@chakra-ui/react';
 import { Music } from 'lucide-react';
-import { type ComponentProps, useCallback, useEffect, useState } from 'react';
+import {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
+import type { ITimingObject } from 'timing-object';
 import { MediaItemFrame } from './media-item-frame';
 import { readEmbeddedDateMs } from './media-metadata';
-import { initialOffsetSec, recordingStartMs } from './media-timing';
-import { offsetStorageKey, useMediaOffset } from './use-media-offset';
 import {
-  type MediaPlayerAdapter,
-  type ReplayPlaybackProps,
-  useMediaSync,
-} from './use-media-sync';
+  DRIFT_THRESHOLD_SEC,
+  initialOffsetSec,
+  recordingStartMs,
+  targetMediaTime,
+} from './media-timing';
+import { offsetStorageKey, useMediaOffset } from './use-media-offset';
+import type { ReplayPlaybackProps } from './use-media-sync';
 
 export const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.webm', '.mov'];
 export const AUDIO_EXTENSIONS = [
@@ -29,30 +38,24 @@ function isAudioFile(file: File) {
   return AUDIO_EXTENSIONS.some((extension) => name.endsWith(extension));
 }
 
-function htmlMediaAdapter(media: HTMLMediaElement): MediaPlayerAdapter {
-  return {
-    getCurrentTime: () => media.currentTime,
-    getDuration: () => media.duration,
-    isPaused: () => media.paused,
-    isSeeking: () => media.seeking,
-    play: () => void media.play().catch(() => undefined),
-    pause: () => media.pause(),
-    seek: (seconds) => {
-      media.currentTime = seconds;
-    },
-    getRate: () => media.playbackRate,
-    setRate: (rate) => {
-      media.playbackRate = rate;
-    },
-    setVolume: (volume, muted) => {
-      if (media.volume !== volume) media.volume = volume;
-      if (media.muted !== muted) media.muted = muted;
-    },
-  };
+export function bindFileMediaTiming(
+  media: HTMLMediaElement,
+  timingObject: ITimingObject,
+  offset: number,
+  setTimingsrc: typeof import('timingsrc').setTimingsrc,
+) {
+  return setTimingsrc(media, timingObject, (vector) => ({
+    ...vector,
+    position:
+      media.seeking && vector.velocity !== 0
+        ? media.currentTime
+        : vector.position + offset,
+  }));
 }
 
 export function FileMediaItem({
   file,
+  timingObject,
   matchId,
   matchStartMs,
   matchDurationMs,
@@ -60,13 +63,17 @@ export function FileMediaItem({
   ...playback
 }: ReplayPlaybackProps & {
   file: File;
+  timingObject: ITimingObject | undefined;
   matchId: string;
   matchStartMs: number;
   matchDurationMs: number;
   onRemove: () => void;
 }) {
   const [url, setUrl] = useState<string>();
-  const [player, setPlayer] = useState<MediaPlayerAdapter>();
+  const [player, setPlayer] = useState<HTMLMediaElement>();
+  const programmaticSeek = useRef(false);
+  const seekId = useId();
+  const lastSeekAt = useRef<number>();
   const [loadError, setLoadError] = useState<string>();
   const { offset, offsetText, applyOffset, restoreOrApply, onOffsetInput } =
     useMediaOffset(
@@ -75,12 +82,75 @@ export function FileMediaItem({
         `${file.name}:${file.size}:${file.lastModified}`,
       ),
     );
-  const { onPlayerTimeChange, onPlayerSeeked } = useMediaSync({
-    ...playback,
-    player,
-    offset,
-    onUserOffset: applyOffset,
-  });
+  useEffect(() => {
+    if (!player || !timingObject || offset === undefined || playback.aligning)
+      return;
+    let cancelled = false;
+    let detach: (() => void) | undefined;
+    void import('timingsrc')
+      .then(({ setTimingsrc }) => {
+        if (!cancelled)
+          detach = bindFileMediaTiming(
+            player,
+            timingObject,
+            offset,
+            setTimingsrc,
+          );
+      })
+      .catch((error: unknown) => {
+        if (!cancelled)
+          setLoadError(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      cancelled = true;
+      detach?.();
+    };
+  }, [player, timingObject, offset, playback.aligning]);
+
+  useEffect(() => {
+    if (!player) return;
+    const volume = Math.min(Math.max(playback.volume, 0), 1);
+    if (player.volume !== volume) player.volume = volume;
+    if (player.muted !== (volume === 0)) player.muted = volume === 0;
+  }, [player, playback.volume]);
+
+  useEffect(() => {
+    if (playback.aligning) player?.pause();
+  }, [player, playback.aligning]);
+
+  const onPlayerTimeChange = useCallback(() => {
+    if (
+      !playback.aligning ||
+      !player ||
+      programmaticSeek.current ||
+      player.seeking ||
+      offset === undefined
+    )
+      return;
+    if (
+      Math.abs(
+        player.currentTime - targetMediaTime(playback.clock.current, offset),
+      ) <= DRIFT_THRESHOLD_SEC
+    )
+      return;
+    applyOffset(player.currentTime - playback.clock.current / 1000);
+  }, [playback.aligning, playback.clock, player, offset, applyOffset]);
+
+  const onPlayerSeeked = useCallback(() => {
+    console.log(
+      `[media seek] ${new Date().toISOString()} ${file.name} (${seekId}): seeked event`,
+      {
+        programmatic: programmaticSeek.current,
+        sinceSeekingMs:
+          lastSeekAt.current === undefined
+            ? null
+            : performance.now() - lastSeekAt.current,
+        currentSec: player?.currentTime,
+      },
+    );
+    if (programmaticSeek.current) programmaticSeek.current = false;
+    else onPlayerTimeChange();
+  }, [file.name, onPlayerTimeChange, player, seekId]);
 
   useEffect(() => {
     const objectUrl = URL.createObjectURL(file);
@@ -92,7 +162,7 @@ export function FileMediaItem({
   }, [file]);
 
   const setMediaElement = useCallback((element: HTMLMediaElement | null) => {
-    setPlayer(element ? htmlMediaAdapter(element) : undefined);
+    setPlayer(element ?? undefined);
   }, []);
 
   const handleLoadedMetadata = (durationSec: number) =>
@@ -119,6 +189,26 @@ export function FileMediaItem({
     onLoadedMetadata: (e) => handleLoadedMetadata(e.currentTarget.duration),
     onError: (e) =>
       setLoadError(e.currentTarget.error?.message ?? 'Unable to load media.'),
+    onSeeking: (event) => {
+      const now = performance.now();
+      console.log(
+        `[media seek] ${new Date().toISOString()} ${file.name} (${seekId}): seeking event`,
+        {
+          targetSec: event.currentTarget.currentTime,
+          replaySec: playback.clock.current / 1000,
+          expectedSec:
+            offset === undefined
+              ? undefined
+              : targetMediaTime(playback.clock.current, offset),
+          sincePreviousSeekingMs:
+            lastSeekAt.current === undefined ? null : now - lastSeekAt.current,
+          playing: playback.playing,
+          aligning: playback.aligning,
+        },
+      );
+      lastSeekAt.current = now;
+      programmaticSeek.current = !playback.aligning;
+    },
     onSeeked: onPlayerSeeked,
     onTimeUpdate: onPlayerTimeChange,
   };

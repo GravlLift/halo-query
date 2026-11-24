@@ -14,6 +14,7 @@ import {
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
 import { Volume2, Volume1, VolumeX } from 'lucide-react';
 import { type MutableRefObject, useEffect, useRef, useState } from 'react';
+import type { ITimingObject } from 'timing-object';
 import { MediaItem } from './media-item';
 import { MediaSourceDialog } from './media-source-dialog';
 import { type MediaSource, mediaSourceLabel } from './media-source-picker';
@@ -43,12 +44,46 @@ export function MediaPanel({
   match,
   ...itemProps
 }: MediaPanelProps) {
+  const [timingObject, setTimingObject] = useState<ITimingObject>();
   const nextId = useRef(0);
   const [items, setItems] = useState<Item[]>([]);
   const [audibleId, setAudibleId] = useState<number>();
   const [volume, setVolume] = useState(1);
   const unmutedVolume = useRef(1);
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import('timing-object').then(({ TimingObject }) => {
+      if (!cancelled) setTimingObject(new TimingObject());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!timingObject) return;
+    const position = itemProps.clock.current / 1000;
+    const velocity =
+      itemProps.playing && !itemProps.waiting && !aligning
+        ? itemProps.speed
+        : 0;
+    const current = timingObject.query();
+    if (
+      current.velocity !== velocity ||
+      Math.abs(current.position - position) > (velocity === 0 ? 0.001 : 0.25)
+    )
+      void timingObject.update({ position, velocity });
+  }, [
+    timingObject,
+    itemProps.clock,
+    itemProps.timeMs,
+    itemProps.playing,
+    itemProps.waiting,
+    itemProps.speed,
+    aligning,
+  ]);
 
   useEffect(() => {
     if (!items.some((item) => item.id === audibleId))
@@ -176,6 +211,7 @@ export function MediaPanel({
           <MediaItem
             key={item.id}
             {...itemProps}
+            timingObject={timingObject}
             source={item.source}
             matchId={match.MatchId}
             matchStartMs={Date.parse(match.MatchInfo.StartTime)}

@@ -600,7 +600,10 @@ export default function Replay({
               timeMs={timeMs}
               playing={playing}
               speed={speed}
-              waiting={pendingSeek !== undefined}
+              waiting={
+                pendingSeek !== undefined ||
+                (playing && !state.complete && timeMs >= replay.endMs)
+              }
               aligning={aligning}
               onAligningChange={(next) => {
                 if (next) setPlaying(false);

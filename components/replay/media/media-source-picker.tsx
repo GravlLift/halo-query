@@ -49,13 +49,14 @@ export function MediaSourcePicker({
   return (
     <Grid templateColumns="minmax(0, 1fr) auto minmax(0, 1fr)" gap={2}>
       <FileUpload.Root
-        maxFiles={1}
+        maxFiles={5}
         accept={ACCEPTED_TYPES}
         alignItems="stretch"
         minW={0}
         onFileChange={({ acceptedFiles }) => {
-          const file = acceptedFiles[0];
-          if (file) onSelect({ kind: 'file', file });
+          for (const file of acceptedFiles) {
+            onSelect({ kind: 'file', file });
+          }
         }}
       >
         <FileUpload.HiddenInput />

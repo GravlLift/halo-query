@@ -69,6 +69,7 @@ export function TwitchMediaItem({
   const { speedSupported, onPlayerTimeChange, onPlayerSeeked } = useMediaSync({
     ...playback,
     player,
+    sourceLabel: `Twitch ${video.id}`,
     offset,
     onUserOffset: applyOffset,
   });
