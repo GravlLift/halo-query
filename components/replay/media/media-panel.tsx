@@ -47,7 +47,8 @@ export function MediaPanel({
   const [timingObject, setTimingObject] = useState<ITimingObject>();
   const nextId = useRef(0);
   const [items, setItems] = useState<Item[]>([]);
-  const [audibleId, setAudibleId] = useState<number>();
+  const [audibleIds, setAudibleIds] = useState<number[]>([]);
+  const previousItemCount = useRef(0);
   const [volume, setVolume] = useState(1);
   const unmutedVolume = useRef(1);
   const [adding, setAdding] = useState(false);
@@ -86,9 +87,16 @@ export function MediaPanel({
   ]);
 
   useEffect(() => {
-    if (!items.some((item) => item.id === audibleId))
-      setAudibleId(items[0]?.id);
-  }, [items, audibleId]);
+    const wasEmpty = previousItemCount.current === 0;
+    previousItemCount.current = items.length;
+    setAudibleIds((current) => {
+      if (wasEmpty && items.length > 0) return [items[0].id];
+      const remaining = current.filter((id) =>
+        items.some((item) => item.id === id),
+      );
+      return remaining.length === current.length ? current : remaining;
+    });
+  }, [items]);
 
   useEffect(() => {
     if (aligning && items.length === 0) onAligningChange(false);
@@ -162,19 +170,21 @@ export function MediaPanel({
                       </Slider.Root>
                     </Field.Root>
                     <Field.Root>
-                      <Field.Label>Source</Field.Label>
+                      <Field.Label>Sources</Field.Label>
                       <Select.Root
+                        multiple
+                        closeOnSelect={false}
                         collection={audioSources}
-                        value={audibleId == null ? [] : [String(audibleId)]}
-                        onValueChange={({ value }) => {
-                          if (value[0] != null) setAudibleId(Number(value[0]));
-                        }}
+                        value={audibleIds.map(String)}
+                        onValueChange={({ value }) =>
+                          setAudibleIds(value.map(Number))
+                        }
                         positioning={{ strategy: 'fixed' }}
                       >
                         <Select.HiddenSelect />
                         <Select.Control>
                           <Select.Trigger aria-label="Audio source">
-                            <Select.ValueText />
+                            <Select.ValueText placeholder="No sources" />
                           </Select.Trigger>
                           <Select.IndicatorGroup>
                             <Select.Indicator />
@@ -216,7 +226,7 @@ export function MediaPanel({
             matchId={match.MatchId}
             matchStartMs={Date.parse(match.MatchInfo.StartTime)}
             aligning={aligning}
-            volume={item.id === audibleId ? volume : 0}
+            volume={audibleIds.includes(item.id) ? volume : 0}
             onRemove={() =>
               setItems((current) =>
                 current.filter((existing) => existing.id !== item.id),

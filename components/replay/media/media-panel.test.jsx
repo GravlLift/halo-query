@@ -67,6 +67,7 @@ describe('media audio hover card', () => {
       container.querySelector('button').click();
       container.querySelector('button').click();
     });
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([1, 0]);
     const trigger = container.querySelector('[aria-label="Mute media"]');
     await act(async () => {
       trigger.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
@@ -106,7 +107,44 @@ describe('media audio hover card', () => {
     await act(async () => {
       await jest.advanceTimersByTimeAsync(50);
     });
-    expect(card.querySelector('select').value).toBe('1');
+    expect(Array.from(card.querySelector('select').selectedOptions, (option) => option.value)).toEqual(['0', '1']);
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([1, 1]);
+    await act(async () => trigger.click());
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([0, 0]);
+    await act(async () => trigger.click());
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([1, 1]);
+    expect(sourceTrigger.getAttribute('aria-expanded')).toBe('true');
+    const firstSource = card.querySelector('[role="option"][data-value="0"]');
+    await act(async () => {
+      firstSource.click();
+      await jest.advanceTimersByTimeAsync(50);
+    });
+    expect(Array.from(card.querySelector('select').selectedOptions, (option) => option.value)).toEqual(['1']);
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([0, 1]);
+    await act(async () => {
+      card.querySelector('[role="option"][data-value="1"]').click();
+      await jest.advanceTimersByTimeAsync(50);
+    });
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([0, 0]);
+    await act(async () => {
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Select media').click();
+    });
+    expect(MediaItem.mock.calls.slice(-3).map(([item]) => item.volume)).toEqual([0, 0, 0]);
+    await act(async () => {
+      card.querySelector('[role="option"][data-value="1"]').click();
+      await jest.advanceTimersByTimeAsync(50);
+    });
+    const [firstItem] = MediaItem.mock.calls.slice(-3).map(([item]) => item);
+    await act(async () => {
+      firstItem.onRemove();
+      await jest.advanceTimersByTimeAsync(50);
+    });
+    expect(MediaItem.mock.calls.slice(-2).map(([item]) => item.volume)).toEqual([1, 0]);
+    expect(card.querySelector('[role="option"][data-value="1"]').getAttribute('aria-selected')).toBe('true');
+    await act(async () => {
+      sourceTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
     expect(card.dataset.state).toBe('open');
     await act(async () => {
       card.dispatchEvent(new MouseEvent('pointerout', { bubbles: true }));
