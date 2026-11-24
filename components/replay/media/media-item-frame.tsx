@@ -4,11 +4,14 @@ import {
   HStack,
   IconButton,
   NumberInput,
+  Popover,
+  Portal,
   Spinner,
   Text,
 } from '@chakra-ui/react';
-import { X } from 'lucide-react';
+import { EllipsisVertical, X } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 function Overlay({ children, bg }: { children: ReactNode; bg: string }) {
   return (
@@ -48,32 +51,80 @@ export function MediaItemFrame({
   children: ReactNode;
   isAligning: boolean;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <Flex direction="column" gap={1} bg="black.800" p={2} borderRadius="sm">
-      <HStack gap={2}>
-        <Text flex={1} minW={0} fontSize="sm" truncate title={title}>
-          {title}
-        </Text>
-        <NumberInput.Root
-          size="xs"
-          w="96px"
-          step={0.2}
-          value={offsetText}
-          disabled={offset === undefined || !isAligning}
-          aria-label={`Offset for ${title} in seconds`}
-          title="Offset (seconds). Positive values play later in the media."
-          onValueChange={onOffsetInput}
-          allowMouseWheel
-        >
-          <NumberInput.Input />
-          <NumberInput.Control />
-        </NumberInput.Root>
-        <IconButton size="xs" aria-label={`Remove ${title}`} onClick={onRemove}>
-          <X size={14} />
-        </IconButton>
-      </HStack>
+    <Flex direction="column" gap={1} bg="black.800" borderRadius="sm">
       <Box position="relative">
         {children}
+        <Text
+          position="absolute"
+          top={1}
+          left={1}
+          zIndex={1}
+          maxW="calc(100% - 48px)"
+          px={2}
+          py={0.5}
+          borderRadius="sm"
+          bg="blackAlpha.700"
+          fontSize="sm"
+          truncate
+          title={title}
+          pointerEvents="none"
+        >
+          {title}
+        </Text>
+        <Popover.Root
+          positioning={{ placement: 'bottom-end' }}
+          open={isAligning || menuOpen}
+          onOpenChange={({ open }) => setMenuOpen(open)}
+          autoFocus={false}
+        >
+          <Popover.Trigger asChild>
+            <IconButton
+              position="absolute"
+              top={1}
+              right={1}
+              zIndex={1}
+              size="xs"
+              variant="subtle"
+              aria-label={`Options for ${title}`}
+            >
+              <EllipsisVertical size={14} />
+            </IconButton>
+          </Popover.Trigger>
+          <Portal>
+            <Popover.Positioner>
+              <Popover.Content w="auto">
+                <Popover.Body p={2}>
+                  <HStack gap={2}>
+                    <NumberInput.Root
+                      size="xs"
+                      w="96px"
+                      step={0.2}
+                      value={offsetText}
+                      disabled={offset === undefined || !isAligning}
+                      aria-label={`Offset for ${title} in seconds`}
+                      title="Offset (seconds). Positive values play later in the media."
+                      onValueChange={onOffsetInput}
+                      allowMouseWheel
+                    >
+                      <NumberInput.Input />
+                      <NumberInput.Control />
+                    </NumberInput.Root>
+                    <IconButton
+                      size="xs"
+                      aria-label={`Remove ${title}`}
+                      onClick={onRemove}
+                    >
+                      <X size={14} />
+                    </IconButton>
+                  </HStack>
+                </Popover.Body>
+              </Popover.Content>
+            </Popover.Positioner>
+          </Portal>
+        </Popover.Root>
         {error ? (
           <Overlay bg="blackAlpha.800">
             <Text role="alert" fontSize="sm" color="red.500" textAlign="center">

@@ -344,12 +344,15 @@ describe('media audio hover card', () => {
         video.dispatchEvent(new Event('seeking', { bubbles: true }));
         video.dispatchEvent(new Event('seeked', { bubbles: true }));
       });
-      expect(Number(container.querySelector('input').value)).toBe(10);
+      await act(async () => {
+        container.querySelector('button[aria-label^="Options for"]').click();
+      });
+      expect(Number(document.querySelector('input').value)).toBe(10);
       expect(log).toHaveBeenCalledWith(
         expect.stringContaining('clip.mp4'),
         expect.objectContaining({ targetSec: 20, replaySec: 10, aligning: true }),
       );
-      const input = container.querySelector('input');
+      const input = document.querySelector('input');
       await act(async () => {
         frame.mock.calls.at(-1)[0].onOffsetInput({ value: '12', valueAsNumber: 12 });
       });
