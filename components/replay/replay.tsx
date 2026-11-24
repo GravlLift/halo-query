@@ -12,7 +12,7 @@ import {
   useSplitter,
 } from '@chakra-ui/react';
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
-import { Pause, Play, Video, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Video, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { paintedBounds } from '@gravllift/halo-film-ui/view';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
@@ -394,30 +394,31 @@ export default function Replay({
               </Box>
               <chakra.button
                 type="button"
-                aria-label={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+                aria-label={feedVisible ? 'Hide event feed' : 'Show event feed'}
                 aria-pressed={feedVisible}
-                title={feedVisible ? 'Hide kill feed' : 'Show kill feed'}
+                title={feedVisible ? 'Hide event feed' : 'Show event feed'}
                 onClick={() => setFeedVisible((visible) => !visible)}
                 // Pull into the grid gap so the handle sits flush against the feed.
                 ml={feedVisible ? -3 : 0}
-                w="8px"
+                w="20px"
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
                 cursor="pointer"
                 borderRadius="sm"
-                _hover={{ bg: 'bg.emphasized' }}
+                bg="bg.emphasized"
+                color="fg"
+                _hover={{ bg: 'bg.muted' }}
                 _focusVisible={{
                   outline: '2px solid',
                   outlineColor: 'teal.500',
                 }}
               >
-                <Box
-                  w="2px"
-                  h="24px"
-                  borderRadius="full"
-                  bg="border.emphasized"
-                />
+                {feedVisible ? (
+                  <ChevronLeft size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
               </chakra.button>
               <TeamPanel
                 players={leftPlayers}

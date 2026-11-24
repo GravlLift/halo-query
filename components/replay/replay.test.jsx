@@ -69,8 +69,12 @@ jest.mock('@chakra-ui/react', () => {
         children,
       ),
   );
-  const button = ({ children, onClick, 'aria-label': label }) =>
-    React.createElement('button', { onClick, 'aria-label': label }, children);
+  const button = ({ children, onClick, bg, 'aria-label': label, 'aria-pressed': pressed }) =>
+    React.createElement(
+      'button',
+      { onClick, 'aria-label': label, 'aria-pressed': pressed, 'data-bg': bg },
+      children,
+    );
   const slider = ({ children, onValueChange, getAriaValueText, max, value }) =>
     React.createElement(
       'div',
@@ -158,6 +162,15 @@ it('shows a dismissible hint for opening the media panel', async () => {
     expect(
       container.querySelector('[aria-label="Media panel (double-click to expand)"] svg.lucide-video'),
     ).not.toBeNull();
+    const feedToggle = container.querySelector('[aria-label="Hide event feed"]');
+    expect(feedToggle.getAttribute('data-bg')).toBe('bg.emphasized');
+    expect(feedToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(feedToggle.querySelector('svg.lucide-chevron-left')).not.toBeNull();
+    act(() => feedToggle.click());
+    expect(feedToggle.getAttribute('aria-label')).toBe('Show event feed');
+    expect(feedToggle.getAttribute('data-bg')).toBe('bg.emphasized');
+    expect(feedToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(feedToggle.querySelector('svg.lucide-chevron-right')).not.toBeNull();
     act(() => container.querySelector('[aria-label="Dismiss media panel hint"]').click());
     expect(container.querySelector('[aria-label="Media panel feature"]')).toBeNull();
     expect(localStorage.getItem('replay.mediaHintDismissed')).toBe('true');

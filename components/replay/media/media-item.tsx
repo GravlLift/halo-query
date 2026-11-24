@@ -11,27 +11,8 @@ export interface MediaItemProps extends ReplayPlaybackProps {
   onRemove: () => void;
 }
 
-export function MediaItem({
-  source,
-  matchStartMs,
-  matchDurationMs,
-  ...props
-}: MediaItemProps) {
+export function MediaItem({ source, ...props }: MediaItemProps) {
   if (source.kind === 'twitch')
-    return (
-      <TwitchMediaItem
-        {...props}
-        video={source.video}
-        matchStartMs={matchStartMs}
-        matchDurationMs={matchDurationMs}
-      />
-    );
-  return (
-    <FileMediaItem
-      {...props}
-      file={source.file}
-      matchStartMs={matchStartMs}
-      matchDurationMs={matchDurationMs}
-    />
-  );
+    return <TwitchMediaItem {...props} video={source.video} />;
+  return <FileMediaItem {...props} file={source.file} />;
 }

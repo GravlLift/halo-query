@@ -36,6 +36,7 @@ export function MediaItemFrame({
   error,
   notice,
   children,
+  isAligning,
 }: {
   title: string;
   offset: number | undefined;
@@ -45,6 +46,7 @@ export function MediaItemFrame({
   error?: string;
   notice?: string;
   children: ReactNode;
+  isAligning: boolean;
 }) {
   return (
     <Flex direction="column" gap={1} bg="black.800" p={2} borderRadius="sm">
@@ -57,7 +59,7 @@ export function MediaItemFrame({
           w="96px"
           step={0.2}
           value={offsetText}
-          disabled={offset === undefined}
+          disabled={offset === undefined || !isAligning}
           aria-label={`Offset for ${title} in seconds`}
           title="Offset (seconds). Positive values play later in the media."
           onValueChange={onOffsetInput}

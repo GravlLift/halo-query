@@ -131,6 +131,7 @@ export function FileMediaItem({
       onOffsetInput={onOffsetInput}
       onRemove={onRemove}
       error={loadError}
+      isAligning={playback.aligning}
     >
       {isAudioFile(file) ? (
         <Flex direction="column" align="center" gap={1}>

@@ -2,6 +2,7 @@ import { Box, Button, Flex, Slider } from '@chakra-ui/react';
 import type { MapObjective, ReplayPoint } from '../../lib/film';
 import { useEffect, useRef, useState } from 'react';
 import { LoadedBackground, LoadState } from './types';
+import MiniMapDrawing from './mini-map-drawing';
 import {
   DEFAULT_VIEW,
   MIN_ZOOM,
@@ -123,11 +124,12 @@ export default function MiniMap({
   // cannot stop the page from scrolling.
   const ready = state.status === 'ready';
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!ready || !canvas) return;
+    if (!ready || !container) return;
     const onWheel = (e: WheelEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('canvas, svg'))
+        return;
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
+      const rect = container.getBoundingClientRect();
       setView((v) =>
         zoomAbout(
           v,
@@ -137,9 +139,9 @@ export default function MiniMap({
         ),
       );
     };
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', onWheel);
-  }, [ready]);
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [ready, container]);
   return (
     <Flex ref={setContainer} minW={0} minH={0} overflow="hidden">
       <Box
@@ -183,6 +185,13 @@ export default function MiniMap({
           }}
           onDoubleClick={() => setView(DEFAULT_VIEW)}
         />
+        {state.status === 'ready' && (
+          <MiniMapDrawing
+            bounds={background?.content ?? state.replay.bounds}
+            size={size}
+            view={view}
+          />
+        )}
         <Flex
           position="absolute"
           bottom={2}

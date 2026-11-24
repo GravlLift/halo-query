@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { drawReplay } from '@gravllift/halo-film-ui';
 import MiniMap from './mini-map';
 
+jest.mock('./mini-map-drawing', () => () => null);
+
 jest.mock('@gravllift/halo-film-ui', () => ({
   DEFAULT_VIEW: { zoom: 1, panX: 0, panY: 0 },
   MIN_ZOOM: 0.25,
