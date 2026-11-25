@@ -10,9 +10,18 @@ import {
   Splitter,
   Text,
   useSplitter,
+  HStack,
 } from '@chakra-ui/react';
 import { ProgressiveMatch } from '@gravllift/halo-helpers';
-import { ChevronLeft, ChevronRight, Pause, Play, Video, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Cpu,
+  Pause,
+  Play,
+  Video,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { paintedBounds } from '@gravllift/halo-film-ui/view';
 import { useApiClients } from '../../lib/contexts/api-client-contexts';
@@ -86,6 +95,7 @@ export default function Replay({
         : [100, 0],
     );
   const abortRef = useRef<AbortController>();
+  const useWorkerRef = useRef(true);
   const [background, setBackground] = useState<LoadedBackground>();
   const backgroundSpec =
     state.status === 'ready' ? state.replay.map.background : undefined;
@@ -138,98 +148,104 @@ export default function Replay({
     return () => navigationSignal.removeEventListener('abort', cleanup);
   }, [navigationSignal]);
 
-  const load = useCallback(async () => {
-    if (navigationSignal?.aborted) return;
-    abortRef.current?.abort();
-    const abort = new AbortController();
-    abortRef.current = abort;
-    let decoder: ReturnType<typeof createReplayDecoder> | undefined;
-    const terminateDecoder = () => decoder?.terminate();
-    abort.signal.addEventListener('abort', terminateDecoder, { once: true });
-    try {
-      setPlaying(false);
-      priorityRef.current = undefined;
-      setPendingSeek(undefined);
-      setState({ status: 'loading', progress: 'Fetching film manifest...' });
-      const film = await haloInfiniteClient.spectateMatch(match.MatchId, {
-        signal: abort.signal,
-      });
-      if (abort.signal.aborted) return;
-      const { BlobStoragePathPrefix } = film;
-      setFilmEndMs(
-        film.CustomData.Chunks.filter((chunk) => chunk.ChunkType === 2).reduce(
-          (end, chunk) =>
-            Math.max(
-              end,
-              chunk.ChunkStartTimeOffsetMilliseconds +
-                chunk.DurationMilliseconds,
-            ),
-          0,
-        ),
-      );
-      // Loaded on demand so the parser stays out of the main bundle.
-      const { loadFilm } = await import('../../lib/film');
-      if (abort.signal.aborted) return;
-      decoder = createReplayDecoder();
-      let receivedReplay = false;
-      const updateProgress = (progress: string) => {
+  const load = useCallback(
+    async (useWorker = useWorkerRef.current) => {
+      if (navigationSignal?.aborted) return;
+      useWorkerRef.current = useWorker;
+      abortRef.current?.abort();
+      const abort = new AbortController();
+      abortRef.current = abort;
+      let decoder: ReturnType<typeof createReplayDecoder> | undefined;
+      const terminateDecoder = () => decoder?.terminate();
+      abort.signal.addEventListener('abort', terminateDecoder, { once: true });
+      try {
+        setPlaying(false);
+        priorityRef.current = undefined;
+        setPendingSeek(undefined);
+        setState({ status: 'loading', progress: 'Fetching film manifest...' });
+        const film = await haloInfiniteClient.spectateMatch(match.MatchId, {
+          signal: abort.signal,
+        });
         if (abort.signal.aborted) return;
+        const { BlobStoragePathPrefix } = film;
+        setFilmEndMs(
+          film.CustomData.Chunks.filter(
+            (chunk) => chunk.ChunkType === 2,
+          ).reduce(
+            (end, chunk) =>
+              Math.max(
+                end,
+                chunk.ChunkStartTimeOffsetMilliseconds +
+                  chunk.DurationMilliseconds,
+              ),
+            0,
+          ),
+        );
+        // Loaded on demand so the parser stays out of the main bundle.
+        const { loadFilm, decodeReplay } = await import('../../lib/film');
+        if (abort.signal.aborted) return;
+        if (useWorker) decoder = createReplayDecoder();
+        let receivedReplay = false;
+        const updateProgress = (progress: string) => {
+          if (abort.signal.aborted) return;
+          setState((current) =>
+            current.status === 'ready'
+              ? { ...current, progress }
+              : { status: 'loading', progress },
+          );
+        };
+        await loadFilm({
+          film,
+          match,
+          signal: abort.signal,
+          decode: decoder?.decode ?? decodeReplay,
+          getPriorityTime: () => priorityRef.current,
+          fetchChunk: (_index, fileRelativePath) =>
+            haloInfiniteClient.getFilmChunk(
+              BlobStoragePathPrefix,
+              fileRelativePath,
+              {
+                signal: abort.signal,
+              },
+            ),
+          onProgress: (downloaded, total) =>
+            updateProgress(`Downloaded chunk ${downloaded}/${total}...`),
+          onStage: updateProgress,
+          onReplay: (replay, complete) => {
+            if (abort.signal.aborted) return;
+            if (!receivedReplay) {
+              timeRef.current = replay.firstSpawnMs ?? replay.startMs;
+              setTimeMs(timeRef.current);
+            }
+            const target = priorityRef.current;
+            if (target !== undefined && (target <= replay.endMs || complete)) {
+              timeRef.current = Math.min(target, replay.endMs);
+              setTimeMs(timeRef.current);
+              priorityRef.current = undefined;
+              setPendingSeek(undefined);
+            }
+            receivedReplay = true;
+            setState({ status: 'ready', replay, complete });
+          },
+        });
+      } catch (e) {
+        if (abort.signal.aborted) return;
+        setPlaying(false);
+        priorityRef.current = undefined;
+        setPendingSeek(undefined);
+        const message = e instanceof Error ? e.message : String(e);
         setState((current) =>
           current.status === 'ready'
-            ? { ...current, progress }
-            : { status: 'loading', progress },
+            ? { ...current, progress: undefined, error: message }
+            : { status: 'error', message },
         );
-      };
-      await loadFilm({
-        film,
-        match,
-        signal: abort.signal,
-        decode: decoder.decode,
-        getPriorityTime: () => priorityRef.current,
-        fetchChunk: (_index, fileRelativePath) =>
-          haloInfiniteClient.getFilmChunk(
-            BlobStoragePathPrefix,
-            fileRelativePath,
-            {
-              signal: abort.signal,
-            },
-          ),
-        onProgress: (downloaded, total) =>
-          updateProgress(`Downloaded chunk ${downloaded}/${total}...`),
-        onStage: updateProgress,
-        onReplay: (replay, complete) => {
-          if (abort.signal.aborted) return;
-          if (!receivedReplay) {
-            timeRef.current = replay.firstSpawnMs ?? replay.startMs;
-            setTimeMs(timeRef.current);
-          }
-          const target = priorityRef.current;
-          if (target !== undefined && (target <= replay.endMs || complete)) {
-            timeRef.current = Math.min(target, replay.endMs);
-            setTimeMs(timeRef.current);
-            priorityRef.current = undefined;
-            setPendingSeek(undefined);
-          }
-          receivedReplay = true;
-          setState({ status: 'ready', replay, complete });
-        },
-      });
-    } catch (e) {
-      if (abort.signal.aborted) return;
-      setPlaying(false);
-      priorityRef.current = undefined;
-      setPendingSeek(undefined);
-      const message = e instanceof Error ? e.message : String(e);
-      setState((current) =>
-        current.status === 'ready'
-          ? { ...current, progress: undefined, error: message }
-          : { status: 'error', message },
-      );
-    } finally {
-      abort.signal.removeEventListener('abort', terminateDecoder);
-      terminateDecoder();
-    }
-  }, [haloInfiniteClient, match, navigationSignal]);
+      } finally {
+        abort.signal.removeEventListener('abort', terminateDecoder);
+        terminateDecoder();
+      }
+    },
+    [haloInfiniteClient, match, navigationSignal],
+  );
 
   useEffect(() => {
     load();
@@ -285,7 +301,16 @@ export default function Replay({
         {state.status === 'error' ? (
           <>
             <Text color="red.500">Unable to load replay: {state.message}</Text>
-            <Button onClick={load}>Retry</Button>
+            <Button onClick={() => load()}>Retry</Button>
+            {/^Replay (worker|decoding worker)/.test(state.message) && (
+              <Button
+                onClick={() => load(false)}
+                title="Parsing on the main thread may temporarily make this tab unresponsive"
+              >
+                <Cpu size={16} />
+                Load Without Worker
+              </Button>
+            )}
           </>
         ) : (
           <>
@@ -342,28 +367,6 @@ export default function Replay({
       : undefined;
   return (
     <Flex direction="column" align="stretch" gap={2} h="100%" minH={0}>
-      <Flex
-        align="center"
-        justify="center"
-        gap={4}
-        flexShrink={0}
-        fontVariantNumeric="tabular-nums"
-      >
-        {scores.map((s, i) => (
-          <Text
-            key={s.team ?? `slot${i}`}
-            fontSize="2xl"
-            fontWeight="bold"
-            color={
-              s.team !== undefined && teamColors.length > 0
-                ? teamColors[s.team % teamColors.length]
-                : undefined
-            }
-          >
-            {s.roundsWon ?? s.score}
-          </Text>
-        ))}
-      </Flex>
       <Grid
         templateColumns="minmax(0, 1fr)"
         templateRows="minmax(0, 1fr) auto"
@@ -376,177 +379,217 @@ export default function Replay({
         <Splitter.RootProvider value={splitter} minW={0} minH={0} gap={2}>
           <Splitter.Panel id="replay" position="relative" minW={0} minH={0}>
             <Grid
-              templateColumns={`${
-                feedVisible ? '280px ' : ''
-              }auto auto minmax(0, 1fr) auto`}
+              templateColumns={`${feedVisible ? '300px' : '20px'} minmax(0, 1fr)`}
               columnGap={3}
               h="100%"
               minH={0}
             >
-              <Box display={feedVisible ? 'block' : 'none'} bg="black.800">
-                <EventFeed
-                  entries={replay.killFeed}
-                  timeMs={timeMs}
-                  teamColors={teamColors}
-                  visible={feedVisible}
-                  onSeek={seek}
-                />
+              <Box display="flex" flexDirection="row" h="100%" minH={0}>
+                <Box
+                  display={feedVisible ? 'block' : 'none'}
+                  flexShrink={0}
+                  minH={0}
+                  bg="black.800"
+                  width="280px"
+                >
+                  <EventFeed
+                    entries={replay.killFeed}
+                    timeMs={timeMs}
+                    teamColors={teamColors}
+                    visible={feedVisible}
+                    onSeek={seek}
+                  />
+                </Box>
+                <chakra.button
+                  type="button"
+                  aria-label={
+                    feedVisible ? 'Hide event feed' : 'Show event feed'
+                  }
+                  aria-pressed={feedVisible}
+                  title={feedVisible ? 'Hide event feed' : 'Show event feed'}
+                  onClick={() => setFeedVisible((visible) => !visible)}
+                  // Pull into the grid gap so the handle sits flush against the feed.
+                  ml={feedVisible ? 2 : 0}
+                  w="20px"
+                  flexShrink={0}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  cursor="pointer"
+                  borderRadius="sm"
+                  bg="bg.emphasized"
+                  color="fg"
+                  _hover={{ bg: 'bg.muted' }}
+                  _focusVisible={{
+                    outline: '2px solid',
+                    outlineColor: 'teal.500',
+                  }}
+                >
+                  {feedVisible ? (
+                    <ChevronLeft size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </chakra.button>
               </Box>
-              <chakra.button
-                type="button"
-                aria-label={feedVisible ? 'Hide event feed' : 'Show event feed'}
-                aria-pressed={feedVisible}
-                title={feedVisible ? 'Hide event feed' : 'Show event feed'}
-                onClick={() => setFeedVisible((visible) => !visible)}
-                // Pull into the grid gap so the handle sits flush against the feed.
-                ml={feedVisible ? -3 : 0}
-                w="20px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                cursor="pointer"
-                borderRadius="sm"
-                bg="bg.emphasized"
-                color="fg"
-                _hover={{ bg: 'bg.muted' }}
-                _focusVisible={{
-                  outline: '2px solid',
-                  outlineColor: 'teal.500',
-                }}
-              >
-                {feedVisible ? (
-                  <ChevronLeft size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </chakra.button>
-              <TeamPanel
-                players={leftPlayers}
-                replay={replay}
-                points={points}
-                timeMs={timeMs}
-                color={teamColorOf(leftTeam)}
-                side="left"
-              />
-              <Box
-                data-testid="replay-map-container"
-                position="relative"
-                display="grid"
-                minW={0}
+              <Grid
+                templateColumns={`auto minmax(0, 1fr) auto`}
+                columnGap={3}
+                h="100%"
                 minH={0}
               >
-                <MiniMap
-                  state={state}
-                  clock={timeRef}
+                <TeamPanel
+                  players={leftPlayers}
+                  replay={replay}
                   points={points}
                   timeMs={timeMs}
-                  teamColors={teamColors}
-                  objectives={state.replay.map.objectives}
-                  background={background}
-                  draggable={true}
-                  leftOverlay={null}
+                  color={teamColorOf(leftTeam)}
+                  side="left"
                 />
-                {!state.complete && (
-                  <Flex
-                    data-testid="replay-loading-status"
-                    position="absolute"
-                    top={2}
-                    right={2}
-                    zIndex={1}
-                    align="center"
-                    gap={2}
-                    maxW="min(360px, 60%)"
-                    p={2}
-                    bg="blackAlpha.800"
-                    borderRadius="sm"
-                    role="status"
-                    aria-label="Replay loading status"
-                  >
-                    {!state.error && <Spinner size="xs" />}
-                    <Text
-                      minW={0}
-                      fontSize="sm"
-                      color={state.error ? 'red.500' : undefined}
-                    >
-                      {state.error
-                        ? `Loading stopped: ${state.error}`
-                        : (state.progress ?? 'Loading more of the replay...')}
-                    </Text>
-                    {state.error && (
-                      <Button size="xs" onClick={load} flexShrink={0}>
-                        Retry
-                      </Button>
-                    )}
-                  </Flex>
-                )}
-              </Box>
-              <TeamPanel
-                players={rightPlayers}
-                replay={replay}
-                points={points}
-                timeMs={timeMs}
-                color={teamColorOf(rightTeam)}
-                side="right"
-              />
-            </Grid>
-            {mediaCollapsed && mediaHintReady && !mediaHintDismissed && (
-              <Flex
-                position="absolute"
-                top="50%"
-                right={3}
-                transform="translateY(-50%)"
-                zIndex={2}
-                align="start"
-                gap={2}
-                maxW="min(280px, calc(100% - 24px))"
-                p={3}
-                bg="bg.emphasized"
-                borderWidth="1px"
-                borderRadius="md"
-                boxShadow="md"
-                _after={{
-                  content: '""',
-                  position: 'absolute',
-                  left: '100%',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  borderTop: '7px solid transparent',
-                  borderBottom: '7px solid transparent',
-                  borderLeft: '8px solid',
-                  borderLeftColor: 'bg.emphasized',
-                }}
-                role="note"
-                aria-label="Media panel feature"
-              >
-                <Text fontSize="sm">
-                  Add gameplay footage to watch alongside the replay.
-                  Double-click to open the media panel.
-                </Text>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  aria-label="Dismiss media panel hint"
-                  onClick={() => setMediaHintDismissed(true)}
-                  flexShrink={0}
+                <HStack
+                  data-testid="replay-map-container"
+                  position="relative"
+                  display="grid"
+                  gridTemplateRows="auto minmax(0, 1fr)"
+                  minW={0}
+                  minH={0}
+                  h="100%"
+                  gap={4}
                 >
-                  <X size={14} />
-                </Button>
-              </Flex>
-            )}
-            {pendingSeek !== undefined && (
-              <Flex
-                position="absolute"
-                inset={0}
-                align="center"
-                justify="center"
-                bg="blackAlpha.600"
-                pointerEvents="none"
-                role="status"
-                aria-label="Loading requested replay position"
-              >
-                <Spinner size="xl" />
-              </Flex>
-            )}
+                  <Flex
+                    align="center"
+                    justify="center"
+                    gap={4}
+                    flexShrink={0}
+                    fontVariantNumeric="tabular-nums"
+                  >
+                    {scores.map((s, i) => (
+                      <Text
+                        key={s.team ?? `slot${i}`}
+                        fontSize="2xl"
+                        fontWeight="bold"
+                        color={
+                          s.team !== undefined && teamColors.length > 0
+                            ? teamColors[s.team % teamColors.length]
+                            : undefined
+                        }
+                      >
+                        {s.roundsWon ?? s.score}
+                      </Text>
+                    ))}
+                  </Flex>
+                  <MiniMap
+                    state={state}
+                    clock={timeRef}
+                    points={points}
+                    timeMs={timeMs}
+                    teamColors={teamColors}
+                    objectives={state.replay.map.objectives}
+                    background={background}
+                    leftOverlay={null}
+                  />
+                  {!state.complete && (
+                    <Flex
+                      data-testid="replay-loading-status"
+                      position="absolute"
+                      top={2}
+                      right={2}
+                      zIndex={1}
+                      align="center"
+                      gap={2}
+                      maxW="min(360px, 60%)"
+                      p={2}
+                      bg="blackAlpha.800"
+                      borderRadius="sm"
+                      role="status"
+                      aria-label="Replay loading status"
+                    >
+                      {!state.error && <Spinner size="xs" />}
+                      <Text
+                        minW={0}
+                        fontSize="sm"
+                        color={state.error ? 'red.500' : undefined}
+                      >
+                        {state.error
+                          ? `Loading stopped: ${state.error}`
+                          : (state.progress ?? 'Loading more of the replay...')}
+                      </Text>
+                      {state.error && (
+                        <Button size="xs" onClick={() => load()} flexShrink={0}>
+                          Retry
+                        </Button>
+                      )}
+                    </Flex>
+                  )}
+                </HStack>
+                <TeamPanel
+                  players={rightPlayers}
+                  replay={replay}
+                  points={points}
+                  timeMs={timeMs}
+                  color={teamColorOf(rightTeam)}
+                  side="right"
+                />
+              </Grid>
+              {mediaCollapsed && mediaHintReady && !mediaHintDismissed && (
+                <Flex
+                  position="absolute"
+                  top="50%"
+                  right={3}
+                  transform="translateY(-50%)"
+                  zIndex={2}
+                  align="start"
+                  gap={2}
+                  maxW="min(280px, calc(100% - 24px))"
+                  p={3}
+                  bg="bg.emphasized"
+                  borderWidth="1px"
+                  borderRadius="md"
+                  boxShadow="md"
+                  _after={{
+                    content: '""',
+                    position: 'absolute',
+                    left: '100%',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    borderTop: '7px solid transparent',
+                    borderBottom: '7px solid transparent',
+                    borderLeft: '8px solid',
+                    borderLeftColor: 'bg.emphasized',
+                  }}
+                  role="note"
+                  aria-label="Media panel feature"
+                >
+                  <Text fontSize="sm">
+                    Add gameplay footage to watch alongside the replay.
+                    Double-click to open the media panel.
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    aria-label="Dismiss media panel hint"
+                    onClick={() => setMediaHintDismissed(true)}
+                    flexShrink={0}
+                  >
+                    <X size={14} />
+                  </Button>
+                </Flex>
+              )}
+              {pendingSeek !== undefined && (
+                <Flex
+                  position="absolute"
+                  inset={0}
+                  align="center"
+                  justify="center"
+                  bg="blackAlpha.600"
+                  pointerEvents="none"
+                  role="status"
+                  aria-label="Loading requested replay position"
+                >
+                  <Spinner size="xl" />
+                </Flex>
+              )}
+            </Grid>
           </Splitter.Panel>
           <Splitter.ResizeTrigger
             id={`replay:${MEDIA_PANEL_ID}`}

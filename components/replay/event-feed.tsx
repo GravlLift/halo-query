@@ -175,7 +175,7 @@ const EventFeedContent = memo(
     }, [activeIndex, autoScroll, entries, visible]);
 
     return (
-      <Flex direction="column" h={0} minH="100%" minW={0} color="white">
+      <Flex direction="column" h="100%" minH={0} minW={0} color="white">
         <Flex align="center" justify="space-between" gap={2} pb={2}>
           <Text fontWeight="bold" fontSize="sm">
             Event feed

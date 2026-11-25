@@ -3,6 +3,7 @@ import type { MediaSource } from './media-source-picker';
 import { TwitchMediaItem } from './twitch-media-item';
 import type { ReplayPlaybackProps } from './use-media-sync';
 import type { ITimingObject } from 'timing-object';
+import type { HTMLAttributes } from 'react';
 
 export interface MediaItemProps extends ReplayPlaybackProps {
   source: MediaSource;
@@ -11,6 +12,7 @@ export interface MediaItemProps extends ReplayPlaybackProps {
   matchStartMs: number;
   matchDurationMs: number;
   onRemove: () => void;
+  dragHandleProps: HTMLAttributes<HTMLButtonElement>;
 }
 
 export function MediaItem({ source, timingObject, ...props }: MediaItemProps) {

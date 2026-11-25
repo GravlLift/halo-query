@@ -1,5 +1,6 @@
 import {
   Box,
+  chakra,
   Flex,
   HStack,
   IconButton,
@@ -9,8 +10,8 @@ import {
   Spinner,
   Text,
 } from '@chakra-ui/react';
-import { EllipsisVertical, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { EllipsisVertical, GripVertical, X } from 'lucide-react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { useState } from 'react';
 
 function Overlay({ children, bg }: { children: ReactNode; bg: string }) {
@@ -40,6 +41,7 @@ export function MediaItemFrame({
   notice,
   children,
   isAligning,
+  dragHandleProps,
 }: {
   title: string;
   offset: number | undefined;
@@ -50,14 +52,17 @@ export function MediaItemFrame({
   notice?: string;
   children: ReactNode;
   isAligning: boolean;
+  dragHandleProps: HTMLAttributes<HTMLButtonElement>;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <Flex direction="column" gap={1} bg="black.800" borderRadius="sm">
-      <Box position="relative">
+      <Box position="relative" minH="40px">
         {children}
-        <Text
+        <chakra.button
+          type="button"
+          display="flex"
           position="absolute"
           top={1}
           left={1}
@@ -68,14 +73,23 @@ export function MediaItemFrame({
           borderRadius="sm"
           bg="blackAlpha.700"
           fontSize="sm"
-          truncate
-          title={title}
-          pointerEvents="none"
+          alignItems="center"
+          gap={1}
+          cursor="grab"
+          _active={{ cursor: 'grabbing' }}
+          aria-label={`Reorder ${title}`}
+          title={`Drag or use arrow keys to reorder ${title}`}
+          {...dragHandleProps}
         >
-          {title}
-        </Text>
+          <GripVertical
+            size={14}
+            style={{ flexShrink: 0 }}
+            aria-hidden="true"
+          />
+          <Text truncate>{title}</Text>
+        </chakra.button>
         <Popover.Root
-          positioning={{ placement: 'bottom-end' }}
+          positioning={{ placement: 'left' }}
           open={isAligning || menuOpen}
           onOpenChange={({ open }) => setMenuOpen(open)}
           autoFocus={false}

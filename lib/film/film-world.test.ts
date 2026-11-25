@@ -36,19 +36,20 @@ const homes = [
   { role: 'flag_spawn', team: 0, x: 0.2, y: 0.5 },
   { role: 'flag_spawn', team: 1, x: 0.8, y: 0.5 },
 ];
+const tagId = (value: number) => value.toString(16).padStart(8, '0');
 const base: Parameters<typeof projectFlagTimeline>[0] = {
-  mode: 'CaptureTheFlag',
+  mode: 'capture_the_flag',
   coordinates: null,
   groundWeapons: [],
   kills: [],
   events: [],
   players: [7, 9].map((id, index) => ({
     id,
-    kind: { Human: { xuid: 2533274800000000 + id, gamertag: `Player ${id}` } },
+    kind: {
+      human: { xuid: String(2533274800000000 + id), gamertag: `Player ${id}` },
+    },
     team: index,
     present_at_start: true,
-    joined: null,
-    left: null,
   })),
 };
 
@@ -64,13 +65,13 @@ describe('canonical CTF flags', () => {
         offset_y: 0,
         spawn_fit: null,
       },
-      events: [{ tick: 60, event: { Flag: { kind: 'Grab', player: 7 } } }],
+      events: [{ tick: 60, event: { type: 'flag', kind: 'grab', player: 7 } }],
       groundWeapons: [
         {
-          tag: 0x2a392328,
+          tag: tagId(0x2a392328),
           position: { x: -0.5 * 32768, y: 0.8 * 32768 },
           from: 90,
-          to: 180,
+          removed: 180,
           taken: false,
         },
       ],
@@ -104,7 +105,12 @@ describe('canonical CTF flags', () => {
           ...data.events,
           {
             tick: 120,
-            event: { Pickup: { player: 7, item: 0x2a392328, slot: 0 } },
+            event: {
+              type: 'pickup',
+              player: 7,
+              item: tagId(0x2a392328),
+              slot: 0,
+            },
           },
         ],
       },
@@ -134,19 +140,24 @@ describe('canonical CTF flags', () => {
       events: [
         {
           tick: 60,
-          event: { Flag: { kind: 'Grab', player: 7, position: null } },
+          event: { type: 'flag', kind: 'grab', player: 7, position: null },
         },
         {
           tick: 90,
-          event: { Pickup: { player: 9, item: 0x2a392328, slot: 0 } },
+          event: {
+            type: 'pickup',
+            player: 9,
+            item: tagId(0x2a392328),
+            slot: 0,
+          },
         },
         {
           tick: 180,
-          event: { Flag: { kind: 'Capture', player: 7, position: null } },
+          event: { type: 'flag', kind: 'capture', player: 7, position: null },
         },
         {
           tick: 240,
-          event: { Flag: { kind: 'Return', player: 7, position: null } },
+          event: { type: 'flag', kind: 'return', player: 7, position: null },
         },
       ],
     };
@@ -212,7 +223,9 @@ describe('canonical CTF flags', () => {
     const timeline = projectFlagTimeline(
       {
         ...base,
-        events: [{ tick: 60, event: { Flag: { kind: 'Steal', player: 7 } } }],
+        events: [
+          { tick: 60, event: { type: 'flag', kind: 'steal', player: 7 } },
+        ],
         kills: [kill],
       },
       positions,
@@ -259,7 +272,7 @@ describe('canonical world objects', () => {
             entity: 20,
             position: { x: -0.5 * 32768, y: 0.4 * 32768 },
             letter: 'A',
-            shape: { cylinder: true, a: 10, team: -1 },
+            shape: { area: { cylinder: { radius: 10 } }, team: -1 },
             states: [
               {
                 tick: 30,
@@ -267,7 +280,7 @@ describe('canonical world objects', () => {
                 capturing: 1,
                 progress: 65,
                 contested: true,
-                inside: 2 ** (31 - 7),
+                inside: [7],
               },
             ],
           },
@@ -285,6 +298,40 @@ describe('canonical world objects', () => {
     assert.equal(zone.capturingTeam, 1);
   });
 
+  it('projects rectangular hills as polygons instead of circular radii', () => {
+    const data = projectWorldZones(
+      {
+        coordinates: {
+          source: 'LevelBox',
+          scale_x: 1,
+          scale_y: 1,
+          offset_x: 0,
+          offset_y: 0,
+          spawn_fit: null,
+        },
+        players: base.players,
+        hillScore: null,
+        events: [],
+        zones: [
+          {
+            entity: 20,
+            position: { x: -0.5 * 32768, y: 0.4 * 32768 },
+            shape: {
+              area: { box: { length: 60, width: 40 } },
+              angle: 0.25,
+              team: -1,
+            },
+            states: [],
+          },
+        ],
+      },
+      positions,
+    );
+
+    assert.equal(data.zones[0].objective.radius, undefined);
+    assert.equal(data.zones[0].objective.polygon?.length, 4);
+  });
+
   it('uses explicit hill activity and point bars rather than inferring them from occupancy', () => {
     const data = projectWorldZones(
       {
@@ -300,17 +347,20 @@ describe('canonical world objects', () => {
         hillScore: {
           points_to_win: 40,
           points: [
-            [60, 0, 20],
-            [90, 1, 10],
+            { tick: 60, team: 0, points: 20 },
+            { tick: 90, team: 1, points: 10 },
           ],
         },
         zones: [{ entity: 20, position: { x: -100, y: 100 }, states: [] }],
         events: [
           {
             tick: 30,
-            event: { Zone: { kind: 'HillControlled', zone: 0, team: 0 } },
+            event: { type: 'zone', kind: 'hill_controlled', zone: 0, team: 0 },
           },
-          { tick: 180, event: { Zone: { kind: 'HillWon', zone: 0, team: 0 } } },
+          {
+            tick: 180,
+            event: { type: 'zone', kind: 'hill_won', zone: 0, team: 0 },
+          },
         ],
       },
       positions,
@@ -343,44 +393,42 @@ describe('canonical world objects', () => {
         },
         worldObjects: [
           {
-            tag: 0x6acdc44d,
+            tag: tagId(0x6acdc44d),
             position: point,
             from: 0,
-            to: 120,
+            removed: 120,
             entity_type: 42,
           },
           {
-            tag: 0xe7be9f5c,
+            tag: tagId(0xe7be9f5c),
             position: point,
             from: 0,
-            to: null,
             entity_type: 43,
           },
           {
-            tag: 0xcaaadcb0,
+            tag: tagId(0xcaaadcb0),
             position: point,
             from: 0,
-            to: null,
             entity_type: 43,
           },
-          { tag: 123, position: point, from: 0, to: null, entity_type: 37 },
-          { tag: 124, position: point, from: 0, to: null, entity_type: 43 },
+          { tag: tagId(123), position: point, from: 0, entity_type: 37 },
+          { tag: tagId(124), position: point, from: 0, entity_type: 43 },
           {
-            tag: 0x2a392328,
+            tag: tagId(0x2a392328),
             position: point,
             from: 0,
-            to: null,
             entity_type: 42,
           },
           {
-            tag: 0x17592c,
+            tag: tagId(0x17592c),
             position: point,
             from: 0,
-            to: null,
             entity_type: 42,
           },
         ],
-        groundWeapons: [{ tag: 0x6acdc44d, position: point, from: 30, to: 60 }],
+        groundWeapons: [
+          { tag: tagId(0x6acdc44d), position: point, from: 30, removed: 60 },
+        ],
         vehicles: [],
         rides: [],
       },
@@ -430,17 +478,15 @@ describe('canonical world objects', () => {
           offset_y: 0,
           spawn_fit: null,
         },
-        worldObjects: [
-          { tag: 1234, position: { x: 0, y: 0 }, from: 0, to: null },
-        ],
+        worldObjects: [{ tag: tagId(1234), position: { x: 0, y: 0 }, from: 0 }],
         groundWeapons: [],
         vehicles: [
           {
-            tag: 1234,
+            tag: tagId(1234),
             entity: 300,
             track: [
-              [0, { x: 0, y: 0 }],
-              [60, { x: -32768, y: 32768 }],
+              { tick: 0, position: { x: 0, y: 0 } },
+              { tick: 60, position: { x: -32768, y: 32768 } },
             ],
           },
         ],

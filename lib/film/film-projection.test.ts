@@ -21,16 +21,20 @@ const positions: LinkedFilmPositions = {
 };
 const bandit = 0x6acdc44d;
 const sidekick = 0xf408190f;
+const tagId = (value: number) => value.toString(16).padStart(8, '0');
 
 describe('canonical inventory projection', () => {
   it('does not keep a stale duplicate when a pickup moves a known weapon to another slot', () => {
     const inventories = projectInventories(
       {
         events: [
-          { tick: 90, event: { Shot: { player: 7, weapon: bandit } } },
+          {
+            tick: 90,
+            event: { type: 'shot', player: 7, weapon: tagId(bandit) },
+          },
           {
             tick: 120,
-            event: { Pickup: { player: 7, item: bandit, slot: 1 } },
+            event: { type: 'pickup', player: 7, item: tagId(bandit), slot: 1 },
           },
         ],
         states: [
@@ -56,19 +60,34 @@ describe('canonical inventory projection', () => {
     const inventories = projectInventories(
       {
         events: [
-          { tick: 90, event: { Shot: { player: 7, weapon: bandit } } },
+          {
+            tick: 90,
+            event: { type: 'shot', player: 7, weapon: tagId(bandit) },
+          },
           {
             tick: 120,
-            event: { Pickup: { player: 7, item: sidekick, slot: 1 } },
+            event: {
+              type: 'pickup',
+              player: 7,
+              item: tagId(sidekick),
+              slot: 1,
+            },
           },
           {
             tick: 130,
-            event: { Pickup: { player: 7, item: 0x7ca85adc, slot: 2 } },
+            event: {
+              type: 'pickup',
+              player: 7,
+              item: tagId(0x7ca85adc),
+              slot: 2,
+            },
           },
           {
             tick: 180,
             event: {
-              Action: { player: 7, kind: { WeaponSwitch: { slot: 0 } } },
+              type: 'action',
+              player: 7,
+              kind: { weapon_switch: { slot: 0 } },
             },
           },
         ],
@@ -145,11 +164,11 @@ describe('canonical inventory projection', () => {
 describe('canonical oddball projection', () => {
   const players: FilmData['players'] = [7, 9].map((id) => ({
     id,
-    kind: { Human: { xuid: 2533274800000000 + id, gamertag: `Player ${id}` } },
+    kind: {
+      human: { xuid: String(2533274800000000 + id), gamertag: `Player ${id}` },
+    },
     team: id === 7 ? 0 : 1,
     present_at_start: true,
-    joined: null,
-    left: null,
   }));
   const ballPositions: LinkedFilmPositions = {
     layout: { gateBits: 0, axisBits: [1, 1, 1] },
@@ -191,7 +210,7 @@ describe('canonical oddball projection', () => {
     | 'groundWeapons'
     | 'kills'
   > = {
-    mode: 'Oddball',
+    mode: 'oddball',
     players,
     coordinates: {
       source: 'LevelBox',
@@ -204,19 +223,25 @@ describe('canonical oddball projection', () => {
     worldObjects: [],
     groundWeapons: [
       {
-        tag: 0x17592c,
+        tag: tagId(0x17592c),
         position: { x: -0.55 * 32768, y: 0.45 * 32768, z: null },
         from: 130,
-        to: 180,
+        removed: 180,
         taken: true,
       },
     ],
     events: [
-      { tick: 0, event: { Zone: { kind: 'SkullSpawn', player: null } } },
-      { tick: 60, event: { Zone: { kind: 'SkullGrab', player: 9 } } },
-      { tick: 60, event: { Pickup: { player: 7, item: 0x17592c, slot: 0 } } },
-      { tick: 180, event: { Pickup: { player: 9, item: 0x17592c, slot: 0 } } },
-      { tick: 300, event: { Zone: { kind: 'SkullSpawn', player: null } } },
+      { tick: 0, event: { type: 'zone', kind: 'skull_spawn', player: null } },
+      { tick: 60, event: { type: 'zone', kind: 'skull_grab', player: 9 } },
+      {
+        tick: 60,
+        event: { type: 'pickup', player: 7, item: tagId(0x17592c), slot: 0 },
+      },
+      {
+        tick: 180,
+        event: { type: 'pickup', player: 9, item: tagId(0x17592c), slot: 0 },
+      },
+      { tick: 300, event: { type: 'zone', kind: 'skull_spawn', player: null } },
     ],
     kills: [
       {
@@ -289,9 +314,16 @@ describe('canonical oddball projection', () => {
       {
         ...data,
         groundWeapons: [
-          { tag: 0x17592c, position: { x: 0, y: 0 }, from: 30, to: 90 },
+          {
+            tag: tagId(0x17592c),
+            position: { x: 0, y: 0 },
+            from: 30,
+            removed: 90,
+          },
         ],
-        worldObjects: [{ tag: 0x17592c, position: { x: 0, y: 0 }, from: 900 }],
+        worldObjects: [
+          { tag: tagId(0x17592c), position: { x: 0, y: 0 }, from: 900 },
+        ],
       },
       ballPositions,
       [],
@@ -314,7 +346,7 @@ describe('canonical oddball projection', () => {
   it('leaves other game modes on their existing objective path', () => {
     assert.equal(
       projectOddballTimeline(
-        { ...data, mode: 'Slayer', events: [] },
+        { ...data, mode: 'slayer', events: [] },
         ballPositions,
         [],
       ),
@@ -328,10 +360,15 @@ describe('canonical oddball projection', () => {
         ...data,
         events: [
           ...data.events,
-          { tick: 150, event: { Zone: { kind: 'SkullGrab', player: 9 } } },
+          { tick: 150, event: { type: 'zone', kind: 'skull_grab', player: 9 } },
           {
             tick: 150,
-            event: { Pickup: { player: 7, item: 0x17592c, slot: 0 } },
+            event: {
+              type: 'pickup',
+              player: 7,
+              item: tagId(0x17592c),
+              slot: 0,
+            },
           },
         ],
       },

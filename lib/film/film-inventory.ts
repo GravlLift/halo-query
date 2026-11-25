@@ -8,7 +8,7 @@ import {
   isGrenadeFamily,
   EQUIPMENT_TAG_NAMES as equipmentNames,
 } from '@gravllift/halo-film-ui/film/core/weapon-catalog';
-import { field, items, number } from './film-json';
+import { eventOfType, field, items, number, tagNumber } from './film-json';
 
 interface InventoryLife {
   playerId: number;
@@ -43,9 +43,9 @@ export function projectInventories(
     if (tick === undefined) continue;
     const timeMs = (tick * 1000) / 60;
     const event = field(timed, 'event');
-    for (const kind of ['Shot', 'Pickup']) {
-      const value = field(event, kind);
-      const tag = number(field(value, kind === 'Shot' ? 'weapon' : 'item'));
+    for (const kind of ['shot', 'pickup']) {
+      const value = eventOfType(event, kind);
+      const tag = tagNumber(field(value, kind === 'shot' ? 'weapon' : 'item'));
       if (tag === undefined) continue;
       const player = number(field(value, 'player'));
       if (WEAPON_FAMILY_NAMES.has(tag) && !isGrenadeFamily(tag)) {
@@ -53,15 +53,15 @@ export function projectInventories(
           timeMs,
           family: tag,
           weaponSlot:
-            kind === 'Pickup' ? number(field(value, 'slot')) : undefined,
+            kind === 'pickup' ? number(field(value, 'slot')) : undefined,
         });
-      } else if (kind === 'Pickup' && equipmentNames.has(tag)) {
+      } else if (kind === 'pickup' && equipmentNames.has(tag)) {
         add(player, { timeMs, equipment: equipmentNames.get(tag) });
       }
     }
-    const action = field(event, 'Action');
+    const action = eventOfType(event, 'action');
     const drawnSlot = number(
-      field(field(field(action, 'kind'), 'WeaponSwitch'), 'slot'),
+      field(field(field(action, 'kind'), 'weapon_switch'), 'slot'),
     );
     if (drawnSlot !== undefined)
       add(number(field(action, 'player')), { timeMs, drawnSlot });

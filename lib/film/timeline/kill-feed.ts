@@ -35,7 +35,7 @@ interface ResolvedKillEvent {
   killer: KillFeedPlayer;
   victim: KillFeedPlayer;
   assister?: KillFeedDamageDealer;
-  killerDamagePercent: number;
+  killerDamagePercent?: number;
 }
 
 function hasRecipient(event: PlayerGameEvent, playerIndex: number): boolean {

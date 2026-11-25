@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { loadFilm } from '../../lib/film';
+import { decodeReplay, loadFilm } from '../../lib/film';
 import Replay from './replay';
 import { createReplayDecoder } from './replay-decoder';
 import { EventFeed } from './event-feed';
@@ -8,7 +8,7 @@ import MiniMap from './mini-map';
 import { TeamPanel } from './team-panel';
 import { MediaPanel } from './media/media-panel';
 
-jest.mock('../../lib/film', () => ({ loadFilm: jest.fn() }));
+jest.mock('../../lib/film', () => ({ loadFilm: jest.fn(), decodeReplay: jest.fn() }));
 jest.mock('./replay-decoder', () => ({
   createReplayDecoder: jest.fn(() => ({
     decode: jest.fn(),
@@ -105,6 +105,7 @@ jest.mock('@chakra-ui/react', () => {
   return {
     Box: component,
     Flex: component,
+    HStack: component,
     Grid: component,
     Text: component,
     Button: button,
@@ -512,6 +513,46 @@ it('matches seek hover endpoints to the slider thumb travel and pauses playback 
     act(() => container.querySelector('[aria-label="Play"]').click());
     act(() => container.querySelector('[aria-label="Seek 70"]').click());
     expect(container.querySelector('[aria-label="Play"]')).not.toBeNull();
+  } finally {
+    act(() => root.unmount());
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('offers direct decoding after a worker failure without creating another worker', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  loadFilm.mockRejectedValueOnce(
+    new Error('Replay worker did not start within 30 seconds'),
+  );
+  loadFilm.mockImplementation(() => new Promise(() => {}));
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const workerCount = createReplayDecoder.mock.calls.length;
+    expect(loadFilm.mock.calls.at(-1)[0].decode).toBe(
+      createReplayDecoder.mock.results.at(-1).value.decode,
+    );
+    const recovery = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Load Without Worker',
+    );
+    expect(recovery).toBeDefined();
+    await act(async () => recovery.click());
+    expect(createReplayDecoder.mock.calls.length).toBe(workerCount);
+    const options = loadFilm.mock.calls.at(-1)[0];
+    expect(options.decode).toBe(decodeReplay);
+    await act(async () =>
+      root.render(<Replay match={{ MatchId: 'match', updated: true }} />),
+    );
+    expect(options.signal.aborted).toBe(true);
+    expect(createReplayDecoder.mock.calls.length).toBe(workerCount);
+    const restarted = loadFilm.mock.calls.at(-1)[0];
+    expect(restarted.decode).toBe(decodeReplay);
+    act(() => root.unmount());
+    expect(restarted.signal.aborted).toBe(true);
   } finally {
     act(() => root.unmount());
     Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');

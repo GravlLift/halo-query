@@ -10,7 +10,7 @@ import type {
 import { linkLives } from '@gravllift/halo-film-ui/film/players/link-lives';
 import type { ScoreTimeline } from './timeline/score';
 import type { PlayerStatTimeline } from './timeline/player-stats';
-import { field, items, number } from './film-json';
+import { eventOfType, field, items, number, tagNumber } from './film-json';
 import { projectInventories } from './film-inventory';
 import {
   WEAPON_FAMILY_NAMES,
@@ -35,13 +35,13 @@ export function projectFilmData(data: FilmData): {
   const roster = data.players.map((player) => ({
     playerIndex: player.id,
     xuid:
-      'Human' in player.kind
-        ? String(player.kind.Human.xuid)
-        : `bot:${player.kind.Bot.bot_id}`,
+      'human' in player.kind
+        ? String(player.kind.human.xuid)
+        : `bot:${player.kind.bot.bot_id}`,
     gamertag:
-      'Human' in player.kind
-        ? (player.kind.Human.gamertag ?? String(player.kind.Human.xuid))
-        : player.kind.Bot.name,
+      'human' in player.kind
+        ? (player.kind.human.gamertag ?? String(player.kind.human.xuid))
+        : player.kind.bot.name,
   }));
   const offsetMs =
     data.clock.highlightZero === null
@@ -140,9 +140,8 @@ export function projectFilmData(data: FilmData): {
         victimIndex: kill.victim,
         killerIndex: kill.killer ?? 255,
         killerDamagePercent: kill.killer_damage_percent,
-        assisterIndex: kill.assistant ?? undefined,
-        assisterDamagePercent:
-          kill.assistant === null ? undefined : kill.assistant_damage_percent,
+        assisterIndex: kill.assistant,
+        assisterDamagePercent: kill.assistant_damage_percent,
       })),
     playerGameEvents: [],
     flights: [],
@@ -161,7 +160,8 @@ export function projectFilmData(data: FilmData): {
       (life) => timeMs >= life.startMs && timeMs <= life.endMs,
     )?.slot;
   };
-  const roundStarts = data.scoreboard.clock
+  const scoreboardChanges = data.scoreboard.changes ?? [];
+  const roundStarts = (data.scoreboard.match_clock ?? [])
     .filter(
       (clock, index, clocks) =>
         index > 0 &&
@@ -171,18 +171,17 @@ export function projectFilmData(data: FilmData): {
     )
     .map((clock) => clock.tick);
   const stats = new Map<string, StatRecord>();
-  for (const change of data.scoreboard.changes) {
+  for (const change of scoreboardChanges) {
     const slot =
-      'Team' in change.owner
-        ? 6 + change.owner.Team * 2
+      'team' in change.owner
+        ? 6 + change.owner.team * 2
         : 10 +
           data.players.findIndex(
             (player) =>
-              'Player' in change.owner && player.id === change.owner.Player,
+              'player' in change.owner && player.id === change.owner.player,
           ) *
             2;
-    const round =
-      change.round ?? roundStarts.filter((tick) => tick <= change.tick).length;
+    const round = change.round;
     const key = `${change.tick}:${slot}:${round}`;
     let record = stats.get(key);
     if (!record) {
@@ -205,25 +204,29 @@ export function projectFilmData(data: FilmData): {
     .map((record) => ({ ...record, comps: [...record.comps] }));
   for (const highlight of data.highlights) {
     const tick = number(field(highlight, 'tick'));
-    const xuid = number(field(highlight, 'xuid'));
+    const timeMs =
+      tick === undefined
+        ? number(field(highlight, 'time_ms'))
+        : milliseconds(tick) - offsetMs;
+    const xuid = field(highlight, 'xuid');
     const gamertag = field(highlight, 'gamertag');
     const kind = field(highlight, 'kind');
-    if (tick === undefined || xuid === undefined) continue;
+    if (timeMs === undefined || typeof xuid !== 'string') continue;
     records.highlightEvents.push({
-      xuid: String(xuid),
+      xuid,
       gamertag: typeof gamertag === 'string' ? gamertag : String(xuid),
       type:
-        kind === 'Kill'
+        kind === 'kill'
           ? 'kill'
-          : kind === 'Death'
+          : kind === 'death'
             ? 'death'
-            : kind === 'Mode'
+            : kind === 'mode'
               ? 'mode'
               : 'medal',
-      timeMs: milliseconds(tick) - offsetMs,
-      typeHint: kind === 'Death' ? 20 : kind === 'Kill' ? 50 : 10,
-      isMedal: number(field(kind, 'Medal')) !== undefined,
-      medalType: number(field(kind, 'Medal')) ?? 0,
+      timeMs,
+      typeHint: kind === 'death' ? 20 : kind === 'kill' ? 50 : 10,
+      isMedal: number(field(kind, 'medal')) !== undefined,
+      medalType: number(field(kind, 'medal')) ?? 0,
     });
   }
   for (const timed of data.events) {
@@ -231,12 +234,12 @@ export function projectFilmData(data: FilmData): {
     if (tick === undefined) continue;
     const timeMs = milliseconds(tick);
     const event = field(timed, 'event');
-    const shot = field(event, 'Shot');
+    const shot = eventOfType(event, 'shot');
     const slot = slotAt(number(field(shot, 'player')), timeMs);
-    const weapon = number(field(shot, 'weapon'));
+    const weapon = tagNumber(field(shot, 'weapon'));
     if (slot !== undefined && weapon !== undefined)
       records.fireEvents.push({ timeMs, slot, family: weapon, weapon: '' });
-    const hit = field(event, 'Hit');
+    const hit = eventOfType(event, 'hit');
     const victimSlot = slotAt(number(field(hit, 'victim')), timeMs);
     if (victimSlot !== undefined)
       records.damageEvents.push({
@@ -247,9 +250,9 @@ export function projectFilmData(data: FilmData): {
           (number(field(hit, 'shield')) ?? 0) +
           (number(field(hit, 'body')) ?? 0),
       });
-    const pickup = field(event, 'Pickup');
+    const pickup = eventOfType(event, 'pickup');
     const pickupSlot = slotAt(number(field(pickup, 'player')), timeMs);
-    const family = number(field(pickup, 'item'));
+    const family = tagNumber(field(pickup, 'item'));
     if (
       pickupSlot !== undefined &&
       family !== undefined &&
@@ -298,7 +301,7 @@ export function projectFilmData(data: FilmData): {
   const coordinates = data.coordinates;
   if (coordinates && coordinates.scale_x !== 0 && coordinates.scale_y !== 0) {
     for (const flight of data.grenadeFlights) {
-      const points = flight.path.map(([tick, position]) => ({
+      const points = flight.path.map(({ tick, position }) => ({
         timeMs: milliseconds(tick),
         x: (position.y - coordinates.offset_y) / coordinates.scale_y / 32768,
         y: (coordinates.offset_x - position.x) / coordinates.scale_x / 32768,
@@ -311,8 +314,8 @@ export function projectFilmData(data: FilmData): {
           (player) => player.id === flight.player,
         ),
         points,
-        explodes: flight.explodes ?? true,
-        lingers: flight.lingers ?? false,
+        explodes: true,
+        lingers: false,
         detonation: {
           ...end,
           timeMs: milliseconds(flight.end),
@@ -329,7 +332,8 @@ export function projectScoreboard(data: FilmData): {
   scoreTimeline: ScoreTimeline;
   playerStats: PlayerStatTimeline;
 } {
-  const starts = data.scoreboard.clock
+  const scoreboardChanges = data.scoreboard.changes ?? [];
+  const starts = (data.scoreboard.match_clock ?? [])
     .filter(
       (clock, index, clocks) =>
         index > 0 &&
@@ -342,8 +346,8 @@ export function projectScoreboard(data: FilmData): {
     starts.filter((start) => start <= tick).length;
   const teamIds = [
     ...new Set(
-      data.scoreboard.changes.flatMap((change) =>
-        'Team' in change.owner ? [change.owner.Team] : [],
+      scoreboardChanges.flatMap((change) =>
+        'team' in change.owner ? [change.owner.team] : [],
       ),
     ),
   ];
@@ -351,10 +355,10 @@ export function projectScoreboard(data: FilmData): {
     let round = 0;
     let carried = 0;
     let previous = 0;
-    const points = data.scoreboard.changes.flatMap((change) => {
+    const points = scoreboardChanges.flatMap((change) => {
       if (
-        !('Team' in change.owner) ||
-        change.owner.Team !== team ||
+        !('team' in change.owner) ||
+        change.owner.team !== team ||
         change.slot !== 0
       )
         return [];
@@ -414,10 +418,10 @@ export function projectScoreboard(data: FilmData): {
       let carried = 0;
       let previous = 0;
       let round = 0;
-      for (const change of data.scoreboard.changes) {
+      for (const change of scoreboardChanges) {
         if (
-          !('Player' in change.owner) ||
-          change.owner.Player !== player.id ||
+          !('player' in change.owner) ||
+          change.owner.player !== player.id ||
           change.slot !== source.slot
         )
           continue;
@@ -436,9 +440,9 @@ export function projectScoreboard(data: FilmData): {
     return {
       slot: 10 + index * 2,
       xuid:
-        'Human' in player.kind
-          ? String(player.kind.Human.xuid)
-          : `bot:${player.kind.Bot.bot_id}`,
+        'human' in player.kind
+          ? String(player.kind.human.xuid)
+          : `bot:${player.kind.bot.bot_id}`,
       series,
     };
   });

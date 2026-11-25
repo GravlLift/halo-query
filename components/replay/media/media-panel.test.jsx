@@ -46,6 +46,50 @@ describe('media audio hover card', () => {
     delete globalThis.ResizeObserver;
   });
 
+  it('reorders media with drag and keyboard without changing the audible source', async () => {
+    MediaItem.mockImplementation(({ dragHandleProps, volume }) => (
+      <button {...dragHandleProps} data-volume={volume}>Media</button>
+    ));
+    try {
+      await act(async () => root.render(
+        <ChakraProvider value={defaultSystem}>
+          <MediaPanel
+            clock={{ current: 0 }} timeMs={0} playing={false} speed={1}
+            waiting={false} aligning={false} onAligningChange={() => {}}
+            match={{ MatchId: 'match', MatchInfo: { StartTime: '2024-01-01' } }}
+            matchDurationMs={0}
+          />
+        </ChakraProvider>,
+      ));
+      const add = Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Select media');
+      await act(async () => { add.click(); add.click(); add.click(); });
+      const handles = Array.from(container.querySelectorAll('[draggable="true"]'));
+      expect(handles).toHaveLength(3);
+      const dataTransfer = { effectAllowed: '', setData: jest.fn() };
+      const dragStart = new Event('dragstart', { bubbles: true });
+      Object.defineProperty(dragStart, 'dataTransfer', { value: dataTransfer });
+      await act(async () => {
+        handles[0].dispatchEvent(dragStart);
+        handles[2].parentElement.dispatchEvent(new Event('dragover', { bubbles: true, cancelable: true }));
+        handles[2].parentElement.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+      });
+      expect(Array.from(container.querySelectorAll('[draggable="true"]')))
+        .toEqual(handles);
+      expect(handles.map((handle) => handle.parentElement.style.order))
+        .toEqual(['2', '0', '1']);
+      expect(handles[0].dataset.volume).toBe('1');
+      await act(async () => handles[0].dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }),
+      ));
+      expect(handles.map((handle) => handle.parentElement.style.order))
+        .toEqual(['1', '0', '2']);
+      expect(handles[0].dataset.volume).toBe('1');
+    } finally {
+      MediaItem.mockImplementation(() => null);
+    }
+  });
+
   it('stays open while the pointer moves from the trigger into the card', async () => {
     await act(async () => {
       root.render(

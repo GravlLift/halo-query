@@ -39,15 +39,13 @@ function sampleData(): FilmData {
     players: [
       {
         id: 7,
-        kind: { Human: { xuid: 2533274800000000, gamertag: 'Spartan' } },
+        kind: { human: { xuid: '2533274800000000', gamertag: 'Spartan' } },
         team: 1,
         present_at_start: true,
-        joined: null,
-        left: null,
       },
     ],
     variant: null,
-    mode: 'Other',
+    mode: 'other',
     level: null,
     coordinates: null,
     lives: [
@@ -80,7 +78,7 @@ function sampleData(): FilmData {
     kills: [],
     highlights: [],
     medals: [],
-    scoreboard: { changes: [], clock: [], engine: [] },
+    scoreboard: { changes: [], match_clock: [], engine: [] },
     states: [],
   };
 }
@@ -113,8 +111,8 @@ describe('FilmData replay boundary', () => {
   it('uses explicit scoreboard owners even with only one change', async () => {
     const data = sampleData();
     data.scoreboard.changes = [
-      { tick: 30, owner: { Team: 4 }, slot: 0, value: 3 },
-      { tick: 30, owner: { Player: 7 }, slot: 4, value: 2 },
+      { tick: 30, owner: { team: 4 }, slot: 0, value: 3, round: 0 },
+      { tick: 30, owner: { player: 7 }, slot: 4, value: 2, round: 0 },
     ];
     const replay = createMatchReplay(
       await decodeFilmData(data, match, undefined, undefined, false),
@@ -124,6 +122,82 @@ describe('FilmData replay boundary', () => {
       3,
     );
     assert.equal(replay.status(0, 750)?.stats?.kills, 2);
+  });
+
+  it('builds the event feed from native kill records without highlight ticks', async () => {
+    const data = sampleData();
+    data.players.push({
+      id: 9,
+      kind: { human: { xuid: '2533274800000009', gamertag: 'Killer' } },
+      team: 0,
+      present_at_start: true,
+    });
+    data.kills = [
+      {
+        tick: 30,
+        kill: {
+          victim: 7,
+          killer: 9,
+          killer_damage_percent: 100,
+          suicide: false,
+        },
+      },
+    ];
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, undefined, false),
+    );
+
+    assert.equal(replay.killFeed.length, 1);
+    assert.equal(replay.killFeed[0].killer?.gamertag, 'Killer');
+    assert.equal(replay.killFeed[0].victim?.gamertag, 'Spartan');
+  });
+
+  it('keeps XUIDs serialized as decimal strings in highlight records', () => {
+    const data = sampleData();
+    data.highlights = [
+      {
+        tick: 30,
+        xuid: '2533274800000000',
+        gamertag: 'Spartan',
+        kind: 'kill',
+      },
+    ];
+    assert.equal(
+      projectFilmData(data).records.highlightEvents[0].xuid,
+      '2533274800000000',
+    );
+  });
+
+  it('builds the event feed from highlights when their game ticks are unknown', async () => {
+    const data = sampleData();
+    data.players.push({
+      id: 9,
+      kind: { human: { xuid: '2533274800000009', gamertag: 'Killer' } },
+      team: 0,
+      present_at_start: true,
+    });
+    data.highlights = [
+      {
+        time_ms: 500,
+        xuid: '2533274800000009',
+        gamertag: 'Killer',
+        kind: 'kill',
+      },
+      {
+        time_ms: 500,
+        xuid: '2533274800000000',
+        gamertag: 'Spartan',
+        kind: 'death',
+      },
+    ];
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, undefined, false),
+    );
+
+    assert.equal(replay.killFeed.length, 1);
+    assert.equal(replay.killFeed[0].killer?.gamertag, 'Killer');
+    assert.equal(replay.killFeed[0].victim?.gamertag, 'Spartan');
+    assert.equal(replay.killFeed[0].timeMs, 500);
   });
 
   it('keeps successive lives distinct when an entity ID is reused', () => {
@@ -163,7 +237,7 @@ describe(
       const manifest: FilmManifest = JSON.parse(
         readFileSync(path.join(fixture, 'manifest.json'), 'utf8'),
       );
-      const chunks = manifest.CustomData.Chunks.slice(0, 5).map((chunk) => ({
+      const chunks = manifest.CustomData.Chunks.map((chunk) => ({
         index: chunk.Index,
         chunkType: chunk.ChunkType,
         bytes: Uint8Array.from(
@@ -184,6 +258,10 @@ describe(
       assert.ok(replay.firstSpawnMs !== undefined);
       assert.ok(replay.at(replay.firstSpawnMs).length > 0);
       assert.ok(replay.endMs > 0);
+      assert.ok(
+        replay.killFeed.length > 0,
+        `WASM parsed ${fromWasm.kills.length} kills and ${fromWasm.highlights.length} highlights but produced no feed rows`,
+      );
     });
   },
 );

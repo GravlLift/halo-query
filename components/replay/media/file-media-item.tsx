@@ -2,6 +2,7 @@ import { Flex, Icon } from '@chakra-ui/react';
 import { Music } from 'lucide-react';
 import {
   type ComponentProps,
+  type HTMLAttributes,
   useCallback,
   useEffect,
   useId,
@@ -60,6 +61,7 @@ export function FileMediaItem({
   matchStartMs,
   matchDurationMs,
   onRemove,
+  dragHandleProps,
   ...playback
 }: ReplayPlaybackProps & {
   file: File;
@@ -68,6 +70,7 @@ export function FileMediaItem({
   matchStartMs: number;
   matchDurationMs: number;
   onRemove: () => void;
+  dragHandleProps: HTMLAttributes<HTMLButtonElement>;
 }) {
   const [url, setUrl] = useState<string>();
   const [player, setPlayer] = useState<HTMLMediaElement>();
@@ -243,6 +246,7 @@ export function FileMediaItem({
       offsetText={offsetText}
       onOffsetInput={onManualOffsetInput}
       onRemove={onRemove}
+      dragHandleProps={dragHandleProps}
       error={loadError}
       isAligning={playback.aligning}
     >
@@ -253,7 +257,7 @@ export function FileMediaItem({
               <Music />
             </Icon>
           )}
-          <audio {...mediaProps} style={{ width: '100%' }} />
+          <audio {...mediaProps} style={{ width: '100%', maxWidth: '360px' }} />
         </Flex>
       ) : (
         <video

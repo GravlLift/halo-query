@@ -9,7 +9,7 @@ import {
   FLAG_IDENTITY,
   SKULL_IDENTITY,
 } from '@gravllift/halo-film-ui/film/decoders/world-object-births';
-import { field, items, number } from './film-json';
+import { eventOfType, field, items, number, tagNumber } from './film-json';
 import { normalizedPoint } from './film-space';
 import type { MapObjective } from '@gravllift/halo-infinite-maps';
 import type { ZoneState } from './timeline/zone-state';
@@ -61,7 +61,7 @@ export function projectWorldObjects(
   const tracks: WorldObjectTrack[] = [];
   const vehicleTags = new Set(
     data.vehicles.flatMap((vehicle) => {
-      const tag = number(field(vehicle, 'tag'));
+      const tag = tagNumber(field(vehicle, 'tag'));
       return tag === undefined ? [] : [tag];
     }),
   );
@@ -70,9 +70,9 @@ export function projectWorldObjects(
     ['ground', data.groundWeapons],
   ] satisfies [string, FilmData['worldObjects']][]) {
     for (const [index, value] of objects.entries()) {
-      const tag = number(field(value, 'tag'));
+      const tag = tagNumber(field(value, 'tag'));
       const from = number(field(value, 'from'));
-      const until = number(field(value, 'to'));
+      const until = number(field(value, 'removed'));
       const point = normalizedPoint(data.coordinates, field(value, 'position'));
       if (
         tag === undefined ||
@@ -109,12 +109,14 @@ export function projectWorldObjects(
     }
   }
   for (const [index, vehicle] of data.vehicles.entries()) {
-    const tag = number(field(vehicle, 'tag'));
+    const tag = tagNumber(field(vehicle, 'tag'));
     const path = items(field(vehicle, 'track'))
       .flatMap((entry) => {
-        if (!Array.isArray(entry)) return [];
-        const tick = number(entry[0]);
-        const point = normalizedPoint(data.coordinates, entry[1]);
+        const tick = number(field(entry, 'tick'));
+        const point = normalizedPoint(
+          data.coordinates,
+          field(entry, 'position'),
+        );
         return tick === undefined || !point
           ? []
           : [{ timeMs: (tick * 1000) / 60, ...point }];
@@ -246,17 +248,21 @@ export function projectWorldZones(
   const hill =
     data.hillScore !== null ||
     data.events.some((event) =>
-      String(field(field(field(event, 'event'), 'Zone'), 'kind')).startsWith(
-        'Hill',
-      ),
+      String(
+        field(eventOfType(field(event, 'event'), 'zone'), 'kind'),
+      ).startsWith('hill_'),
     );
   const zones: WorldZoneData['zones'] = [];
   for (const [index, value] of data.zones.entries()) {
     const point = normalizedPoint(data.coordinates, field(value, 'position'));
     if (!point) continue;
     const shape = field(value, 'shape');
-    const length = number(field(shape, 'a'));
-    const width = number(field(shape, 'b'));
+    const area = field(shape, 'area');
+    const cylinder = field(area, 'cylinder');
+    const box = field(area, 'box');
+    const radius = number(field(cylinder, 'radius'));
+    const length = number(field(box, 'length'));
+    const width = number(field(box, 'width'));
     const angle = number(field(shape, 'angle')) ?? 0;
     const objective: MapObjective & { label?: string } = {
       role: hill ? 'hill' : 'strongholds_zone',
@@ -270,44 +276,48 @@ export function projectWorldZones(
       : typeof label === 'string'
         ? label
         : undefined;
-    if (length !== undefined && data.coordinates) {
-      if (field(shape, 'cylinder') === true)
-        objective.radius = length / Math.abs(data.coordinates.scale_y * 32768);
-      else if (width !== undefined) {
-        const center = field(value, 'position');
-        const horizontal = number(field(center, 'x'));
-        const vertical = number(field(center, 'y'));
-        if (horizontal !== undefined && vertical !== undefined) {
-          objective.polygon = [
-            [1, 1],
-            [1, -1],
-            [-1, -1],
-            [-1, 1],
-          ].flatMap(([forward, right]): [number, number][] => {
-            const corner = normalizedPoint(data.coordinates, {
-              x:
-                horizontal +
-                ((Math.cos(angle) * length) / 2) * forward +
-                ((Math.sin(angle) * width) / 2) * right,
-              y:
-                vertical +
-                ((Math.sin(angle) * length) / 2) * forward -
-                ((Math.cos(angle) * width) / 2) * right,
-            });
-            return corner ? [[corner.x, corner.y]] : [];
+    if (data.coordinates && radius !== undefined) {
+      objective.radius = radius / Math.abs(data.coordinates.scale_y * 32768);
+    } else if (
+      length !== undefined &&
+      width !== undefined &&
+      data.coordinates
+    ) {
+      const center = field(value, 'position');
+      const horizontal = number(field(center, 'x'));
+      const vertical = number(field(center, 'y'));
+      if (horizontal !== undefined && vertical !== undefined) {
+        objective.polygon = [
+          [1, 1],
+          [1, -1],
+          [-1, -1],
+          [-1, 1],
+        ].flatMap(([forward, right]): [number, number][] => {
+          const corner = normalizedPoint(data.coordinates, {
+            x:
+              horizontal +
+              ((Math.cos(angle) * length) / 2) * forward +
+              ((Math.sin(angle) * width) / 2) * right,
+            y:
+              vertical +
+              ((Math.sin(angle) * length) / 2) * forward -
+              ((Math.cos(angle) * width) / 2) * right,
           });
-        }
+          return corner ? [[corner.x, corner.y]] : [];
+        });
       }
     }
     const states = items(field(value, 'states'))
       .flatMap((state) => {
         const tick = number(field(state, 'tick'));
         if (tick === undefined) return [];
-        const insideMask = number(field(state, 'inside')) ?? 0;
+        const insidePlayers = new Set(
+          items(field(state, 'inside')).flatMap((player) =>
+            typeof player === 'number' ? [player] : [],
+          ),
+        );
         const inside = data.players.flatMap((player, actor) =>
-          player.id >= 0 &&
-          player.id < 32 &&
-          ((insideMask >>> (31 - player.id)) & 1) === 1
+          insidePlayers.has(player.id)
             ? [positions.actors[actor]?.team ?? player.team ?? undefined]
             : [],
         );
@@ -334,7 +344,7 @@ export function projectWorldZones(
   let activeHill: number | undefined;
   let controllingTeam: number | undefined;
   for (const timed of data.events) {
-    const event = field(field(timed, 'event'), 'Zone');
+    const event = eventOfType(field(timed, 'event'), 'zone');
     const kind = field(event, 'kind');
     const tick = number(field(timed, 'tick'));
     if (tick === undefined) continue;
@@ -344,20 +354,20 @@ export function projectWorldZones(
         ? undefined
         : zones.findIndex((zone) => zone.index === index);
     if (
-      kind === 'HillAppear' ||
-      kind === 'HillLive' ||
-      kind === 'HillControlled'
+      kind === 'hill_appear' ||
+      kind === 'hill_live' ||
+      kind === 'hill_controlled'
     ) {
       if (zone !== undefined && zone >= 0) activeHill = zone;
       controllingTeam =
-        kind === 'HillControlled' ? number(field(event, 'team')) : undefined;
-    } else if (kind === 'HillWon') {
+        kind === 'hill_controlled' ? number(field(event, 'team')) : undefined;
+    } else if (kind === 'hill_won') {
       activeHill = undefined;
       controllingTeam = undefined;
     } else if (
-      kind === 'ControlLost' ||
-      kind === 'ContestStart' ||
-      kind === 'Neutral'
+      kind === 'control_lost' ||
+      kind === 'contest_start' ||
+      kind === 'neutral'
     )
       controllingTeam = undefined;
     else continue;
@@ -371,10 +381,9 @@ export function projectWorldZones(
   events.sort((first, second) => first.timeMs - second.timeMs);
   const teams = new Map<number, { timeMs: number; value: number }[]>();
   for (const point of items(field(data.hillScore, 'points'))) {
-    if (!Array.isArray(point)) continue;
-    const tick = number(point[0]);
-    const team = number(point[1]);
-    const value = number(point[2]);
+    const tick = number(field(point, 'tick'));
+    const team = number(field(point, 'team'));
+    const value = number(field(point, 'points'));
     if (tick === undefined || team === undefined || value === undefined)
       continue;
     const own = teams.get(team) ?? [];

@@ -22,7 +22,6 @@ export default function MiniMap({
   teamColors,
   objectives,
   background,
-  draggable,
   leftOverlay,
   renderer,
   clock,
@@ -33,7 +32,6 @@ export default function MiniMap({
   teamColors: string[];
   objectives: MapObjective[];
   background?: LoadedBackground;
-  draggable: boolean;
   leftOverlay?: HTMLElement | null;
   renderer?: MapRenderer;
   clock?: { readonly current: number };
@@ -143,13 +141,15 @@ export default function MiniMap({
     return () => container.removeEventListener('wheel', onWheel);
   }, [ready, container]);
   return (
-    <Flex ref={setContainer} minW={0} minH={0} overflow="hidden">
-      <Box
-        position="relative"
-        lineHeight={0}
-        w={`${size.width}px`}
-        h={`${size.height}px`}
-      >
+    <Flex
+      ref={setContainer}
+      w="100%"
+      h="100%"
+      minW={0}
+      minH={0}
+      overflow="hidden"
+    >
+      <Box position="relative" lineHeight={0} w="100%" h="100%">
         <canvas
           ref={canvasRef}
           width={size.width}

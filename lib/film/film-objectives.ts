@@ -2,7 +2,7 @@ import type { FilmData, JsonValue } from '@gravllift/halo-helpers/film-data';
 import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import { SKULL_IDENTITY } from '@gravllift/halo-film-ui/film/decoders/world-object-births';
 import type { ObjectiveTimelineEvent } from './timeline/replay';
-import { field, number } from './film-json';
+import { eventOfType, field, number, tagNumber } from './film-json';
 
 interface ObjectiveAction {
   timeMs: number;
@@ -28,10 +28,10 @@ export function projectOddballTimeline(
   objectives: readonly { role: string; x: number; y: number }[],
 ): ObjectiveTimelineEvent[] | undefined {
   if (
-    data.mode !== 'Oddball' &&
+    data.mode !== 'oddball' &&
     !data.events.some((event) =>
-      ['SkullSpawn', 'SkullGrab'].includes(
-        String(field(field(field(event, 'event'), 'Zone'), 'kind')),
+      ['skull_spawn', 'skull_grab'].includes(
+        String(field(eventOfType(field(event, 'event'), 'zone'), 'kind')),
       ),
     )
   )
@@ -84,14 +84,14 @@ export function projectOddballTimeline(
       : undefined;
   };
   const spawnObjects = data.worldObjects.filter(
-    (object) => number(field(object, 'tag')) === SKULL_IDENTITY,
+    (object) => tagNumber(field(object, 'tag')) === SKULL_IDENTITY,
   );
   const homeAt = (timeMs: number) => {
     let latest: JsonValue | undefined;
     let latestTime = -Infinity;
     for (const object of spawnObjects) {
       const from = number(field(object, 'from'));
-      const until = number(field(object, 'to'));
+      const until = number(field(object, 'removed'));
       if (
         from === undefined ||
         (from * 1000) / 60 > timeMs ||
@@ -110,9 +110,9 @@ export function projectOddballTimeline(
   };
   const actions: ObjectiveAction[] = [];
   for (const [ground, object] of data.groundWeapons.entries()) {
-    if (number(field(object, 'tag')) !== SKULL_IDENTITY) continue;
+    if (tagNumber(field(object, 'tag')) !== SKULL_IDENTITY) continue;
     const from = number(field(object, 'from'));
-    const until = number(field(object, 'to'));
+    const until = number(field(object, 'removed'));
     const point = worldPoint(field(object, 'position'));
     if (from !== undefined && point)
       actions.push({
@@ -135,21 +135,21 @@ export function projectOddballTimeline(
     if (tick === undefined) continue;
     const timeMs = (tick * 1000) / 60;
     const event = field(timed, 'event');
-    const zone = field(event, 'Zone');
-    if (field(zone, 'kind') === 'SkullSpawn')
+    const zone = eventOfType(event, 'zone');
+    if (field(zone, 'kind') === 'skull_spawn')
       actions.push({ timeMs, rank: 1, state: 'spawn' });
-    if (field(zone, 'kind') === 'SkullGrab') {
+    if (field(zone, 'kind') === 'skull_grab') {
       const actor = actorOf(number(field(zone, 'player')));
       if (actor !== undefined && canCarry(actor, timeMs))
         actions.push({ timeMs, rank: 4, state: 'grab', actor });
     }
-    const pickup = field(event, 'Pickup');
-    if (number(field(pickup, 'item')) === SKULL_IDENTITY) {
+    const pickup = eventOfType(event, 'pickup');
+    if (tagNumber(field(pickup, 'item')) === SKULL_IDENTITY) {
       const actor = actorOf(number(field(pickup, 'player')));
       if (actor !== undefined && canCarry(actor, timeMs))
         actions.push({ timeMs, rank: 5, state: 'grab', actor });
     }
-    const thrown = field(event, 'Throw');
+    const thrown = eventOfType(event, 'throw');
     if (field(thrown, 'grenade') === null) {
       const actor = actorOf(number(field(thrown, 'player')));
       if (actor !== undefined)

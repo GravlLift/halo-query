@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   createListCollection,
   Field,
@@ -46,6 +47,7 @@ export function MediaPanel({
 }: MediaPanelProps) {
   const [timingObject, setTimingObject] = useState<ITimingObject>();
   const nextId = useRef(0);
+  const draggedId = useRef<number>();
   const [items, setItems] = useState<Item[]>([]);
   const [audibleIds, setAudibleIds] = useState<number[]>([]);
   const previousItemCount = useRef(0);
@@ -109,6 +111,18 @@ export function MediaPanel({
       value: String(item.id),
     })),
   });
+
+  const moveItem = (id: number, targetId: number) => {
+    setItems((current) => {
+      const from = current.findIndex((item) => item.id === id);
+      const to = current.findIndex((item) => item.id === targetId);
+      if (from < 0 || to < 0 || from === to) return current;
+      const next = [...current];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
 
   return (
     <Flex direction="column" gap={2} h="100%" minH={0} pl={2}>
@@ -217,24 +231,62 @@ export function MediaPanel({
         }
       />
       <Flex direction="column" gap={2} flex={1} minH={0} overflowY="auto">
-        {items.map((item) => (
-          <MediaItem
-            key={item.id}
-            {...itemProps}
-            timingObject={timingObject}
-            source={item.source}
-            matchId={match.MatchId}
-            matchStartMs={Date.parse(match.MatchInfo.StartTime)}
-            aligning={aligning}
-            volume={audibleIds.includes(item.id) ? volume : 0}
-            onRemove={() =>
-              setItems((current) =>
-                current.filter((existing) => existing.id !== item.id),
-              )
-            }
-          />
-        ))}
+        {[...items]
+          .sort((first, second) => first.id - second.id)
+          .map((item) => (
+            <Box
+              key={item.id}
+              style={{ order: items.indexOf(item) }}
+              onDragOver={(event) => {
+                if (draggedId.current !== undefined) event.preventDefault();
+              }}
+              onDrop={(event) => {
+                if (draggedId.current === undefined) return;
+                event.preventDefault();
+                moveItem(draggedId.current, item.id);
+                draggedId.current = undefined;
+              }}
+            >
+              <MediaItem
+                {...itemProps}
+                timingObject={timingObject}
+                source={item.source}
+                matchId={match.MatchId}
+                matchStartMs={Date.parse(match.MatchInfo.StartTime)}
+                aligning={aligning}
+                volume={audibleIds.includes(item.id) ? volume : 0}
+                dragHandleProps={{
+                  draggable: true,
+                  onDragStart: (event) => {
+                    draggedId.current = item.id;
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(item.id));
+                  },
+                  onDragEnd: () => {
+                    draggedId.current = undefined;
+                  },
+                  onKeyDown: (event) => {
+                    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')
+                      return;
+                    event.preventDefault();
+                    const index = items.findIndex(
+                      (existing) => existing.id === item.id,
+                    );
+                    const target =
+                      items[index + (event.key === 'ArrowUp' ? -1 : 1)];
+                    if (target) moveItem(item.id, target.id);
+                  },
+                }}
+                onRemove={() =>
+                  setItems((current) =>
+                    current.filter((existing) => existing.id !== item.id),
+                  )
+                }
+              />
+            </Box>
+          ))}
         <Button
+          style={{ order: MAX_ITEMS }}
           aria-label="Add media"
           title={
             items.length >= MAX_ITEMS

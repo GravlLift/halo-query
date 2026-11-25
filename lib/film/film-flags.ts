@@ -2,7 +2,7 @@ import type { FilmData } from '@gravllift/halo-helpers/film-data';
 import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import { FLAG_IDENTITY } from '@gravllift/halo-film-ui/film/decoders/world-object-births';
 import type { ObjectiveTimelineEvent } from './timeline/replay';
-import { field, number } from './film-json';
+import { eventOfType, field, number, tagNumber } from './film-json';
 import { normalizedPoint } from './film-space';
 
 type FlagData = Pick<
@@ -73,23 +73,23 @@ export function projectFlagTimeline(
     if (tick === undefined) continue;
     const timeMs = (tick * 1000) / 60;
     const event = field(timed, 'event');
-    const flag = field(event, 'Flag');
+    const flag = eventOfType(event, 'flag');
     const kind = field(flag, 'kind');
     const actor = actorOf(number(field(flag, 'player')));
     const point = normalizedPoint(data.coordinates, field(flag, 'position'));
-    if ((kind === 'Grab' || kind === 'Steal') && active(actor, timeMs))
+    if ((kind === 'grab' || kind === 'steal') && active(actor, timeMs))
       actions.push({ timeMs, rank: 4, kind: 'grab', actor, point });
-    else if (kind === 'Return')
+    else if (kind === 'return')
       actions.push({ timeMs, rank: 2, kind: 'return', actor, point });
-    else if (kind === 'Capture')
+    else if (kind === 'capture')
       actions.push({ timeMs, rank: 2, kind: 'capture', actor, point });
-    const pickup = field(event, 'Pickup');
-    if (number(field(pickup, 'item')) === FLAG_IDENTITY) {
+    const pickup = eventOfType(event, 'pickup');
+    if (tagNumber(field(pickup, 'item')) === FLAG_IDENTITY) {
       const owner = actorOf(number(field(pickup, 'player')));
       if (active(owner, timeMs))
         actions.push({ timeMs, rank: 5, kind: 'grab', actor: owner });
     }
-    const thrown = field(event, 'Throw');
+    const thrown = eventOfType(event, 'throw');
     if (field(thrown, 'grenade') === null)
       actions.push({
         timeMs,
@@ -116,10 +116,10 @@ export function projectFlagTimeline(
       ),
     });
   for (const [ground, object] of data.groundWeapons.entries()) {
-    if (number(field(object, 'tag')) !== FLAG_IDENTITY) continue;
+    if (tagNumber(field(object, 'tag')) !== FLAG_IDENTITY) continue;
     const point = normalizedPoint(data.coordinates, field(object, 'position'));
     const from = number(field(object, 'from'));
-    const to = number(field(object, 'to'));
+    const to = number(field(object, 'removed'));
     if (point && from !== undefined)
       actions.push({
         timeMs: (from * 1000) / 60,

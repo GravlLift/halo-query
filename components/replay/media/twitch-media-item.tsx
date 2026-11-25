@@ -1,5 +1,11 @@
 import { Box } from '@chakra-ui/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type HTMLAttributes,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { MediaItemFrame } from './media-item-frame';
 import { EmbedAlignControls } from './embed-align-controls';
 import {
@@ -51,6 +57,7 @@ export function TwitchMediaItem({
   matchStartMs,
   matchDurationMs,
   onRemove,
+  dragHandleProps,
   ...playback
 }: ReplayPlaybackProps & {
   video: TwitchVideo;
@@ -58,6 +65,7 @@ export function TwitchMediaItem({
   matchStartMs: number;
   matchDurationMs: number;
   onRemove: () => void;
+  dragHandleProps: HTMLAttributes<HTMLButtonElement>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [player, setPlayer] = useState<MediaPlayerAdapter>();
@@ -178,6 +186,7 @@ export function TwitchMediaItem({
       offsetText={offsetText}
       onOffsetInput={onOffsetInput}
       onRemove={onRemove}
+      dragHandleProps={dragHandleProps}
       error={loadError}
       notice={
         !speedSupported && !playback.aligning
