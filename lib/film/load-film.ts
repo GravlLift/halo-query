@@ -28,7 +28,11 @@ import type { ObjectiveCarries, Replay } from './timeline/replay';
 import { buildScoreTimeline } from './timeline/score';
 import { buildFlagObjects, buildSkullObject } from './timeline/flag-objects';
 import { parseFilm, parseFilmWithTeams } from '@gravllift/libfilmshell-wasm';
-import { projectOddballTimeline } from './film-objectives';
+import {
+  projectObjectiveFeed,
+  projectOddballTimeline,
+  type ObjectiveFeedEntry,
+} from './film-objectives';
 import { projectFlagTimeline } from './film-flags';
 import {
   projectWorldObjects,
@@ -102,6 +106,7 @@ export interface MatchReplay extends Replay {
   firstSpawnMs?: number;
   projectiles: ReplayProjectile[];
   killFeed: KillFeedEntry[];
+  eventFeed: (KillFeedEntry | ObjectiveFeedEntry)[];
   map: {
     /** Zones and spawns of the game mode, in film coordinates. */
     objectives: MapObjective[];
@@ -368,6 +373,19 @@ export async function decodeFilmData(
           secures: teamEvents(extractZoneSecureSlots(statRecords)),
         }
       : undefined;
+  const recordedZoneCaptures =
+    category === GameVariantCategory.MultiplayerStrongholds
+      ? worldZones.zones.flatMap(({ states }) =>
+          states.flatMap((state, index) => {
+            const previous = states[index - 1];
+            return previous &&
+              state.owner >= 0 &&
+              state.owner !== previous.owner
+              ? [{ timeMs: state.timeMs, team: state.owner }]
+              : [];
+          }),
+        )
+      : [];
 
   const hillInput: HillInput | undefined =
     category === GameVariantCategory.MultiplayerKingOfTheHill
@@ -424,6 +442,12 @@ export async function decodeFilmData(
       records.roster,
       playerGameEvents,
     ).filter((entry) => !partial || entry.timeMs <= endMs),
+    objectiveFeed: projectObjectiveFeed(
+      data,
+      zoneInput?.captures.length ? zoneInput.captures : recordedZoneCaptures,
+      positions,
+      carries.timeline,
+    ).filter((entry) => !partial || entry.timeMs <= endMs),
     flights,
     metersToFilm,
     objectives,
@@ -450,6 +474,7 @@ export function createMatchReplay(data: ReplayBuildData): MatchReplay {
     hillInput,
     inventoryDeltas,
     killFeed,
+    objectiveFeed,
     flights,
     metersToFilm,
     objectives,
@@ -494,6 +519,9 @@ export function createMatchReplay(data: ReplayBuildData): MatchReplay {
     worldObjects: (timeMs: number) => worldObjectsAt(worldObjects, timeMs),
     firstSpawnMs,
     killFeed,
+    eventFeed: [...killFeed, ...objectiveFeed].sort(
+      (first, second) => first.timeMs - second.timeMs,
+    ),
     projectiles: flights.map((flight): ReplayProjectile => {
       const xuid =
         flight.thrower === undefined

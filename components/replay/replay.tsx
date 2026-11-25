@@ -393,7 +393,7 @@ export default function Replay({
                   width="280px"
                 >
                   <EventFeed
-                    entries={replay.killFeed}
+                    entries={replay.eventFeed ?? replay.killFeed}
                     timeMs={timeMs}
                     teamColors={teamColors}
                     visible={feedVisible}

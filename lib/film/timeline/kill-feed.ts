@@ -8,6 +8,7 @@ import type {
 } from '@gravllift/halo-helpers/film-types';
 
 const KILL_EVENT_PAIR_WINDOW_MS = 250;
+const HIGHLIGHT_TICK_MS = 1000 / 60;
 
 export interface KillFeedPlayer {
   xuid: string;
@@ -162,30 +163,7 @@ export function buildKillFeed(
 ): KillFeedEntry[] {
   const kills = events.filter((event) => event.type === 'kill');
   const deaths = events.filter((event) => event.type === 'death');
-  const candidates = kills
-    .flatMap((kill, killIndex) =>
-      deaths.flatMap((death, deathIndex) => {
-        const gap = Math.abs(kill.timeMs - death.timeMs);
-        return gap <= 5 && kill.xuid !== death.xuid
-          ? [{ killIndex, deathIndex, gap }]
-          : [];
-      }),
-    )
-    .sort(
-      (a, b) =>
-        a.gap - b.gap ||
-        a.killIndex - b.killIndex ||
-        a.deathIndex - b.deathIndex,
-    );
   const resolvedKillEvents: ResolvedKillEvent[] = [];
-  const paired = new Map<number, number>();
-  const usedDeaths = new Set<number>();
-  for (const candidate of candidates) {
-    if (paired.has(candidate.killIndex) || usedDeaths.has(candidate.deathIndex))
-      continue;
-    paired.set(candidate.killIndex, candidate.deathIndex);
-    usedDeaths.add(candidate.deathIndex);
-  }
   const playerForXuid = (xuid: string, gamertag?: string): KillFeedPlayer => ({
     xuid,
     gamertag:
@@ -228,9 +206,44 @@ export function buildKillFeed(
       killerDamagePercent: event.killerDamagePercent,
     });
   }
+  const offset = positions.highlightClockOffsetMs ?? 0;
+  const candidates = kills
+    .flatMap((kill, killIndex) =>
+      deaths.flatMap((death, deathIndex) => {
+        const gap = Math.abs(kill.timeMs - death.timeMs);
+        if (kill.xuid === death.xuid || gap > HIGHLIGHT_TICK_MS + 0.001)
+          return [];
+        const corroborated = resolvedKillEvents.some(
+          (record) =>
+            record.killer.xuid === kill.xuid &&
+            record.victim.xuid === death.xuid &&
+            Math.abs(record.timeMs - kill.timeMs - offset) <=
+              KILL_EVENT_PAIR_WINDOW_MS &&
+            Math.abs(record.timeMs - death.timeMs - offset) <=
+              KILL_EVENT_PAIR_WINDOW_MS,
+        );
+        return gap <= 5 || corroborated
+          ? [{ killIndex, deathIndex, gap, corroborated }]
+          : [];
+      }),
+    )
+    .sort(
+      (a, b) =>
+        Number(b.corroborated) - Number(a.corroborated) ||
+        a.gap - b.gap ||
+        a.killIndex - b.killIndex ||
+        a.deathIndex - b.deathIndex,
+    );
+  const paired = new Map<number, number>();
+  const usedDeaths = new Set<number>();
+  for (const candidate of candidates) {
+    if (paired.has(candidate.killIndex) || usedDeaths.has(candidate.deathIndex))
+      continue;
+    paired.set(candidate.killIndex, candidate.deathIndex);
+    usedDeaths.add(candidate.deathIndex);
+  }
   const exactByKillIndex = new Map<number, ResolvedKillEvent>();
   const usedExactEvents = new Set<ResolvedKillEvent>();
-  const offset = positions.highlightClockOffsetMs ?? 0;
   for (const [killIndex, deathIndex] of paired) {
     const kill = kills[killIndex];
     const victim = deaths[deathIndex];

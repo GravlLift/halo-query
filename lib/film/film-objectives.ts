@@ -1,8 +1,139 @@
 import type { FilmData, JsonValue } from '@gravllift/halo-helpers/film-data';
 import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
-import { SKULL_IDENTITY } from '@gravllift/halo-film-ui/film/decoders/world-object-births';
+import {
+  FLAG_IDENTITY,
+  SKULL_IDENTITY,
+} from '@gravllift/halo-film-ui/film/decoders/world-object-births';
 import type { ObjectiveTimelineEvent } from './timeline/replay';
+import type { KillFeedPlayer } from './timeline/kill-feed';
 import { eventOfType, field, number, tagNumber } from './film-json';
+
+export interface ObjectiveFeedEntry {
+  type: 'objective';
+  timeMs: number;
+  action: string;
+  player?: KillFeedPlayer;
+  team?: number;
+}
+
+export function projectObjectiveFeed(
+  data: Pick<FilmData, 'events' | 'players'>,
+  captures: readonly { timeMs: number; team: number }[] = [],
+  positions?: LinkedFilmPositions,
+  timeline?: readonly ObjectiveTimelineEvent[],
+): ObjectiveFeedEntry[] {
+  const entries: ObjectiveFeedEntry[] = [];
+  const skullTimeline = timeline?.filter((event) => event.kind === 'skull');
+  const playerFor = (id: number | undefined): KillFeedPlayer | undefined => {
+    const player = data.players.find((candidate) => candidate.id === id);
+    if (!player) return undefined;
+    const actor = positions?.actors[data.players.indexOf(player)];
+    return {
+      xuid:
+        'human' in player.kind
+          ? String(player.kind.human.xuid)
+          : `bot:${player.kind.bot.bot_id}`,
+      gamertag:
+        actor?.gamertag ??
+        ('human' in player.kind
+          ? (player.kind.human.gamertag ?? undefined)
+          : player.kind.bot.name),
+      team: actor?.team ?? player.team ?? undefined,
+    };
+  };
+  for (const timed of data.events) {
+    const tick = number(field(timed, 'tick'));
+    if (tick === undefined || tick < 0) continue;
+    const event = field(timed, 'event');
+    const flag = eventOfType(event, 'flag');
+    const zone = eventOfType(event, 'zone');
+    const pickup = eventOfType(event, 'pickup');
+    const flagKind = field(flag, 'kind');
+    const zoneKind = field(zone, 'kind');
+    const item = tagNumber(field(pickup, 'item'));
+    let action: string | undefined;
+    let source = flag;
+    if (flagKind === 'grab' || flagKind === 'steal')
+      action = 'grabbed the flag';
+    else if (flagKind === 'capture') action = 'captured the flag';
+    else if (flagKind === 'return') action = 'returned the flag';
+    else if (zoneKind === 'skull_grab') {
+      action = 'grabbed the oddball';
+      source = zone;
+    } else if (zoneKind === 'hill_controlled' || zoneKind === 'hill_won') {
+      action =
+        zoneKind === 'hill_won' ? 'captured the hill' : 'controlled the hill';
+      source = zone;
+    } else if (item === FLAG_IDENTITY || item === SKULL_IDENTITY) {
+      action =
+        item === FLAG_IDENTITY ? 'grabbed the flag' : 'grabbed the oddball';
+      source = pickup;
+    }
+    if (!action || (action === 'grabbed the oddball' && skullTimeline?.length))
+      continue;
+    const timeMs = (tick * 1000) / 60;
+    if (action === 'grabbed the oddball' && positions) {
+      const playerIndex = data.players.findIndex(
+        (player) => player.id === number(field(source, 'player')),
+      );
+      const lives = positions.actors[playerIndex]?.lives;
+      if (
+        lives?.length &&
+        !lives.some(
+          (life) => life.startMs <= timeMs + 125 && life.endMs >= timeMs,
+        )
+      )
+        continue;
+    }
+    const entry: ObjectiveFeedEntry = {
+      type: 'objective',
+      timeMs,
+      action,
+      player: playerFor(number(field(source, 'player'))),
+      team: number(field(source, 'team')),
+    };
+    const duplicate = entries.findIndex(
+      (previous) =>
+        previous.timeMs === timeMs &&
+        previous.action === action &&
+        (action === 'grabbed the oddball' ||
+          (entry.player && previous.player?.xuid === entry.player.xuid) ||
+          (!entry.player && !previous.player && previous.team === entry.team)),
+    );
+    if (duplicate >= 0 && pickup) entries[duplicate] = entry;
+    else if (duplicate < 0) entries.push(entry);
+  }
+  let carrier: number | undefined;
+  for (const event of skullTimeline ?? []) {
+    if (event.state !== 'carried') {
+      carrier = undefined;
+      continue;
+    }
+    if (carrier === event.actor) continue;
+    carrier = event.actor;
+    const actor = positions?.actors.find((player) => player.actor === carrier);
+    const player = actor?.xuid
+      ? { xuid: actor.xuid, gamertag: actor.gamertag, team: actor.team }
+      : undefined;
+    entries.push({
+      type: 'objective',
+      timeMs: event.timeMs,
+      action: 'grabbed the oddball',
+      player,
+    });
+  }
+  entries.push(
+    ...captures.map(
+      ({ timeMs, team }): ObjectiveFeedEntry => ({
+        type: 'objective',
+        timeMs,
+        team,
+        action: 'captured a zone',
+      }),
+    ),
+  );
+  return entries.sort((first, second) => first.timeMs - second.timeMs);
+}
 
 interface ObjectiveAction {
   timeMs: number;

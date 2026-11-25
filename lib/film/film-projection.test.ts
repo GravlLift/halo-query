@@ -3,8 +3,52 @@ import { describe, it } from 'node:test';
 import type { LinkedFilmPositions } from '@gravllift/halo-helpers/film-types';
 import { projectInventories } from './film-inventory';
 import { createReplay } from './timeline/replay';
-import { projectOddballTimeline } from './film-objectives';
+import {
+  projectObjectiveFeed,
+  projectOddballTimeline,
+} from './film-objectives';
 import type { FilmData } from '@gravllift/halo-helpers/film-data';
+
+it('projects recorded objective actions and team captures in chronological order', () => {
+  const entries = projectObjectiveFeed(
+    {
+      players: [
+        {
+          id: 7,
+          kind: { human: { xuid: '123', gamertag: 'Spartan' } },
+          team: 1,
+          present_at_start: true,
+        },
+        {
+          id: 9,
+          kind: { human: { xuid: '456', gamertag: 'Carrier' } },
+          team: 0,
+          present_at_start: true,
+        },
+      ],
+      events: [
+        { tick: 180, event: { type: 'flag', kind: 'capture', player: 7 } },
+        { tick: 60, event: { type: 'zone', kind: 'skull_grab', player: 7 } },
+        { tick: 60, event: { type: 'pickup', player: 9, item: '0017592c' } },
+        { tick: 240, event: { type: 'zone', kind: 'hill_won', team: 1 } },
+        { tick: 270, event: { type: 'shot', player: 7 } },
+      ],
+    },
+    [{ timeMs: 2000, team: 0 }],
+  );
+  assert.deepEqual(
+    entries.map(({ timeMs, action }) => [timeMs, action]),
+    [
+      [1000, 'grabbed the oddball'],
+      [2000, 'captured a zone'],
+      [3000, 'captured the flag'],
+      [4000, 'captured the hill'],
+    ],
+  );
+  assert.equal(entries[0].player?.gamertag, 'Carrier');
+  assert.equal(entries[1].team, 0);
+  assert.equal(entries[2].player?.team, 1);
+});
 
 const life = {
   playerId: 7,
@@ -386,5 +430,36 @@ describe('canonical oddball projection', () => {
       10000,
     );
     assert.equal(replay.objectives(2700)[0].actor, 1);
+    const feed = projectObjectiveFeed(
+      {
+        ...data,
+        events: [
+          { tick: 150, event: { type: 'zone', kind: 'skull_grab', player: 9 } },
+          {
+            tick: 150,
+            event: { type: 'pickup', player: 7, item: tagId(0x17592c) },
+          },
+        ],
+      },
+      [],
+      ballPositions,
+    );
+    assert.equal(feed.length, 1);
+    const playerKind = data.players[1].kind;
+    assert.ok('human' in playerKind);
+    assert.equal(feed[0].player?.xuid, String(playerKind.human.xuid));
+  });
+
+  it('uses possession changes to avoid repeating an uninterrupted oddball grab', () => {
+    const feed = projectObjectiveFeed(data, [], ballPositions, [
+      { kind: 'skull', state: 'carried', timeMs: 1000, actor: 1 },
+      { kind: 'skull', state: 'carried', timeMs: 1100, actor: 1 },
+      { kind: 'skull', state: 'dropped', timeMs: 1200, x: 0, y: 0 },
+      { kind: 'skull', state: 'carried', timeMs: 1300, actor: 1 },
+    ]);
+    assert.deepEqual(
+      feed.map((entry) => entry.timeMs),
+      [1000, 1300],
+    );
   });
 });

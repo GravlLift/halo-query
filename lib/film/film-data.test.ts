@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import type { FilmData } from '@gravllift/halo-helpers/film-data';
+import { GameVariantCategory } from '@gravllift/halo-infinite-maps';
 import {
   createMatchReplay,
   decodeFilmData,
@@ -150,6 +151,73 @@ describe('FilmData replay boundary', () => {
     assert.equal(replay.killFeed.length, 1);
     assert.equal(replay.killFeed[0].killer?.gamertag, 'Killer');
     assert.equal(replay.killFeed[0].victim?.gamertag, 'Spartan');
+  });
+
+  it('merges objective events with kills and excludes future partial events', async () => {
+    const data = sampleData();
+    data.players.push({
+      id: 9,
+      kind: { human: { xuid: '2533274800000009', gamertag: 'Killer' } },
+      team: 0,
+      present_at_start: true,
+    });
+    data.kills = [{ tick: 30, kill: { victim: 7, killer: 9, suicide: false } }];
+    data.events = [
+      { tick: 15, event: { type: 'flag', kind: 'grab', player: 7 } },
+      { tick: 45, event: { type: 'flag', kind: 'capture', player: 7 } },
+    ];
+    const replay = createMatchReplay(
+      await decodeFilmData(data, match, undefined, 600, true),
+    );
+    assert.deepEqual(
+      replay.eventFeed.map((entry) => entry.timeMs),
+      [250, 500],
+    );
+    assert.equal(replay.killFeed.length, 1);
+    assert.ok('type' in replay.eventFeed[0]);
+  });
+
+  it('uses recorded Strongholds ownership changes when capture counters are unavailable', async () => {
+    const data = sampleData();
+    data.coordinates = {
+      source: 'LevelBox',
+      scale_x: 1,
+      scale_y: 1,
+      offset_x: 0,
+      offset_y: 0,
+      spawn_fit: null,
+    };
+    data.zones = [
+      {
+        position: { x: 0, y: 0 },
+        states: [
+          { tick: 0, owner: -1 },
+          { tick: 15, owner: 0 },
+          { tick: 30, owner: 0 },
+          { tick: 45, owner: 1 },
+        ],
+      },
+    ];
+    const strongholds = {
+      ...match,
+      MatchInfo: {
+        ...match.MatchInfo,
+        GameVariantCategory: GameVariantCategory.MultiplayerStrongholds,
+      },
+    };
+    const replay = createMatchReplay(
+      await decodeFilmData(data, strongholds, undefined, undefined, false),
+    );
+    assert.deepEqual(
+      replay.eventFeed.map((entry) => [
+        entry.timeMs,
+        'team' in entry ? entry.team : undefined,
+      ]),
+      [
+        [250, 0],
+        [750, 1],
+      ],
+    );
   });
 
   it('keeps XUIDs serialized as decimal strings in highlight records', () => {

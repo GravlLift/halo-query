@@ -112,6 +112,99 @@ test('reconciles gameplay kills with highlights without duplicating entries', ()
   assert.equal(final[0].killerDamagePercent, 100);
 });
 
+test('preserves a gameplay kill when its highlights differ by one game tick', () => {
+  const positions = {
+    actors: [
+      actor('killer', 1, 1, 50000),
+      actor('victim', 2, 0, 50000),
+      actor('assist', 3, 1, 50000),
+    ],
+  };
+  const kills = [
+    {
+      timeMs: 48700,
+      killerIndex: 0,
+      victimIndex: 1,
+      assisterIndex: 2,
+      killerDamagePercent: 23,
+      assisterDamagePercent: 76,
+    },
+  ];
+  const roster = [
+    { playerIndex: 0, xuid: 'killer', gamertag: 'SwltchbIxde' },
+    { playerIndex: 1, xuid: 'victim', gamertag: 'buterymufin' },
+    { playerIndex: 2, xuid: 'assist', gamertag: 'xSTAITISx' },
+  ];
+  const provisional = buildKillFeed([], positions, [], kills, roster);
+  const final = buildKillFeed(
+    [
+      event('kill', 'killer', 48700),
+      event('death', 'victim', 48716.666666666664),
+    ],
+    positions,
+    [],
+    kills,
+    roster,
+  );
+  assert.deepEqual(final, provisional);
+  assert.equal(final.length, 1);
+  assert.equal(final[0].killerDamagePercent, 23);
+  assert.equal(final[0].damageAssists[0].damagePercent, 76);
+});
+
+test('prefers confirmed pairs over closer highlights from simultaneous kills', () => {
+  const entries = buildKillFeed(
+    [
+      event('kill', 'first', 1000),
+      event('kill', 'second', 1016.6666666666666),
+      event('death', 'second-victim', 1000),
+      event('death', 'first-victim', 1016.6666666666666),
+    ],
+    { actors: [] },
+    [],
+    [
+      { timeMs: 1000, killerIndex: 0, victimIndex: 2, killerDamagePercent: 23 },
+      {
+        timeMs: 1016.6666666666666,
+        killerIndex: 1,
+        victimIndex: 3,
+        killerDamagePercent: 90,
+      },
+    ],
+    [
+      { playerIndex: 0, xuid: 'first' },
+      { playerIndex: 1, xuid: 'second' },
+      { playerIndex: 2, xuid: 'first-victim' },
+      { playerIndex: 3, xuid: 'second-victim' },
+    ],
+  );
+  assert.deepEqual(
+    entries.map((entry) => [
+      entry.killer?.xuid,
+      entry.victim?.xuid,
+      entry.killerDamagePercent,
+    ]),
+    [
+      ['first', 'first-victim', 23],
+      ['second', 'second-victim', 90],
+    ],
+  );
+});
+
+test('does not pair a one-tick difference without a confirming gameplay kill', () => {
+  const entries = buildKillFeed(
+    [
+      event('kill', 'killer', 1000),
+      event('death', 'victim', 1016.6666666666666),
+    ],
+    { actors: [] },
+    [],
+  );
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].victim, undefined);
+  assert.equal(entries[1].killer, undefined);
+});
+
 test('pairs the closest highlights without reusing deaths and retains unmatched events', () => {
   const entries = buildKillFeed(
     [

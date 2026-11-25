@@ -120,3 +120,58 @@ it('preserves seeks and refreshes rows when callbacks or team colors change', as
     feed.cleanup();
   }
 });
+
+it('highlights all events at the active timestamp without grouping nearby events', async () => {
+  const feed = await setup();
+  try {
+    feed.entries.splice(
+      2,
+      0,
+      { type: 'objective', timeMs: 200, action: 'returned the flag' },
+      { type: 'objective', timeMs: 250, action: 'grabbed the flag' },
+    );
+    await feed.render(200);
+    expect(
+      Array.from(feed.container.querySelectorAll('[aria-current="true"]')).map(
+        (row) => row.getAttribute('data-feed-index'),
+      ),
+    ).toEqual(['1', '2']);
+    for (const index of [1, 2]) {
+      act(() => feed.container.querySelector(`[data-feed-index="${index}"]`).click());
+      expect(feed.onSeek).toHaveBeenLastCalledWith(200);
+    }
+    await feed.render(250);
+    expect(
+      Array.from(feed.container.querySelectorAll('[aria-current="true"]')).map(
+        (row) => row.getAttribute('data-feed-index'),
+      ),
+    ).toEqual(['3']);
+  } finally {
+    feed.cleanup();
+  }
+});
+
+it('renders objective events alongside kills and seeks to them', async () => {
+  const feed = await setup();
+  try {
+    feed.entries.splice(
+      1,
+      0,
+      {
+        type: 'objective',
+        timeMs: 125,
+        action: 'grabbed the oddball',
+        player: { xuid: 'p', gamertag: 'Carrier', team: 0 },
+      },
+      { type: 'objective', timeMs: 140, action: 'captured a zone', team: 1 },
+    );
+    await feed.render(150);
+    expect(feed.container.textContent).toContain('Carrier grabbed the oddball');
+    expect(feed.container.textContent).toContain('Team 1 captured a zone');
+    expect(feed.container.textContent).toContain('Killer0');
+    act(() => feed.container.querySelector('[data-feed-index="1"]').click());
+    expect(feed.onSeek).toHaveBeenLastCalledWith(125);
+  } finally {
+    feed.cleanup();
+  }
+});

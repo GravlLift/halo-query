@@ -1,6 +1,12 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
-import type { KillFeedEntry, KillFeedPlayer } from '../../lib/film';
+import type {
+  KillFeedEntry,
+  KillFeedPlayer,
+  ObjectiveFeedEntry,
+} from '../../lib/film';
 import { memo, useEffect, useRef, useState } from 'react';
+
+type EventFeedEntry = KillFeedEntry | ObjectiveFeedEntry;
 
 function formatTime(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000));
@@ -29,7 +35,7 @@ const KillFeedRow = memo(
     teamColors,
     onSeek,
   }: {
-    entry: KillFeedEntry;
+    entry: EventFeedEntry;
     index: number;
     active: boolean;
     occurred: boolean;
@@ -80,12 +86,36 @@ const KillFeedRow = memo(
             {formatTime(entry.timeMs)}
           </Text>
           <Box>
-            {name(entry.killer, 'Unknown killer')}
-            {damagePercent(entry.killerDamagePercent)} <Text as="span">→</Text>{' '}
-            {name(entry.victim, 'Unknown victim')}
+            {'type' in entry ? (
+              <>
+                {entry.player ? (
+                  name(entry.player, 'Unknown player')
+                ) : (
+                  <Text
+                    as="span"
+                    color={
+                      entry.team !== undefined && entry.team >= 0
+                        ? teamColors[entry.team % teamColors.length]
+                        : undefined
+                    }
+                  >
+                    {entry.team !== undefined && entry.team >= 0
+                      ? `Team ${entry.team}`
+                      : 'Unknown player'}
+                  </Text>
+                )}{' '}
+                {entry.action}
+              </>
+            ) : (
+              <>
+                {name(entry.killer, 'Unknown killer')}
+                {damagePercent(entry.killerDamagePercent)}{' '}
+                <Text as="span">→</Text> {name(entry.victim, 'Unknown victim')}
+              </>
+            )}
           </Box>
         </Flex>
-        {entry.damageAssists.length > 0 && (
+        {!('type' in entry) && entry.damageAssists.length > 0 && (
           <Box pl="42px">
             {entry.damageAssists.map((assist) => (
               <Box key={assist.xuid} whiteSpace="nowrap">
@@ -117,7 +147,7 @@ export function EventFeed({
   visible,
   onSeek,
 }: {
-  entries: KillFeedEntry[];
+  entries: EventFeedEntry[];
   timeMs: number;
   teamColors: string[];
   visible: boolean;
@@ -150,7 +180,7 @@ const EventFeedContent = memo(
     visible,
     onSeek,
   }: {
-    entries: KillFeedEntry[];
+    entries: EventFeedEntry[];
     activeIndex: number;
     teamColors: string[];
     visible: boolean;
@@ -201,7 +231,7 @@ const EventFeedContent = memo(
           flex={1}
           minH={0}
           overflowY="auto"
-          aria-label="Kill feed"
+          aria-label="Event feed"
           onScroll={(event) => {
             if (
               visible &&
@@ -214,14 +244,17 @@ const EventFeedContent = memo(
           }}
         >
           {entries.length === 0 ? (
-            <Text fontSize="xs">No kill events available.</Text>
+            <Text fontSize="xs">No events available.</Text>
           ) : (
-            entries.map((entry: KillFeedEntry, index) => (
+            entries.map((entry: EventFeedEntry, index) => (
               <KillFeedRow
                 key={index}
                 entry={entry}
                 index={index}
-                active={index === activeIndex}
+                active={
+                  activeIndex >= 0 &&
+                  entry.timeMs === entries[activeIndex].timeMs
+                }
                 occurred={index <= activeIndex}
                 teamColors={teamColors}
                 onSeek={onSeek}
