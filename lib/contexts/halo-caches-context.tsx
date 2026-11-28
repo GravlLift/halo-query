@@ -1,5 +1,4 @@
 import { compareXuids, HaloCaches } from '@gravllift/halo-helpers';
-import { timeout, TimeoutStrategy } from 'cockatiel';
 import { RelyingParty, XboxAuthenticationClient } from 'halo-infinite-api';
 import { createContext, useContext } from 'react';
 import { waypointXboxRequestPolicy } from '../request-policy';
@@ -15,11 +14,6 @@ export function useHaloCaches() {
   }
   return context;
 }
-
-const policy = timeout(5000, {
-  abortOnReturn: false,
-  strategy: TimeoutStrategy.Aggressive,
-});
 
 export function HaloCachesProvider({
   children,

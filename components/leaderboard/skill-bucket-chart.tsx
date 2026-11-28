@@ -1,6 +1,6 @@
 'use client';
 import { Box } from '@chakra-ui/react';
-import { getTierSubTierForSkill } from '@gravllift/halo-helpers';
+import { getTierSubTierForSkill, SkillProp } from '@gravllift/halo-helpers';
 import {
   BarElement,
   CategoryScale,
@@ -23,7 +23,7 @@ export default function SkillBucketChart({
   skillProp,
 }: {
   playlistAssetId: string;
-  skillProp: 'esr' | 'csr';
+  skillProp: SkillProp;
 }) {
   const router = useRouter();
   const { buckets: skillBuckets, loading } = useSkillBuckets(

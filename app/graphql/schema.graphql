@@ -32,14 +32,108 @@ type Gamerpic {
   xlarge: String!
 }
 
+type PlayerMatchHistory {
+  MatchId: String!
+  LastTeamId: Int!
+  Outcome: Int!
+}
+
 type Player {
   xuid: String!
   gamertag: String!
   gamerpic: Gamerpic!
+  matches(page: Int = 1): [Match!]!
+}
+
+type PlaylistCsr {
+  Value: Int!
+  MeasurementMatchesRemaining: Int!
+  Tier: String!
+  TierStart: Int!
+  SubTier: Int!
+  NextTier: Int!
+  NextTierStart: Int!
+  NextSubTier: Int!
+  InitialMeasurementMatches: Int!
+  DemotionProtectionMatchesRemaining: Int!
+  InitialDemotionProtectionMatches: Int!
+}
+
+type RankRecap {
+  PreMatchCsr: PlaylistCsr!
+  PostMatchCsr: PlaylistCsr!
+}
+
+type StatPerformance {
+  Count: Float!
+  Expected: Float!
+  StdDev: Float!
+}
+
+type StatPerformances {
+  Kills: StatPerformance
+  Deaths: StatPerformance
+}
+
+type Counterfactual {
+  Kills: Float
+  Deaths: Float
+}
+
+type TierCounterfactuals {
+  Bronze: Counterfactual!
+  Silver: Counterfactual!
+  Gold: Counterfactual!
+  Platinum: Counterfactual!
+  Diamond: Counterfactual!
+  Onyx: Counterfactual!
+}
+
+type Counterfactuals {
+  SelfCounterfactuals: Counterfactual!
+  TierCounterfactuals: TierCounterfactuals!
+}
+
+type MatchSkill {
+  TeamId: Int!
+  TeamMmr: Float
+  RankRecap: RankRecap!
+  StatPerformances: StatPerformances!
+  Counterfactuals: Counterfactuals
+}
+
+type AssetVersionLink {
+  AssetKind: Int!
+  AssetId: String!
+  VersionId: String!
+}
+
+type MatchInfo {
+  StartTime: String!
+  EndTime: String!
+  Duration: String!
+}
+
+type MatchTeam {
+  TeamId: Int!
+}
+
+type MatchPlayer {
+  PlayerId: String!
+  LastTeamId: Int!
+}
+
+type Match {
+  MatchId: String!
+  MatchInfo: MatchInfo!
+  Players: [MatchPlayer!]!
+  Teams: [MatchTeam!]!
+  getSkills(playerXuids: [String!]!): [MatchSkill!]!
 }
 
 type Query {
   playlistIds: [String!]!
   leaderboard(playlistId: String!, skillProp: SkillProp!): Leaderboard
   player(xuidOrGamertag: String!): Player
+  match(matchId: String!): Match
 }

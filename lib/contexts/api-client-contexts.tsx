@@ -1,6 +1,5 @@
 'use client';
 import { isRequestError } from '@gravllift/halo-helpers';
-import { SpreadableClassShape } from '@gravllift/utilities';
 import {
   HaloAuthenticationClient,
   HaloInfiniteClient,
@@ -12,6 +11,7 @@ import { createContext, ReactNode, useCallback, useContext } from 'react';
 import { fetcher } from '../clients/fetcher';
 import { tokenPersister } from '../token-persisters/client';
 import { useAuthentication } from './authentication-contexts';
+import { HybridHaloInfiniteClient } from './hybrid-halo-infinite-client';
 import { XboxLiveError } from './xbox-live-error';
 
 class XboxCurrentGamertagAuthenticationClient extends XboxAuthenticationClient {
@@ -119,7 +119,10 @@ export function ApiClientsProvider({ children }: { children: ReactNode }) {
     fetcher
   );
 
-  const haloInfiniteClient = new HaloInfiniteClient(haloAuthClient, fetcher);
+  const haloInfiniteClient = new HybridHaloInfiniteClient(
+    haloAuthClient,
+    fetcher
+  );
 
   return (
     <ApiClientsContext.Provider

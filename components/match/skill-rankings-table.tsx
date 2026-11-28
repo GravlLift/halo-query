@@ -20,7 +20,7 @@ import {
 } from '@gravllift/halo-helpers';
 import { MatchSkill } from 'halo-infinite-api';
 import { ChevronDown, ChevronUp, CircleHelp } from 'lucide-react';
-import { JSX, RefObject } from 'react';
+import { JSX } from 'react';
 import { toFixed343 } from '../../lib/render-helpers';
 import CsrDeltaDisplay from '../csr-delta-display/csr-delta-display';
 import { Tooltip } from '../ui/tooltip';

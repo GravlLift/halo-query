@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Leaderboard from '../../components/leaderboard';
+import { SkillProp } from '@gravllift/halo-helpers';
 
 export const metadata: Metadata = {
   title: `Leaderboard | Halo Query`,
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default async function LeaderboardPage(props: {
   searchParams: Promise<{
     playlistAssetId: string | undefined;
-    skillProp: 'esr' | 'csr' | undefined;
+    skillProp: SkillProp | undefined;
     gamertag: string | undefined;
     page: string | undefined; // Use 1 start for page numbers
   }>;
