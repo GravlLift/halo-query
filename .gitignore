@@ -2,3 +2,6 @@
 .env
 node_modules
 tsconfig.tsbuildinfo
+public/map-backgrounds
+public/wasm
+public/mediainfo

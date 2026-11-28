@@ -25,14 +25,16 @@ export function remapUrlForProxy(rawUrl: string) {
 
   if (
     'login.live.com' === url.hostname ||
-    ['.xboxlive.com', '.halowaypoint.com'].some((hostname) =>
-      url.hostname.endsWith(hostname)
-    )
+    [
+      '.xboxlive.com',
+      '.halowaypoint.com',
+      's3infiniteugcsessions.blob.core.windows.net',
+    ].some((hostname) => url.hostname.endsWith(hostname))
   ) {
     url = new URL(
       `${typeof window !== 'undefined' ? window.location.origin : ''}/proxy/${
         url.hostname
-      }${url.pathname}${url.search}`
+      }${url.pathname}${url.search}`,
     );
   }
 
@@ -42,5 +44,5 @@ export function remapUrlForProxy(rawUrl: string) {
 export const fetcher: FetchFunction = (input, init) =>
   vercelResponsePolicy.execute(
     ({ signal }) => fetch(remapUrlForProxy(getUrl(input)), { ...init, signal }),
-    init?.signal ?? undefined
+    init?.signal ?? undefined,
   );

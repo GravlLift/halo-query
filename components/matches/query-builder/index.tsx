@@ -16,7 +16,7 @@ import {
 } from '@react-awesome-query-builder/ui';
 import '@react-awesome-query-builder/ui/css/styles.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ReplaySubject, debounceTime, firstValueFrom } from 'rxjs';
+import { ReplaySubject, debounceTime } from 'rxjs';
 import { useConfig } from './hooks/use-config';
 import './index.css';
 
@@ -90,29 +90,47 @@ export function useQueryBuilder(
     []
   );
 
+  // Latest value without debounce; falls back to state if the builder never emitted a change
+  const latestRef = useRef<{ immutableTree: ImmutableTree; config: Config }>();
+  const queryStateRef = useRef(queryState);
+  queryStateRef.current = queryState;
+
   return {
     queryState,
-    onQueryChange: (immutableTree, config) =>
-      onChangeSubject$.current.next({ immutableTree, config }),
+    onQueryChange: (immutableTree, config) => {
+      latestRef.current = { immutableTree, config };
+      onChangeSubject$.current.next({ immutableTree, config });
+    },
     renderBuilder,
-    getFilter: () => firstValueFrom(onChangeSubject$.current),
+    getFilter: async () =>
+      latestRef.current ?? {
+        immutableTree: queryStateRef.current.tree,
+        config: queryStateRef.current.config,
+      },
   };
 }
 
 export function QueryBuilder(props: QueryBuilderProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
   const jsonLogicTree = useMemo(
     () =>
       QbUtils.jsonLogicFormat(props.queryState.tree, props.queryState.config),
     [props.queryState.tree, props.queryState.config]
   );
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   return (
     <>
-      <Query
-        {...props.queryState.config}
-        value={props.queryState.tree}
-        onChange={props.onQueryChange}
-        renderBuilder={props.renderBuilder}
-      />
+      {isHydrated ? (
+        <Query
+          {...props.queryState.config}
+          value={props.queryState.tree}
+          onChange={props.onQueryChange}
+          renderBuilder={props.renderBuilder}
+        />
+      ) : null}
       {jsonLogicTree.errors?.length ? (
         <Box backgroundColor={'red.500'}>
           {jsonLogicTree.errors.map((e, i) => (

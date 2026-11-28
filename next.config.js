@@ -6,7 +6,13 @@ const path = require('path');
 const nextConfig = {
   productionBrowserSourceMaps: true,
   output: 'standalone',
-  transpilePackages: ['@gravllift/utilities', '@gravllift/halo-helpers'],
+  transpilePackages: [
+    '@gravllift/utilities',
+    '@gravllift/halo-helpers',
+    '@gravllift/halo-film-ui',
+    '@gravllift/halo-infinite-maps',
+    'films-ui',
+  ],
   outputFileTracingRoot: path.join(__dirname, '../../'),
   eslint: {
     ignoreDuringBuilds: true,
@@ -73,6 +79,11 @@ const nextConfig = {
       ...config.experiments,
       topLevelAwait: true,
     };
+    // The wasm is served from public/mediainfo via locateFile, so skip bundling its URL.
+    config.module.rules.push({
+      test: /[\\/]mediainfo\.js[\\/]dist[\\/]/,
+      parser: { url: false },
+    });
 
     return config;
   },
@@ -92,6 +103,11 @@ const nextConfig = {
         {
           source: '/proxy/:subdomain.halowaypoint.com/:path*',
           destination: 'https://:subdomain.halowaypoint.com/:path*',
+        },
+        {
+          source: '/proxy/s3infiniteugcsessions.blob.core.windows.net/:path*',
+          destination:
+            'https://s3infiniteugcsessions.blob.core.windows.net/:path*',
         },
       ],
     };

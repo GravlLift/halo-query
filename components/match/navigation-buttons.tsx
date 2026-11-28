@@ -56,7 +56,7 @@ export function NavigationButtons(props: {
                 navigationStartSignal
               );
               const { previous } = await getNextAndPreviousMatch(
-                user.xuid,
+                user,
                 props.matchId,
                 pageSize,
                 navigationStartSignal,
@@ -149,7 +149,7 @@ export function NavigationButtons(props: {
                 focusPlayerCoalesce(await props.focusPlayerPromise)
               );
               const { next } = await getNextAndPreviousMatch(
-                user.xuid,
+                user,
                 props.matchId,
                 pageSize,
                 navigationStartSignal,

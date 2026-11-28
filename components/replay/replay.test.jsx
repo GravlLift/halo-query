@@ -1,0 +1,752 @@
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { decodeReplay, loadFilm } from '../../lib/film';
+import Replay from './replay';
+import { createReplayDecoder } from './replay-decoder';
+import { EventFeed } from './event-feed';
+import MiniMap from './mini-map';
+import { TeamPanel } from './team-panel';
+import { MediaPanel } from './media/media-panel';
+
+jest.mock('../../lib/film', () => ({ loadFilm: jest.fn(), decodeReplay: jest.fn() }));
+jest.mock('./replay-decoder', () => ({
+  createReplayDecoder: jest.fn(() => ({
+    decode: jest.fn(),
+    terminate: jest.fn(),
+  })),
+}));
+jest.mock('../../lib/contexts/api-client-contexts', () => {
+  const haloInfiniteClient = {
+    spectateMatch: async () => ({
+      BlobStoragePathPrefix: 'film',
+      CustomData: {
+        Chunks: [
+          {
+            ChunkType: 2,
+            ChunkStartTimeOffsetMilliseconds: 0,
+            DurationMilliseconds: 100000,
+          },
+        ],
+      },
+    }),
+    getFilmChunk: async () => new Uint8Array(),
+  };
+  return { useApiClients: () => ({ haloInfiniteClient }) };
+});
+jest.mock('../match/team-presets', () => ({ useTeamPresets: () => [] }));
+jest.mock('./mini-map', () => ({
+  __esModule: true,
+  default: jest.fn(() => null),
+}));
+jest.mock('./team-panel', () => ({ TeamPanel: jest.fn(() => null) }));
+jest.mock('./event-feed', () => ({ EventFeed: jest.fn(() => null) }));
+jest.mock('./media/media-panel', () => ({ MediaPanel: jest.fn(() => null) }));
+jest.mock('@chakra-ui/react', () => {
+  const React = require('react');
+  const component = React.forwardRef(
+    (
+      {
+        children,
+        role,
+        'aria-label': label,
+        'data-testid': testId,
+        w,
+        onPointerMove,
+        onPointerLeave,
+      },
+      ref,
+    ) =>
+      React.createElement(
+        'div',
+        {
+          role,
+          'aria-label': label,
+          'data-testid': testId,
+          'data-width': w,
+          onPointerMove,
+          onPointerLeave,
+          ref,
+        },
+        children,
+      ),
+  );
+  const button = ({ children, onClick, bg, 'aria-label': label, 'aria-pressed': pressed }) =>
+    React.createElement(
+      'button',
+      { onClick, 'aria-label': label, 'aria-pressed': pressed, 'data-bg': bg },
+      children,
+    );
+  const slider = ({ children, onValueChange, getAriaValueText, max, value }) =>
+    React.createElement(
+      'div',
+      {
+        'data-max': max,
+        'data-value': value[0],
+        'data-value-text': getAriaValueText({ value: value[0], index: 0 }),
+      },
+      React.createElement('button', {
+        onClick: () => onValueChange({ value: [70000] }),
+        'aria-label': 'Seek 70',
+      }),
+      React.createElement('button', {
+        onClick: () => onValueChange({ value: [80000] }),
+        'aria-label': 'Seek 80',
+      }),
+      React.createElement('button', {
+        onClick: () => onValueChange({ value: [95000] }),
+        'aria-label': 'Seek 95',
+      }),
+      React.createElement('button', {
+        onClick: () => onValueChange({ value: [5000] }),
+        'aria-label': 'Seek 5',
+      }),
+      children,
+    );
+  return {
+    Box: component,
+    Flex: component,
+    HStack: component,
+    Grid: component,
+    Text: component,
+    Button: button,
+    Spinner: component,
+    chakra: { button },
+    NativeSelect: { Root: component, Field: component, Indicator: component },
+    Splitter: {
+      RootProvider: component,
+      Panel: component,
+      ResizeTrigger: component,
+      ResizeTriggerSeparator: component,
+      ResizeTriggerIndicator: component,
+    },
+    useSplitter: () => ({
+      isPanelCollapsed: () => true,
+      expandPanel: jest.fn(),
+      collapsePanel: jest.fn(),
+    }),
+    Slider: {
+      Root: slider,
+      Control: component,
+      Track: component,
+      Range: component,
+      Thumbs: component,
+    },
+  };
+});
+
+it('shows a dismissible hint for opening the media panel', async () => {
+  localStorage.removeItem('replay.mediaHintDismissed');
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const hint = container.querySelector('[aria-label="Media panel feature"]');
+    expect(hint.textContent).toContain('Add gameplay footage');
+    expect(hint.textContent).toContain('Double-click to open the media panel.');
+    expect(
+      container.querySelector('[aria-label="Media panel (double-click to expand)"] svg.lucide-video'),
+    ).not.toBeNull();
+    const feedToggle = container.querySelector('[aria-label="Hide event feed"]');
+    expect(feedToggle.getAttribute('data-bg')).toBe('bg.emphasized');
+    expect(feedToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(feedToggle.querySelector('svg.lucide-chevron-left')).not.toBeNull();
+    act(() => feedToggle.click());
+    expect(feedToggle.getAttribute('aria-label')).toBe('Show event feed');
+    expect(feedToggle.getAttribute('data-bg')).toBe('bg.emphasized');
+    expect(feedToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(feedToggle.querySelector('svg.lucide-chevron-right')).not.toBeNull();
+    act(() => container.querySelector('[aria-label="Dismiss media panel hint"]').click());
+    expect(container.querySelector('[aria-label="Media panel feature"]')).toBeNull();
+    expect(localStorage.getItem('replay.mediaHintDismissed')).toBe('true');
+    await act(async () => root.render(null));
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    expect(container.querySelector('[aria-label="Media panel feature"]')).toBeNull();
+  } finally {
+    act(() => root.unmount());
+    localStorage.removeItem('replay.mediaHintDismissed');
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it.each([
+  [false, ['7', '4', '99']],
+  [true, ['2', '1', '99']],
+])(
+  'aligns overall scores with team card sides (round wins: %s)',
+  async (roundBased, expected) => {
+    const previous = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'IS_REACT_ACT_ENVIRONMENT',
+    );
+    Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+      configurable: true,
+      value: true,
+    });
+    const scores = Object.freeze([
+      { team: 1, score: 4, ...(roundBased ? { roundsWon: 1 } : {}) },
+      { team: undefined, score: 99 },
+      { team: 0, score: 7, ...(roundBased ? { roundsWon: 2 } : {}) },
+    ]);
+    const replay = {
+      startMs: 0,
+      endMs: 100000,
+      players: [
+        { actor: 0, team: 1 },
+        { actor: 1, team: 0 },
+      ],
+      map: { objectives: [] },
+      at: () => [],
+      scores: () => scores,
+      killFeed: [],
+      projectiles: [],
+    };
+    loadFilm.mockImplementation((options) => {
+      options.onReplay(replay, true);
+      return Promise.resolve(replay);
+    });
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    try {
+      await act(async () =>
+        root.render(<Replay match={{ MatchId: 'match' }} />),
+      );
+      const scoreboard = container.firstElementChild.firstElementChild;
+      expect(
+        Array.from(scoreboard.children, (element) => element.textContent),
+      ).toEqual(expected);
+      expect(
+        TeamPanel.mock.calls.slice(-2).map(([props]) => props.players[0].team),
+      ).toEqual([0, 1]);
+      expect(scores.map((score) => score.team)).toEqual([1, undefined, 0]);
+    } finally {
+      act(() => root.unmount());
+      if (previous)
+        Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', previous);
+      else Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+    }
+  },
+);
+
+it('keeps the canvas clock current without rerendering controls every frame', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const now = jest.spyOn(performance, 'now').mockReturnValue(1000);
+  const requestFrame = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockReturnValue(123);
+  const cancelFrame = jest
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation(() => {});
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    const initialCalls = MiniMap.mock.calls.length;
+    const step = (timestamp) =>
+      act(() => requestFrame.mock.calls.at(-1)[0](timestamp));
+    step(1016);
+    expect(MiniMap.mock.calls.length).toBe(initialCalls);
+    expect(MiniMap.mock.calls.at(-1)[0].clock.current).toBe(16);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(0);
+    step(1116);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(116);
+    step(1180);
+    expect(MiniMap.mock.calls.at(-1)[0].clock.current).toBe(180);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(116);
+    act(() => container.querySelector('[aria-label="Pause"]').click());
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(180);
+    act(() => container.querySelector('[aria-label="Seek 5"]').click());
+    expect(MiniMap.mock.calls.at(-1)[0].clock.current).toBe(5000);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(5000);
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    step(200000);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(100000);
+    expect(container.querySelector('[aria-label="Play"]')).not.toBeNull();
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    expect(MiniMap.mock.calls.at(-1)[0].clock.current).toBe(0);
+    expect(MiniMap.mock.calls.at(-1)[0].timeMs).toBe(0);
+  } finally {
+    act(() => root.unmount());
+    now.mockRestore();
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('keeps the kill feed seek handler stable across playback ticks', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const requestFrame = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockReturnValue(123);
+  const cancelFrame = jest
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation(() => {});
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const seek = EventFeed.mock.calls.at(-1)[0].onSeek;
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    const tick = requestFrame.mock.calls.at(-1)[0];
+    act(() => tick(performance.now() + 16));
+    expect(EventFeed.mock.calls.at(-1)[0].onSeek).toBe(seek);
+  } finally {
+    act(() => root.unmount());
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('holds media at the loaded replay boundary and resumes when more arrives', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const requestFrame = jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(123);
+  const cancelFrame = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+  const replay = {
+    startMs: 0, endMs: 20000, players: [], map: { objectives: [] },
+    at: () => [], scores: () => [], killFeed: [], projectiles: [],
+  };
+  let options;
+  loadFilm.mockImplementation((received) => {
+    options = received;
+    received.onReplay(replay, false);
+    return new Promise(() => {});
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(false);
+    const tick = requestFrame.mock.calls.at(-1)[0];
+    act(() => tick(performance.now() + 21000));
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(true);
+    act(() => options.onReplay({ ...replay, endMs: 40000 }, false));
+    expect(MediaPanel.mock.calls.at(-1)[0].waiting).toBe(false);
+  } finally {
+    act(() => root.unmount());
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('prioritizes unloaded seeks and shows an overlay until the latest target is ready', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    endMs: 20000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  let options;
+  let rejectLoading;
+  loadFilm.mockImplementation((received) => {
+    options = received;
+    received.onReplay(replay, false);
+    return new Promise((resolve, reject) => {
+      rejectLoading = reject;
+    });
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+
+  expect(container.querySelector('[data-max="100000"]')).not.toBeNull();
+  const loadedRange = () =>
+    container.querySelector('[data-testid="replay-loaded-range"]');
+  const playedRange = () =>
+    container.querySelector('[data-testid="replay-played-range"]');
+  const pendingOverlay = () =>
+    container.querySelector('[aria-label="Loading requested replay position"]');
+  expect(loadedRange().getAttribute('data-width')).toBe('20%');
+  expect(playedRange().getAttribute('data-width')).toBe('0%');
+  expect(
+    container
+      .querySelector('[data-value-text]')
+      .getAttribute('data-value-text'),
+  ).toBe('0:00 of 1:40, loaded through 0:20');
+  const loadStatus = container.querySelector(
+    '[data-testid="replay-loading-status"]',
+  );
+  expect(loadStatus.parentElement.getAttribute('data-testid')).toBe(
+    'replay-map-container',
+  );
+  const click = (name) =>
+    act(() => container.querySelector(`[aria-label="${name}"]`).click());
+  click('Seek 70');
+  expect(options.getPriorityTime()).toBe(70000);
+  expect(pendingOverlay()).not.toBeNull();
+  expect(playedRange().getAttribute('data-width')).toBe('0%');
+  click('Seek 5');
+  expect(options.getPriorityTime()).toBeUndefined();
+  expect(pendingOverlay()).toBeNull();
+  click('Seek 70');
+  click('Seek 80');
+  expect(options.getPriorityTime()).toBe(80000);
+  act(() => options.onReplay({ ...replay, endMs: 75000 }, false));
+  expect(pendingOverlay()).not.toBeNull();
+  expect(loadedRange().getAttribute('data-width')).toBe('75%');
+  expect(playedRange().getAttribute('data-width')).toBe('5%');
+  act(() => options.onReplay({ ...replay, endMs: 90000 }, false));
+  expect(pendingOverlay()).toBeNull();
+  expect(container.querySelector('[data-value="80000"]')).not.toBeNull();
+  expect(loadedRange().getAttribute('data-width')).toBe('90%');
+  expect(playedRange().getAttribute('data-width')).toBe('80%');
+  expect(options.getPriorityTime()).toBeUndefined();
+
+  click('Seek 5');
+  expect(container.querySelector('[data-value="5000"]')).not.toBeNull();
+  expect(pendingOverlay()).toBeNull();
+  click('Seek 95');
+  expect(pendingOverlay()).not.toBeNull();
+  await act(async () => rejectLoading(new Error('Network failed')));
+  expect(pendingOverlay()).toBeNull();
+  expect(container.textContent).toContain('Network failed');
+  expect(options.getPriorityTime()).toBeUndefined();
+  expect(
+    createReplayDecoder.mock.results.at(-1).value.terminate,
+  ).toHaveBeenCalled();
+  act(() => root.unmount());
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('matches seek hover endpoints to the slider thumb travel and pauses playback on seek', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const seekTrack = container.querySelector(
+      '[data-testid="replay-seek-track"]',
+    );
+    jest.spyOn(seekTrack, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 1000,
+    });
+    act(() =>
+      seekTrack.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 990 }),
+      ),
+    );
+    expect(seekTrack.lastElementChild.textContent).toBe('1:40');
+    act(() => container.querySelector('[aria-label="Play"]').click());
+    act(() => container.querySelector('[aria-label="Seek 70"]').click());
+    expect(container.querySelector('[aria-label="Play"]')).not.toBeNull();
+  } finally {
+    act(() => root.unmount());
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('offers direct decoding after a worker failure without creating another worker', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  loadFilm.mockRejectedValueOnce(
+    new Error('Replay worker did not start within 30 seconds'),
+  );
+  loadFilm.mockImplementation(() => new Promise(() => {}));
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+    const workerCount = createReplayDecoder.mock.calls.length;
+    expect(loadFilm.mock.calls.at(-1)[0].decode).toBe(
+      createReplayDecoder.mock.results.at(-1).value.decode,
+    );
+    const recovery = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Load Without Worker',
+    );
+    expect(recovery).toBeDefined();
+    await act(async () => recovery.click());
+    expect(createReplayDecoder.mock.calls.length).toBe(workerCount);
+    const options = loadFilm.mock.calls.at(-1)[0];
+    expect(options.decode).toBe(decodeReplay);
+    await act(async () =>
+      root.render(<Replay match={{ MatchId: 'match', updated: true }} />),
+    );
+    expect(options.signal.aborted).toBe(true);
+    expect(createReplayDecoder.mock.calls.length).toBe(workerCount);
+    const restarted = loadFilm.mock.calls.at(-1)[0];
+    expect(restarted.decode).toBe(decodeReplay);
+    act(() => root.unmount());
+    expect(restarted.signal.aborted).toBe(true);
+  } finally {
+    act(() => root.unmount());
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});
+
+it('terminates the decoder when the replay is unmounted during a download', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  loadFilm.mockImplementation(() => new Promise(() => {}));
+  const root = createRoot(document.createElement('div'));
+  await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+  const decoder = createReplayDecoder.mock.results.at(-1).value;
+  expect(decoder.terminate).not.toHaveBeenCalled();
+  act(() => root.unmount());
+  expect(decoder.terminate).toHaveBeenCalled();
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('starts at the first spawn without resetting later seeks', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    firstSpawnMs: 8000,
+    endMs: 20000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  let options;
+  loadFilm.mockImplementation((received) => {
+    options = received;
+    received.onReplay(replay, false);
+    return new Promise(() => {});
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+  expect(container.querySelector('[data-value="8000"]')).not.toBeNull();
+  act(() => container.querySelector('[aria-label="Seek 5"]').click());
+  expect(container.querySelector('[data-value="5000"]')).not.toBeNull();
+  act(() => options.onReplay({ ...replay, endMs: 90000 }, false));
+  expect(container.querySelector('[data-value="5000"]')).not.toBeNull();
+  act(() => root.unmount());
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('cancels the playback frame when the replay is unmounted', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const requestFrame = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockReturnValue(123);
+  const cancelFrame = jest
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation(() => {});
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+  act(() => container.querySelector('[aria-label="Play"]').click());
+  expect(requestFrame).toHaveBeenCalled();
+  act(() => root.unmount());
+  expect(cancelFrame).toHaveBeenCalledWith(123);
+  requestFrame.mockRestore();
+  cancelFrame.mockRestore();
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('releases playback and the decoder when navigation starts while still mounted', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const requestFrame = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockReturnValue(123);
+  const cancelFrame = jest
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation(() => {});
+  const navigation = new AbortController();
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  let options;
+  loadFilm.mockImplementation((received) => {
+    options = received;
+    received.onReplay(replay, false);
+    return new Promise(() => {});
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  await act(async () =>
+    root.render(
+      <Replay
+        match={{ MatchId: 'match' }}
+        navigationSignal={navigation.signal}
+      />,
+    ),
+  );
+  const decoder = createReplayDecoder.mock.results.at(-1).value;
+  act(() => container.querySelector('[aria-label="Play"]').click());
+  expect(requestFrame).toHaveBeenCalled();
+  act(() => navigation.abort());
+  expect(decoder.terminate).toHaveBeenCalled();
+  expect(cancelFrame).toHaveBeenCalledWith(123);
+  expect(container.querySelector('[data-max]')).toBeNull();
+  act(() => options.onReplay(replay, true));
+  expect(container.querySelector('[data-max]')).toBeNull();
+  act(() => root.unmount());
+  requestFrame.mockRestore();
+  cancelFrame.mockRestore();
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('does not start decoding after navigation has already begun', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const navigation = new AbortController();
+  navigation.abort();
+  const decoderCount = createReplayDecoder.mock.calls.length;
+  const root = createRoot(document.createElement('div'));
+  await act(async () =>
+    root.render(
+      <Replay
+        match={{ MatchId: 'match' }}
+        navigationSignal={navigation.signal}
+      />,
+    ),
+  );
+  expect(createReplayDecoder).toHaveBeenCalledTimes(decoderCount);
+  act(() => root.unmount());
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});
+
+it('marks the entire track loaded when the final snapshot arrives', async () => {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    value: true,
+    configurable: true,
+  });
+  const replay = {
+    startMs: 0,
+    endMs: 100000,
+    players: [],
+    map: { objectives: [] },
+    at: () => [],
+    scores: () => [],
+    killFeed: [],
+    projectiles: [],
+  };
+  loadFilm.mockImplementation((options) => {
+    options.onReplay(replay, true);
+    return Promise.resolve(replay);
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  await act(async () => root.render(<Replay match={{ MatchId: 'match' }} />));
+  expect(
+    container
+      .querySelector('[data-testid="replay-loaded-range"]')
+      .getAttribute('data-width'),
+  ).toBe('100%');
+  act(() => root.unmount());
+  Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+});

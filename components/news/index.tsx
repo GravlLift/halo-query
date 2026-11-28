@@ -1,6 +1,8 @@
 import '@gravllift/utilities';
 import type { JSX } from 'react';
 import Assault from './articles/assault';
+import Replays from './articles/replays';
+import BulkEsr from './articles/bulk-esr';
 import Cu29PatchRolledOut from './articles/cu29-patch-rolled-out';
 import DeathCounterfactualsAreBonkers from './articles/death-counterfactuals-are-bonkers';
 import DiscordServer from './articles/discord-server';
@@ -14,6 +16,7 @@ import QuerySavingSharing from './articles/query-saving-sharing';
 import Post from './post';
 import OpenSource from './articles/open-source';
 import Teammates from './articles/teammates';
+import MmrResearch from './articles/mmr-research';
 
 const articles: Record<
   string,
@@ -23,6 +26,21 @@ const articles: Record<
     Component: () => JSX.Element;
   }
 > = {
+  'mmr-research': {
+    date: '2026-11-22',
+    title: 'Help Improve ESR for Players in Parties',
+    Component: MmrResearch,
+  },
+  replays: {
+    date: '2026-11-04',
+    title: 'Replays Feature',
+    Component: Replays,
+  },
+  'bulk-esr': {
+    date: '2026-08-03',
+    title: 'Bulk ESR Page',
+    Component: BulkEsr,
+  },
   teammates: {
     date: '2025-12-23',
     title: 'Teammates Table',
@@ -91,7 +109,7 @@ const articles: Record<
 };
 
 export const postEntries = Object.entries(articles).sortByDesc(
-  ([, { date }]) => date
+  ([, { date }]) => date,
 );
 export const postMap = postEntries.reduce(
   (acc, [id, { date, title, Component }]) => {
@@ -102,7 +120,7 @@ export const postMap = postEntries.reduce(
     );
     return acc;
   },
-  {} as Record<string, () => JSX.Element>
+  {} as Record<string, () => JSX.Element>,
 );
 
 export const latest3ArticleIds = postEntries.slice(0, 3).map(([id]) => id);

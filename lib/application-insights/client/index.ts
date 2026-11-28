@@ -3,7 +3,6 @@ import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 import { config } from '../config';
 import { TelemetryLevel, telemetryLevel } from '../telemetry-level';
 import { handleDependencyTelemetry } from './dependency-telemetry-handler';
-// import './websocket-dependency-tracker';
 
 declare global {
   const WorkerGlobalScope: { new (): unknown } | undefined;
@@ -39,7 +38,10 @@ if (config.connectionString) {
   const reactPlugin = new ReactPlugin();
   const _appInsights = new ApplicationInsights({
     config: {
-      disableTelemetry: !isWorkerProcess && typeof window === 'undefined',
+      disableTelemetry:
+        !isWorkerProcess &&
+        (typeof window === 'undefined' ||
+          window.location.hostname === 'localhost'),
       connectionString: config.connectionString,
       extensions: [reactPlugin],
       enableAutoRouteTracking: false,
@@ -72,10 +74,10 @@ if (config.connectionString) {
               const targetUrl = new URL(envelope.item.target);
               if (
                 /\/matches\/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/skill$/.test(
-                  targetUrl.pathname
+                  targetUrl.pathname,
                 ) ||
                 /playlist\/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\/csrs/.test(
-                  targetUrl.pathname
+                  targetUrl.pathname,
                 )
               ) {
                 // 404s for skill data are expected
@@ -92,7 +94,7 @@ if (config.connectionString) {
     return true;
   });
   _appInsights.addDependencyInitializer((envelope) =>
-    handleDependencyTelemetry(envelope, _appInsights)
+    handleDependencyTelemetry(envelope, _appInsights),
   );
 
   if (isWorkerProcess || typeof window !== 'undefined') {

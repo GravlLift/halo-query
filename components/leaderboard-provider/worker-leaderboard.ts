@@ -1,6 +1,5 @@
 import type {
   ILeaderboardProvider,
-  KnowledgeMapLeaderboardProvider,
 } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { useEffect, useMemo, useRef } from 'react';
@@ -13,22 +12,22 @@ const callMap = new Map<
   ResolvablePromise<
     Awaited<
       ReturnType<
-        KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+        ILeaderboardProvider[keyof ILeaderboardProvider]
       >
     >
   >
 >();
 let workerRestarts = 0;
-export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
+export function useLeaderboardProvider(): ILeaderboardProvider {
   const workerRef = useRef<Worker | null>(null);
 
-  const workerLeaderboard = useMemo((): KnowledgeMapLeaderboardProvider => {
+  const workerLeaderboard = useMemo((): ILeaderboardProvider => {
     function callLeaderboardProviderFn<
-      TFunction extends keyof KnowledgeMapLeaderboardProvider,
+      TFunction extends keyof ILeaderboardProvider,
     >(
       fn: TFunction,
-      args: Parameters<KnowledgeMapLeaderboardProvider[TFunction]>,
-    ): ReturnType<KnowledgeMapLeaderboardProvider[TFunction]> {
+      args: Parameters<ILeaderboardProvider[TFunction]>,
+    ): ReturnType<ILeaderboardProvider[TFunction]> {
       const callId = Math.random();
       const abort = () => {
         workerRef.current?.postMessage({ callId, cancel: true });
@@ -36,35 +35,37 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
       const promise = new ResolvablePromise<
         Awaited<
           ReturnType<
-            KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+            ILeaderboardProvider[keyof ILeaderboardProvider]
           >
         >
       >();
       callMap.set(callId, promise);
+      let workerArgs: unknown[] = args;
       switch (fn) {
-        case 'getGamertagIndex':
-          args[3]?.addEventListener('abort', abort);
-          promise.finally(() => args[3]?.removeEventListener('abort', abort));
+        case 'getGamertagIndex': {
+          const signal = args[3];
+          signal?.addEventListener('abort', abort);
+          const cleanup = () => signal?.removeEventListener('abort', abort);
+          void promise.then(cleanup, cleanup);
           // Signal cannot be transmitted, remove it from arg list
-          args = args.slice(0, 3) as Parameters<
-            KnowledgeMapLeaderboardProvider[TFunction]
-          >;
+          workerArgs = args.slice(0, 3);
           break;
+        }
       }
       workerRef.current?.postMessage({
         callId,
         fn,
-        args,
+        args: workerArgs,
       });
-      return promise as ReturnType<KnowledgeMapLeaderboardProvider[TFunction]>;
+      return promise as ReturnType<ILeaderboardProvider[TFunction]>;
     }
 
-    return new Proxy({} as KnowledgeMapLeaderboardProvider, {
+    return new Proxy({} as ILeaderboardProvider, {
       get(_target, prop) {
         return (...args: unknown[]) =>
           retryEverythingPolicy.execute(async () =>
             callLeaderboardProviderFn(
-              prop as keyof KnowledgeMapLeaderboardProvider,
+              prop as keyof ILeaderboardProvider,
               args as any,
             ),
           );
@@ -80,7 +81,7 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
             callId: number;
             result: Awaited<
               ReturnType<
-                KnowledgeMapLeaderboardProvider[keyof KnowledgeMapLeaderboardProvider]
+                ILeaderboardProvider[keyof ILeaderboardProvider]
               >
             >;
           }
@@ -103,12 +104,13 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
         }
         if (event.data.forceReload && workerRef.current) {
           if (workerRestarts < 3) {
-            workerRef.current.postMessage({ terminate: true });
             workerRef.current.removeEventListener('message', messageHandler);
+            workerRef.current.terminate();
 
             workerRef.current = new Worker(
               new URL('./worker.ts', import.meta.url),
             );
+            workerRef.current.addEventListener('message', messageHandler);
             workerRestarts++;
           } else {
             const searchParams = new URLSearchParams(location.search);
@@ -125,8 +127,9 @@ export function useLeaderboardProvider(): KnowledgeMapLeaderboardProvider {
     workerRef.current.addEventListener('message', messageHandler);
 
     return () => {
-      workerRef.current?.postMessage({ terminate: true });
       workerRef.current?.removeEventListener('message', messageHandler);
+      workerRef.current?.terminate();
+      workerRef.current = null;
     };
   }, []);
 
