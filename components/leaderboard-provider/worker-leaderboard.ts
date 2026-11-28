@@ -1,6 +1,4 @@
-import type {
-  ILeaderboardProvider,
-} from '@gravllift/halo-helpers';
+import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
 import { ResolvablePromise } from '@gravllift/utilities';
 import { useEffect, useMemo, useRef } from 'react';
 import { handleAll, retry } from 'cockatiel';
@@ -10,11 +8,7 @@ const retryEverythingPolicy = retry(handleAll, { maxAttempts: 3 });
 const callMap = new Map<
   number,
   ResolvablePromise<
-    Awaited<
-      ReturnType<
-        ILeaderboardProvider[keyof ILeaderboardProvider]
-      >
-    >
+    Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
   >
 >();
 let workerRestarts = 0;
@@ -33,11 +27,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         workerRef.current?.postMessage({ callId, cancel: true });
       };
       const promise = new ResolvablePromise<
-        Awaited<
-          ReturnType<
-            ILeaderboardProvider[keyof ILeaderboardProvider]
-          >
-        >
+        Awaited<ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>>
       >();
       callMap.set(callId, promise);
       let workerArgs: unknown[] = args;
@@ -80,9 +70,7 @@ export function useLeaderboardProvider(): ILeaderboardProvider {
         | {
             callId: number;
             result: Awaited<
-              ReturnType<
-                ILeaderboardProvider[keyof ILeaderboardProvider]
-              >
+              ReturnType<ILeaderboardProvider[keyof ILeaderboardProvider]>
             >;
           }
         | {
