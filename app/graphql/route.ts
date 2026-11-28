@@ -10,11 +10,12 @@ import {
   SkillProp,
   skillRankCombined,
 } from '@gravllift/halo-helpers';
+import { GraphQLScalarType } from 'graphql';
 import { HaloInfiniteClient, MatchStats, XboxClient } from 'halo-infinite-api';
+import { DateTime } from 'luxon';
 import { after, type NextRequest } from 'next/server';
 import { provider } from '../../lib/leaderboard/sqlite';
 import typeDefs from './schema.graphql';
-import { DateTime } from 'luxon';
 
 let playlistIdsPromise: Promise<string[]> | null = null;
 function getPlaylistIds() {
@@ -61,6 +62,35 @@ function getHaloCaches(request: NextRequest) {
 }
 
 const resolvers: IResolvers<any, NextRequest> = {
+  Long: new GraphQLScalarType({
+    name: 'Long',
+    description: '64-bit signed integer',
+    serialize(value) {
+      return Number(value);
+    },
+    parseValue(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      if (typeof value === 'bigint') {
+        return value;
+      }
+      if (
+        typeof value === 'number' ||
+        typeof value === 'string' ||
+        typeof value === 'boolean'
+      ) {
+        return BigInt(value);
+      }
+      throw new Error(`Cannot convert value to BigInt: ${value}`);
+    },
+    parseLiteral(ast) {
+      if (ast.kind === 'IntValue') {
+        return BigInt(ast.value);
+      }
+      return null;
+    },
+  }),
   Query: {
     playlistIds: () => getPlaylistIds(),
     leaderboard: async (
@@ -99,12 +129,7 @@ const resolvers: IResolvers<any, NextRequest> = {
     entries: (
       { playlistId, skillProp }: { playlistId: string; skillProp: SkillProp },
       { page }: { page: number }
-    ) =>
-      provider.getRankedEntries(
-        playlistId,
-        { offset: (page - 1) * 100, limit: 100 },
-        skillProp
-      ),
+    ) => provider.getRankedEntries(playlistId, { page }, skillProp),
     skillBuckets: async ({
       playlistId,
       skillProp,
@@ -118,10 +143,10 @@ const resolvers: IResolvers<any, NextRequest> = {
         count,
       }));
     },
-    gamertagIndex: (
+    xuidIndex: (
       { playlistId, skillProp }: { playlistId: string; skillProp: SkillProp },
-      { gamertag }: { gamertag: string }
-    ) => provider.getGamertagIndex(gamertag, playlistId, skillProp),
+      { xuid }: { xuid: string }
+    ) => provider.getXuidIndex(xuid, playlistId, skillProp),
   },
   Match: {
     getSkills: async (

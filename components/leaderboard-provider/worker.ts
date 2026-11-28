@@ -1,18 +1,18 @@
 import Dexie from 'dexie';
 import leaderboard from '../../lib/leaderboard';
-import type { ILeaderboardProvider } from '@gravllift/halo-helpers';
+import type { ReadOnlyLeaderboardProvider } from '@gravllift/halo-helpers';
 import { closeDatabase } from '../../lib/leaderboard/indexed-db/indexed-db-repository';
 
 const signalMap = new Map<number, AbortController>();
 
 async function leaderboardFn<
-  const TFunction extends keyof ILeaderboardProvider,
+  const TFunction extends keyof ReadOnlyLeaderboardProvider,
 >(
   event: MessageEvent<
     | {
         callId: number;
         fn: TFunction;
-        args: Parameters<ILeaderboardProvider[TFunction]>;
+        args: Parameters<ReadOnlyLeaderboardProvider[TFunction]>;
       }
     | {
         callId: number;
@@ -21,7 +21,7 @@ async function leaderboardFn<
     | {
         terminate: true;
       }
-  >,
+  >
 ) {
   if ('terminate' in event.data) {
     try {
@@ -41,12 +41,14 @@ async function leaderboardFn<
     return;
   } else {
     try {
-      if (event.data.fn === 'getGamertagIndex') {
+      if (event.data.fn === 'getXuidIndex') {
         const controller = new AbortController();
         event.data.args[3] = controller.signal;
         signalMap.set(event.data.callId, controller);
       }
-      const result: Awaited<ReturnType<ILeaderboardProvider[TFunction]>> =
+      const result: Awaited<
+        ReturnType<ReadOnlyLeaderboardProvider[TFunction]>
+      > =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (leaderboard[event.data.fn] as any)(...(event.data.args as []));
 

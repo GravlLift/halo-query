@@ -1,5 +1,6 @@
 'use client';
 import { Box, Flex, Heading, Tabs } from '@chakra-ui/react';
+import { SkillProp } from '@gravllift/halo-helpers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useFocusPlayer } from '../../lib/contexts/focus-player-context';
@@ -12,8 +13,6 @@ import {
   rankedSlayerPlaylistAssetId,
 } from '../../lib/ranked-playlist-ids';
 import { Loading } from '../loading';
-import Testing from '../testing';
-import Peers from './peers';
 import PlaylistLeaderboard from './playlist-leaderboard';
 import { SkillProp } from '@gravllift/halo-helpers';
 
@@ -100,11 +99,6 @@ export default function Leaderboard({
               <Heading size="lg">Leaderboard</Heading>
             </Box>
           </Box>
-          <Testing>
-            <Box flexGrow={1} textAlign="right">
-              <Peers />
-            </Box>
-          </Testing>
         </Flex>
         {playlistAssetId == null ||
         playlists.some((p) => p.AssetId === playlistAssetId) ? (

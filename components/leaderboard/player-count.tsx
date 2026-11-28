@@ -7,31 +7,14 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { CircleHelp } from 'lucide-react';
-import { map } from 'rxjs';
-import { useObservable } from '../../lib/hooks/use-observable';
 import { usePlaylistEntriesCount } from '../../lib/leaderboard/hooks';
-import { useHiveMind } from '../leaderboard-provider/hive-mind-context';
 
 export default function PlayerCount({
   playlistAssetId,
 }: {
   playlistAssetId: string;
 }) {
-  const hiveMind = useHiveMind();
   const playerCount = usePlaylistEntriesCount(playlistAssetId);
-  const isLoading = useObservable(
-    hiveMind?.peerStatus$?.pipe(
-      map((v) => {
-        // Get the most fully loaded peer
-        const max = Object.entries(v).reduce(
-          (max, [_, value]) => Math.max(max, value ?? -1),
-          -1
-        );
-        return max > 0;
-      })
-    ),
-    false
-  );
   return playerCount ? (
     <HoverCard.Root>
       <HoverCard.Trigger>
@@ -64,7 +47,7 @@ export default function PlayerCount({
     <>
       <Text>Loading...</Text>
       <Dialog.Root
-        open={playerCount === 0 && isLoading}
+        open={playerCount === 0}
         closeOnInteractOutside={false}
         placement={'center'}
       >

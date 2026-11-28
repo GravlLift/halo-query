@@ -160,8 +160,7 @@ export function useSkillBuckets(
 export function useRankedEntries(
   playlistAssetId: string,
   options: {
-    offset: number;
-    limit: number;
+    page: number;
   },
   skillProp: SkillProp
 ): {
@@ -182,8 +181,7 @@ export function useRankedEntries(
           return await leaderboard!.getRankedEntries(
             playlistAssetId,
             {
-              offset: options.offset,
-              limit: options.limit,
+              page: options.page,
             },
             skillProp
           );
@@ -195,7 +193,7 @@ export function useRankedEntries(
         (a, b) => a.length === b.length && a.every((v, i) => v === b[i])
       )
     );
-  }, [leaderboard, playlistAssetId, skillProp, options.limit, options.offset]);
+  }, [leaderboard, playlistAssetId, skillProp, options.page]);
   return {
     loading,
     value: useObservable(observable$, undefined),

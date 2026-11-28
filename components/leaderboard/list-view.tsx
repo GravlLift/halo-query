@@ -8,28 +8,25 @@ import {
   Table,
   Text,
 } from '@chakra-ui/react';
+import { SkillProp } from '@gravllift/halo-helpers';
 import { abortSignalAny, isAbortError } from '@gravllift/utilities';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { DateTime } from 'luxon';
 import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { map } from 'rxjs';
-import { useNavigationController } from '../navigation-context';
-import { useObservable } from '../../lib/hooks/use-observable';
+import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
 import {
   usePlaylistEntriesCount,
   useRankedEntries,
 } from '../../lib/leaderboard/hooks';
 import FragmentLinkTarget from '../fragment-link';
-import { useHiveMind } from '../leaderboard-provider/hive-mind-context';
 import { useLeaderboard } from '../leaderboard-provider/leaderboard-context';
 import GamertagDisplay from '../match/gamertag-display';
+import { useNavigationController } from '../navigation-context';
 import TableLoading from '../table-loading';
-import { VerticalCenter } from '../vertical-center';
 import { toaster } from '../ui/toaster';
-import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { SkillProp } from '@gravllift/halo-helpers';
+import { VerticalCenter } from '../vertical-center';
 
 const pageSize = 100;
 
@@ -46,11 +43,6 @@ export default function ListView({
 }) {
   const leaderboard = useLeaderboard();
   const haloCaches = useHaloCaches();
-  const hiveMind = useHiveMind();
-  const peerCount = useObservable(
-    hiveMind?.peerStatus$?.pipe(map((p) => Object.keys(p).length)),
-    null
-  );
   const router = useRouter();
   const { signal: navigationAbortSignal } = useNavigationController();
   const csrEntriesCount = usePlaylistEntriesCount(playlistAssetId);
@@ -101,13 +93,13 @@ export default function ListView({
               });
               return;
             }
-            let gamertagIndex = await leaderboard.getGamertagIndex(
+            let xuidIndex = await leaderboard.getXuidIndex(
               xuid,
               playlistAssetId,
               skillProp,
               signal
             );
-            if (gamertagIndex === -1) {
+            if (xuidIndex === -1) {
               // Gamertag not found, this gamertag is not on the leaderboard
               const search = new URLSearchParams(window.location.search);
               search.set('page', `1`);
@@ -116,7 +108,7 @@ export default function ListView({
               return;
             }
             setHighlight(gt);
-            const newPage = Math.floor(gamertagIndex / pageSize);
+            const newPage = Math.floor(xuidIndex / pageSize);
             setPage(newPage + 1);
           } catch (e) {
             if (isAbortError(e)) {
@@ -146,8 +138,7 @@ export default function ListView({
   const { value: entries, loading: dbLoading } = useRankedEntries(
     playlistAssetId,
     {
-      offset: pageSize * (page - 1),
-      limit: pageSize,
+      page,
     },
     skillProp
   );
@@ -221,9 +212,7 @@ export default function ListView({
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {(!peerCount && !entries?.length) ||
-            dbLoading ||
-            userFetchLoading ? (
+            {!entries?.length || dbLoading || userFetchLoading ? (
               <TableLoading rows={pageSize} columns={4} />
             ) : (
               entries?.map(

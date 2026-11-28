@@ -1,8 +1,8 @@
 import { Box, Link, Skeleton } from '@chakra-ui/react';
+import { isAbortError } from '@gravllift/utilities';
 import NextLink from 'next/link';
 import { useEffect, useState } from 'react';
 import { useHaloCaches } from '../../lib/contexts/halo-caches-context';
-import { wrapXuid } from '@gravllift/halo-helpers';
 import { useNavigationController } from '../navigation-context';
 
 export default function GamertagDisplay({
@@ -40,7 +40,9 @@ export default function GamertagDisplay({
         );
         setResolvedGamertag(user.gamertag);
       } catch (err) {
-        throw err;
+        if (!isAbortError(err)) {
+          throw err;
+        }
       }
     })();
     return () => {

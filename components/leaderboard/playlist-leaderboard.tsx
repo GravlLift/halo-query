@@ -36,8 +36,8 @@ export default function PlaylistLeaderboard({
         defaultValue={skillProp || SkillProp.Esr}
       >
         <Tabs.List>
-          <Tabs.Trigger value="esr">ESR</Tabs.Trigger>
-          <Tabs.Trigger value="csr">CSR</Tabs.Trigger>
+          <Tabs.Trigger value={SkillProp.Esr}>ESR</Tabs.Trigger>
+          <Tabs.Trigger value={SkillProp.Csr}>CSR</Tabs.Trigger>
         </Tabs.List>
       </Tabs.Root>
       <Box mt={4}>

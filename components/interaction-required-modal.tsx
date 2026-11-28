@@ -53,7 +53,7 @@ export default function InteractionRequiredModal() {
       setNavigating(false);
     }
   };
-  const isOpen = !!interaction && !gamertag;
+  const isOpen = !!interaction;
   useEffect(() => {
     if (isOpen) {
       appInsights.trackEvent({
